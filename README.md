@@ -29,3 +29,10 @@ npm i -D prettier prettier-plugin-django
 - Uses Prettier's HTML parser under the hood.
 - Preserves Django template tags via placeholders during formatting.
 - Supports `{% verbatim %}...{% endverbatim %}` blocks.
+
+# TODO:
+
+- README
+- LICENSE
+- CHANGELOG
+- Remove @svitejs/changesets-changelog-github-compact
