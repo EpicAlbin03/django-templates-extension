@@ -10,3 +10,4 @@ This project vendors external repositories under @repos/
 Available repositories:
 
 - `django`
+- `prettier-plugin-svelte`
