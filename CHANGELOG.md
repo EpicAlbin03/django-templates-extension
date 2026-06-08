@@ -1,167 +1,374 @@
-# Changelog
+# prettier-plugin-svelte changelog
 
-## master
+## 4.1.0
 
--   Features
+### Minor Changes
 
--   Bug fixes
+- feat: support Svelte 5 declaration tags ([#533](https://github.com/sveltejs/prettier-plugin-svelte/pull/533))
 
-## v0.4.6
+## 4.0.1
 
--   Bug fix: Leave parentheses in place in `'classA' ~ (not needsB ? ' classB')`
+### Patch Changes
 
-## v0.4.5
+- fix: print `@const` correctly ([#530](https://github.com/sveltejs/prettier-plugin-svelte/pull/530))
 
--   Bug fix (Melody): Whitespace trimming information was lost when using a conditional expression
+## 4.0.0
 
-## v0.4.4
+- (breaking) Require Svelte 5
+- (breaking) Remove `svelteBracketNewLine` option
+- (breaking) Remove `svelteStrictMode` option
+- (fix) Keep trailing `<!-- #endregion -->` comments below `svelte:options` / scripts / styles
 
--   Bug fix: Expand the list of HTML tags treated as "inline"
+## 3.5.2
 
-## v0.4.3
+- (fix) Preserve non-breaking spaces
+- (fix) handle comments in `bind:` get/set tuple
+- (fix) handle computed properties in e.g. `{#each}` blocks
 
--   Bug fix: Filter expression was not correctly interpolated in a string
+## 3.5.1
 
-## v0.4.2
+- (fix) Svelte 5: print trailing attribute comments
 
--   Bug fix: Remove hard-coded space at the beginning of Twig comments
+## 3.5.0
 
-## v0.4.1
+- (feat) Svelte 5: print attribute comments
 
--   Bug fix: Preserve leading (non-newline) whitespace in inline IF statement body
+## 3.4.1
 
-## v0.4.0
+- (fix) externalize all prettier imports
+- (fix) don't remove parantheses of `bind:`ings with `as` type casts
 
--   Fix [issue #1](https://github.com/trivago/prettier-plugin-twig-melody/issues/1): Non-standard (custom) Twig tags don't make the parser crash any more, and receive at least some default printing. Complex tags can be configured using the `twigMultiTags` option.
+## 3.4.0
 
-## v0.3.9
+- (feat) Svelte 5: support attachments (`{@attach ...}`)
 
--   Fix [issue #32](https://github.com/trivago/prettier-plugin-twig-melody/issues/32): Curly braces around a binary expression were lost when they were in fact needed.
+## 3.3.3
 
-## v0.3.8
+- (fix) Svelte 5: ensure bind get/set is broken up correctly when too long
 
--   Bug fix/optimization: ArrayExpression was causing too many newlines
--   Bug fix: Filter target was losing parentheses, which was altering the meaning (e.g., conditional expression)
+## 3.3.2
 
-## v0.3.7
+- (fix) Svelte 5: handle type annotations on Svelte control flow blocks
+- (fix) preserve `style`/`script` tags at the end of the file when using `svelteSortOrder: "none"`
 
--   Bug fix: Expressions like `not (a and b)` lost the parentheses, thus changing the meaning of the expression.
+## 3.3.1
 
-## v0.3.6
+- (feat) Svelte 5: support upcoming `bind:value={get, set}`
 
--   Bug fix: Optimize group structure when using `SetStatement`, `VariableDeclarationStatement`, and logical binary expressions. Previously, the group created by `SetStatement` had only one breaking point (before the closing `%}`), which led to some undesirable results.
+## 3.3.0
 
-## v0.3.5
+- (feat) Svelte 5: support upcoming `<svelte:boundary>`
+- (feat) Svelte 5: support upcoming `<svelte:html>`
+- (feat) Svelte 5: support upcoming `#each` without `as`
 
--   Fix: `twigMelodyPlugins` option is finally an array, not a string separated by `|` any more.
+## 3.2.8
 
-## v0.3.4
+- (chore) provide IDE tooling a way to pass Svelte compiler path
 
--   Fix: Stylistic improvements
+## 3.2.7
 
-## v0.3.3
+- (fix) force quote style inside style directives
+- (fix) preserve commas in array expressions
+- (fix) Svelte 5: properly determine end of snippet parameters with TS annotations
 
--   Bug fix: Mount statement of the form `mount ... from ...` were dropping the source. Fixed now.
+## 3.2.6
 
-## v0.3.2
+- (feat) Svelte 5: never quote single-expression-attributes
 
--   Bug fix: No breaking point before closing `%}` for `for`, `if`, `set`.
+## 3.2.5
 
-## v0.3.1
+- (fix) Svelte 5: format TypeScript in the template
 
--   Bug fixes
-    -   [Issue #24](https://github.com/trivago/prettier-plugin-twig-melody/issues/24): Take the string contents into account when choosing the quote characters surrounding a string literal.
+## 3.2.4
 
-## v0.3.0
+- (fix) speed up regex
 
--   Features
-    -   [Issue #22](https://github.com/trivago/prettier-plugin-twig-melody/issues/22): Add `twigOutputEndblockName` option so that you can choose whether to print the name in the `{% endblock %}` tag or not.
+## 3.2.3
 
-## v0.2.3
+- (fix) don't force-self-close `<slot>` tags
 
--   Bug fixes
-    -   [Issue #21](https://github.com/trivago/prettier-plugin-twig-melody/issues/21): Always use double quotes around interpolated strings
+## 3.2.2
 
-## v0.2.2
+- (fix) handle updated `@render` tag AST shape
 
--   Bug fixes
-    -   [Issue #20](https://github.com/trivago/prettier-plugin-twig-melody/issues/20): Double quotation marks in `include` statement
-    -   [Issue #21](https://github.com/trivago/prettier-plugin-twig-melody/issues/21): Essentially same bug as Issue #20
+## 3.2.1
 
-## v0.2.1
+- (fix) handle updated `@render` tag AST shape
 
--   Bug fixes
-    -   Improve printing of HTML and Twig comments
+## 3.2.0
 
-## v0.2.0
+- (feat) format JSON script tags
+- (feat) introduce separate entry point using `prettier/standalone`
+- (fix) don't duplicate comments of nested script/style tags
+- (fix) handle updated `Snippet` block AST shape
 
--   Features
+## 3.1.2
 
-    -   Introduction of `prettier-ignore` functionality
-    -   Better adherence to Twig coding standards
+- (fix) handle `>` tags in attributes
 
--   Bug fixes
-    -   Avoid dropping of backslash in string literal: [https://github.com/trivago/prettier-plugin-twig-melody/issues/11](https://github.com/trivago/prettier-plugin-twig-melody/issues/11)
-    -   Not crashing when facing declarations (`<!DOCTYPE html>`) any more
+## 3.1.1
 
-## v0.1.1
+- (fix) handle types on each/await contexts
 
--   Bug fixes
-    -   Avoid extraneous line breaks for zero-argument call expressions: [https://github.com/trivago/prettier-plugin-twig-melody/issues/10](https://github.com/trivago/prettier-plugin-twig-melody/issues/10)
+## 3.1.0
 
-## v0.1.0
+- (feat) add experimental support for Svelte 5
+- (feat) support `#snippet` and `@render`
 
--   Features
+## 3.0.3
 
-    -   "If" statements can be in one line now, under certain circumstances
-    -   New option `twigAlwaysBreakObjects`
-    -   New option `twigPrintWidth`
-    -   All util functions are public now (available to plugins)
-    -   Optimizations: Fewer line breaks in a lot of cases, less indentation
-    -   Long HTML comments are re-wrapped now
+- (fix) handle static `tag` attributes on `<svelte:element>`
 
--   Bug fixes
-    -   Respect operator precedence in binary expressions (especially boolean)
+## 3.0.2
 
-## v0.0.34
+- (fix) add `package.json` to exports map
 
-Various small bug fixes and cosmetic optimizations
+## 3.0.1
 
-## v0.0.33
+- (fix) support less/scss in style tags
 
--   Bug fix
-    -   Empty block was causing an error. Does not an more.
+## 3.0.0
 
-## v0.0.32
+- (breaking) requires `prettier` version 3. This may require adjustments to your configuration file, see [the migration guide for more info](https://github.com/sveltejs/prettier-plugin-svelte#migration)
+- (breaking) requires node version 14 or higher
+- (breaking) Whether or not empty elements/components should self-close is now left to the user - in other words, if you write `<div />` or `<Component />` that stays as is, and so does `<div></div>`/`<Component></Component>`. If `svelteStrictMode` is turned on, it will still only allow `<div></div>` notation for elements (but it will leave your components alone)
+- (breaking) `svelteAllowShorthand` now takes precedence over `svelteStrictMode`, which no longer has any effect on that behavior. Set `svelteAllowShorthand` to `false` to get back the v2 behavior
+- (breaking) remove deprecated `svelteSortOrder` options
 
--   Features
-    -   Uses Melody 1.5.0
-    -   Trim left and trim right marks are preserved for Twig tags `{%- ... -%}`
+## 2.10.1
 
-## v0.0.31
+- (chore) mark as compatible with Svelte 4
 
--   Features
-    -   Uses Melody 1.4.0
-    -   Whitespace trimming is now suppressed
-    -   Trim left and trim right marks are preserved for expressions `{{- ... -}}`
+## 2.10.0
 
-## v0.0.30
+- (feat) support `requirePragma` and `insertPragma` options ([#350](https://github.com/sveltejs/prettier-plugin-svelte/issues/350))
+- (feat) support `<svelte:document>`
+- (feat) trim whitespace in `class` attributes ([#339](https://github.com/sveltejs/prettier-plugin-svelte/issues/339))
+- (feat) allow multiple comments atop of script/style tags ([#291](https://github.com/sveltejs/prettier-plugin-svelte/issues/291))
+- (fix) handle script/style attributes without quotes ([#344](https://github.com/sveltejs/prettier-plugin-svelte/issues/344))
 
--   Bug fixes:
-    -   MacroDeclarationStatement: There was an extraneous space after the opening parenthesis
-    -   Plugin loading: project root path was not always correctly determined
+## 2.9.0
 
-## v0.0.29
+- (feat) support style modifiers ([#330](https://github.com/sveltejs/prettier-plugin-svelte/issues/330))
+- (fix) respect strict mode and shorthand options when formatting style/class directives ([#328](https://github.com/sveltejs/prettier-plugin-svelte/issues/328))
 
--   Make use of new `melody-parser` capabilities:
-    -   Add comment printing
-    -   Pass parser option to leave character entities undecoded
-    -   Preserve HTML comments
+## 2.8.1
 
-## v0.0.28
+- (fix) format `{#await .. catch ..}..{/await}` correctly ([#323](https://github.com/sveltejs/prettier-plugin-svelte/issues/323))
+- (fix) respect strict mode and shorthand options when formatting bindings ([#321](https://github.com/sveltejs/prettier-plugin-svelte/issues/321))
 
--   Fix [issue #2](https://github.com/trivago/prettier-plugin-twig-melody/issues/2), where all final newlines in a file were skipped. Now, there will be one final newline.
+## 2.8.0
 
-## v0.0.27
+- (feat) support `singleAttributePerLine` Prettier option ([#305](https://github.com/sveltejs/prettier-plugin-svelte/issues/305))
+- (feat) add `svelteSortOrder: none` Prettier option which skips reordering scripts/styles/html ([#305](https://github.com/sveltejs/prettier-plugin-svelte/issues/314))
 
--   Fix attribute printing in objects. Computed attributes are now surrounded by `(...)`. Keys that don't need quotes will not be quoted.
+## 2.7.1
+
+- (fix) check for snipped content in JS expressions ([#290](https://github.com/sveltejs/prettier-plugin-svelte/issues/290))
+- (fix) handle `<!DOCTYPE>` ([#298](https://github.com/sveltejs/prettier-plugin-svelte/issues/298))
+
+## 2.7.0
+
+- (feat) Support `<svelte:element>` ([#285](https://github.com/sveltejs/prettier-plugin-svelte/pull/285))
+- (fix) Respect `htmlWhitespaceSensitivity: 'ignore'` setting in components ([#281](https://github.com/sveltejs/prettier-plugin-svelte/issues/281))
+
+## 2.6.0
+
+- (feat) Support `{@const}` tag ([#272](https://github.com/sveltejs/prettier-plugin-svelte/issues/272))
+- (feat) Support `style:` directive (requires Svelte 3.46.1 or later) ([#274](https://github.com/sveltejs/prettier-plugin-svelte/issues/274))
+
+## 2.5.1
+
+- (fix) Better handling of destructured values with defaults in `{#each}` and `{#await}` blocks ([#269](https://github.com/sveltejs/prettier-plugin-svelte/issues/269))
+- (fix) Prevent `<script>`/`<style>` contents from being erased in certain cases ([#268](https://github.com/sveltejs/prettier-plugin-svelte/issues/268))
+- (fix) Format `{expressions}` inside `<pre>` tags ([#266](https://github.com/sveltejs/prettier-plugin-svelte/issues/266))
+
+## 2.5.0
+
+- (feat) Support `bracketSameLine` option and deprecate `svelteBracketNewLine` ([#251](https://github.com/sveltejs/prettier-plugin-svelte/pull/251))
+- (fix) Prevent script/style contents from being erased in certain cases ([#255](https://github.com/sveltejs/prettier-plugin-svelte/issues/255))
+- (fix) Properly format nested array patterns ([#259](https://github.com/sveltejs/prettier-plugin-svelte/issues/259))
+
+## 2.4.0
+
+- (feat) Add support for formatting Pug inside `<template>` tags, if the corresponding plugin is available ([#248](https://github.com/sveltejs/prettier-plugin-svelte/pull/248))
+- (fix) Adjust checks for whether we're inside another tag when snipping tags ([#244](https://github.com/sveltejs/prettier-plugin-svelte/issues/244), [#246](https://github.com/sveltejs/prettier-plugin-svelte/issues/246))
+
+## 2.3.1
+
+- (fix) More robust check for `hardline` to prevent trailing empty lines in `<style>`/`<script>` tags ([#222](https://github.com/sveltejs/prettier-plugin-svelte/issues/222))
+
+## 2.3.0
+
+- (fix) Adjust snip regex to not break commented-out `<script>`/`<style>` tags ([#212](https://github.com/sveltejs/prettier-plugin-svelte/issues/212))
+- (fix) Don't snip `<style>` tags that are inside `<script>` tags ([#219](https://github.com/sveltejs/prettier-plugin-svelte/issues/219), [#70](https://github.com/sveltejs/prettier-plugin-svelte/issues/70))
+- (fix) Better formatting of long attribute values with mustache tags in between ([#221](https://github.com/sveltejs/prettier-plugin-svelte/pull/221))
+- (fix) Format properly when using Prettier 2.3.0+ ([#222](https://github.com/sveltejs/prettier-plugin-svelte/issues/222))
+- (fix) Keep parentheses in `<script>` tags for which JS is assumed ([#218](https://github.com/sveltejs/prettier-plugin-svelte/issues/218))
+- (feat) Support range ignores at HTML top level ([#225](https://github.com/sveltejs/prettier-plugin-svelte/issues/225))
+
+## 2.2.0
+
+- Add support for `<svelte:fragment>` ([#213](https://github.com/sveltejs/prettier-plugin-svelte/pull/213))
+
+## 2.1.6
+
+- Fix incorrect removal of comment ([#207](https://github.com/sveltejs/prettier-plugin-svelte/issues/207))
+
+## 2.1.5
+
+- Fix retrieval of comment belonging to `<script>`/`<style>` block ([#205](https://github.com/sveltejs/prettier-plugin-svelte/issues/205))
+
+## 2.1.4
+
+- Don't print an empty line at the end of code embedded inside Markdown (further fixes) ([#202](https://github.com/sveltejs/prettier-plugin-svelte/issues/202))
+
+## 2.1.3
+
+- Don't print an empty line at the end of code embedded inside Markdown ([#202](https://github.com/sveltejs/prettier-plugin-svelte/issues/202))
+
+## 2.1.2
+
+- Keep whitespace around `<script>`/`<style>` tags ([#197](https://github.com/sveltejs/prettier-plugin-svelte/issues/197))
+- Make `<script>`/`<style>` tag snipping case-sensitive ([#198](https://github.com/sveltejs/prettier-plugin-svelte/issues/198))
+
+## 2.1.1
+
+- Fix `svelteBracketNewLine: true` sometimes not having `>` on a separate line ([#194](https://github.com/sveltejs/prettier-plugin-svelte/issues/194))
+
+## 2.1.0
+
+- Support Prettier's `htmlWhitespaceSensitivity` setting
+- When `svelteBracketNewLine` is set to `true` and only the closing tag has whitespace before it, print the closing `>` on a separate line
+
+## 2.0.3
+
+- When `svelteBracketNewLine` is set to `false`, don't print the closing `>` in a separate line if possible ([#183](https://github.com/sveltejs/prettier-plugin-svelte/issues/183))
+
+## 2.0.2
+
+- Fix formatting of `<template>` tags with an unsupported language inside
+
+## 2.0.1
+
+- Fix formatting of inline element when there's a line at the start/end ([#183](https://github.com/sveltejs/prettier-plugin-svelte/issues/183))
+
+## 2.0.0
+
+This release comes with a rewrite of the HTML formatting. The output is now much more in line with how standard Prettier formats HTML. This is also why `svelteBracketNewLine` now defaults to `true`. Another notable default change is the sort order: `svelte:options` is now part of the sort order and the default changed to `options-scripts-markup-styles`, which is in line with how the majority of users like to order the code blocks.
+
+The complete list of changes:
+
+- Rework the tag breaking logic with the goal to be more in line with how Prettier formats standard HTML. This includes respecting the user's decision to have child tags in separate lines even if they don't exceed the maximum line width ([#143](https://github.com/sveltejs/prettier-plugin-svelte/issues/143), [#117](https://github.com/sveltejs/prettier-plugin-svelte/issues/117)). This is a breaking change because tags are broken up differently now than before.
+- `<svelte:options>` is now part of `svelteSortOrder`. Default sort order is now `options-scripts-markup-styles`. This is a breaking change. ([#73](https://github.com/sveltejs/prettier-plugin-svelte/issues/73))
+- `svelteBracketNewLine` defaults to `true` now to be more in line with how Prettier formats standard HTML. This is a breaking change
+- Fix formatting of fenced Svelte code blocks inside Markdown ([#129](https://github.com/sveltejs/prettier-plugin-svelte/issues/129))
+- Everything that is not explicitly a block element is now treated as an inline element, including components. This is a breaking change ([#159](https://github.com/sveltejs/prettier-plugin-svelte/issues/159))
+- Single quotes are no longer forced except inside quoted attributes/events/etc. This is a breaking change ([#94](https://github.com/sveltejs/prettier-plugin-svelte/issues/94))
+- If the content inside a `{tag}` is too long, break it up if possible (excluding `{#if}`/`{#await}`/etc. blocks). This is a breaking change ([#170](https://github.com/sveltejs/prettier-plugin-svelte/issues/170))
+- If the content of a `<script>`/`<style>` tag is completely empty (no whitespace), don't put the closing tag on a new line ([#87](https://github.com/sveltejs/prettier-plugin-svelte/issues/87))
+
+## 1.4.2
+
+- Pass options to embedded parser ([#162](https://github.com/sveltejs/prettier-plugin-svelte/issues/162))
+- Fall back to raw text if there is a parser error in a JS expression inside a moustache tag ([#163](https://github.com/sveltejs/prettier-plugin-svelte/issues/163))
+
+## 1.4.1
+
+- Format next node correctly when previous node has a comment as last child ([#152](https://github.com/sveltejs/prettier-plugin-svelte/issues/152))
+- Only `prettier-ignore` comments should ignore formatting of next line ([#151](https://github.com/sveltejs/prettier-plugin-svelte/issues/151))
+- Do not encode entities in attribute values ([#29](https://github.com/sveltejs/prettier-plugin-svelte/issues/29))
+- Fix raw printing of unsupported languages ([#156](https://github.com/sveltejs/prettier-plugin-svelte/issues/156))
+
+## 1.4.0
+
+- Fix print order of attributes and body ([#146](https://github.com/sveltejs/prettier-plugin-svelte/issues/146))
+- Support the new `{#key}` block introduced in Svelte 3.28.0 ([#147](https://github.com/sveltejs/prettier-plugin-svelte/pull/147))
+
+## 1.3.0
+
+- Add `vscodeLanguageIds` for VS Code consumers, including coc-prettier ([#138](https://github.com/sveltejs/prettier-plugin-svelte/issues/138))
+- Keep comments directly before `<style>`, `<script>` or `<template>` tags together with the tag when reformatting ([#137](https://github.com/sveltejs/prettier-plugin-svelte/issues/137))
+- Keep inline elements together even when inside text ([#139](https://github.com/sveltejs/prettier-plugin-svelte/issues/139))
+- Don't format `class` attributes ([#145](https://github.com/sveltejs/prettier-plugin-svelte/pull/145))
+
+## 1.2.1
+
+- Skip formatting `<style>` or `<script>` tags if in an unsupported language or if `prettier-ignore`d ([#55](https://github.com/sveltejs/prettier-plugin-svelte/issues/55), [#59](https://github.com/sveltejs/prettier-plugin-svelte/issues/59), [#95](https://github.com/sveltejs/prettier-plugin-svelte/issues/95))
+- Make error location properties compatible with both Svelte and Prettier ([#71](https://github.com/sveltejs/prettier-plugin-svelte/issues/71))
+- Handle/preserve comments in event handlers ([#96](https://github.com/sveltejs/prettier-plugin-svelte/issues/96))
+- Fix Node 10 compatibility ([#135](https://github.com/sveltejs/prettier-plugin-svelte/issues/135))
+
+## 1.2.0
+
+- Don't format contents of `<pre>` or its attributes, apart from `class` ([#28](https://github.com/sveltejs/prettier-plugin-svelte/issues/28))
+- Fix whitespace issues ([#58](https://github.com/sveltejs/prettier-plugin-svelte/issues/58), [#103](https://github.com/sveltejs/prettier-plugin-svelte/issues/103), [#24](https://github.com/sveltejs/prettier-plugin-svelte/issues/24))
+- Add option to disable first level of indentation in `<script>` and `<style>` tags ([#105](https://github.com/sveltejs/prettier-plugin-svelte/issues/105))
+- Fix output when rewriting shorthand attributes to not use the shorthand syntax ([#110](https://github.com/sveltejs/prettier-plugin-svelte/issues/110))
+- Add support for object destructuring reassignment ([#113](https://github.com/sveltejs/prettier-plugin-svelte/issues/113))
+
+## 1.1.1
+
+- Fix bug that breaks plugin when using Prettier v2.1.x ([#123](https://github.com/sveltejs/prettier-plugin-svelte/issues/123))
+- Fix incorrectly escaped regexp which broke style tags followed by "s" ([#118](https://github.com/sveltejs/prettier-plugin-svelte/issues/118))
+- Write to console.error to prevent crash and erasion of files ([#115](https://github.com/sveltejs/prettier-plugin-svelte/issues/115))
+
+## 1.1.0
+
+- Support `<!-- prettier-ignore -->` comments ([#59](https://github.com/sveltejs/prettier-plugin-svelte/issues/59))
+- Fix `{#await}` printing with `{:catch}` but no pending block ([#76](https://github.com/sveltejs/prettier-plugin-svelte/pull/76))
+- Fix `{#await}` printing with only a pending block ([#77](https://github.com/sveltejs/prettier-plugin-svelte/pull/77))
+- Support `{#await}` destructuring ([#83](https://github.com/sveltejs/prettier-plugin-svelte/pull/83))
+- Fix other `{#await}` handling in Svelte versions since 3.20 ([#83](https://github.com/sveltejs/prettier-plugin-svelte/pull/83))
+
+## 1.0.0
+
+- Support Prettier 2
+- Add `svelteAllowShorthand` option
+- This plugin has now become an official Svelte project
+
+## 0.7.0
+
+- Add `svelteStrictMode` option
+- Support `{#await}` block shorthand syntax
+
+## 0.6.0
+
+- Support nested `<script>` and `<style>` tags
+- Add `svelteSortOrder` option
+- Fix printing of HTML entities
+- Add option to add newline to closing angle bracket
+- Support all `<svelte:*>` elements
+- Throw Svelte parsing errors in format Prettier expects
+- Add handling for `|local` transition modifier
+- Prevent `{#if}` blocks nested in an `{#each}`/`{:else}` from being converted into an `{:else if}`
+- Fix whitespace trimming for lonely wrapped mustache tags
+
+## 0.5.1
+
+- Fix attribute wrapping
+
+## 0.5.0
+
+- Remove .html from list of extensions
+- Use `typescript` as parser to handle both JS and TS
+- Add support for event modifiers
+- Support Unicode content in `<script>` and `<style>` blocks
+- Don't print children for empty elements
+- Improve handling of text nodes
+- Prevent extra whitespace for `<script>`-only templates
+- Correctly collapse empty elements
+- Improve directive support
+
+## 0.4.2
+
+- Fix script + css and script + module printing
+
+## 0.4.1
+
+- Print HTML last
+
+## 0.4.0
+
+- Drop support for v2 and fully support v3
+- Make Prettier and Svelte peer deps

@@ -1,4 +1,0 @@
-<section class="{{ {
-    base: css.prices
-} | classes }}">
-</section>

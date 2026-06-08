@@ -1,101 +1,152 @@
-// @ts-nocheck
+import { SupportLanguage, Parser, Printer } from 'prettier';
+import * as prettierPluginBabel from 'prettier/plugins/babel';
+import { hasPragma, print } from './print';
+import { ASTNode } from './print/nodes';
+import { embed, getVisitorKeys } from './embed';
+import { snipScriptAndStyleTagContent } from './lib/snipTagContent';
+import { parse } from 'svelte/compiler';
+import { ParserOptions } from './options';
 
-import { embed } from './embed.js'
-import { parse } from './parser.js'
-import { print } from './printer.js'
+const babelParser = prettierPluginBabel.parsers.babel;
+const typescriptParser = prettierPluginBabel.parsers['babel-ts']; // TODO use TypeScript parser in next major?
 
-const languages = [
-  {
-    name: 'Django',
-    parsers: ['django'],
-    group: 'Template',
-    tmScope: 'text.html.django',
-    aceMode: 'html',
-    codemirrorMode: 'htmlmixed',
-    codemirrorMimeType: 'text/x-django',
-    extensions: ['.django'],
-    linguistLanguageId: 0,
-    vscodeLanguageIds: ['django', 'django-html']
-  }
-]
-
-const hasPragma = () => false
-const locStart = () => -1
-const locEnd = () => -1
-
-const parsers = {
-  django: {
-    parse,
-    astFormat: 'django',
-    hasPragma,
-    locStart,
-    locEnd
-  }
+function locStart(node: any) {
+    return node.start;
 }
 
-const canAttachComment = (node) => node.ast_type && node.ast_type !== 'comment'
-
-const printComment = (commentPath) => {
-  const comment = commentPath.getValue()
-
-  switch (comment.ast_type) {
-    case 'comment':
-      return comment.value
-    default:
-      throw new Error(`Not a comment: ${JSON.stringify(comment)}`)
-  }
+function locEnd(node: any) {
+    return node.end;
 }
 
-const clean = (_ast, newObj) => {
-  delete newObj.lineno
-  delete newObj.col_offset
-}
+export const languages: Partial<SupportLanguage>[] = [
+    {
+        name: 'svelte',
+        parsers: ['svelte'],
+        extensions: ['.svelte'],
+        vscodeLanguageIds: ['svelte'],
+    },
+];
 
-const printers = {
-  django: {
-    print,
-    embed,
-    printComment,
-    canAttachComment,
-    massageAstNode: clean,
-    willPrintOwnComments: () => true
-  }
-}
+export const parsers: Record<string, Parser> = {
+    svelte: {
+        hasPragma,
+        parse: async (text, options: ParserOptions) => {
+            try {
+                let _parse = parse;
+                if (options.svelte5CompilerPath) {
+                    try {
+                        _parse = (await import(options.svelte5CompilerPath)).parse;
+                    } catch (e) {
+                        console.warn(
+                            `Failed to load Svelte 5 compiler from ${options.svelte5CompilerPath}`,
+                        );
+                        console.warn(e);
+                        options.svelte5CompilerPath = undefined;
+                    }
+                }
 
-const options = {
-  djangoSingleQuote: {
-    type: 'boolean',
-    category: 'Global',
-    default: true,
-    description: 'Use single quotes in Django templates.'
-  },
-  djangoAlwaysBreakObjects: {
-    type: 'boolean',
-    category: 'Global',
-    default: true,
-    description: 'Always break object literals in Django templates.'
-  },
-  djangoPrintWidth: {
-    type: 'int',
-    category: 'Global',
-    default: 80,
-    description: 'Print width for Django templates.'
-  },
-  djangoSpaceAroundFilters: {
-    type: 'boolean',
-    category: 'Global',
-    default: false,
-    description: 'Print spaces around the filter separator.'
-  },
-  djangoOutputEndblockName: {
-    type: 'boolean',
-    category: 'Global',
-    default: false,
-    description: "Output the Django block name in the 'endblock' tag."
-  }
-}
+                const root = _parse(text, { modern: true }) as Record<string, any>;
+                (root as ASTNode).__isRoot = true;
 
-const plugin = { languages, options, parsers, printers }
+                // Prettier does a sanity check on ast.comments after printing
+                // to verify all comments were printed. Since the comments array
+                // includes script/style comments already handled by embedded
+                // parsers, we stash the full array on _comments and remove
+                // comments so Prettier doesn't try to process them itself.
+                // We then manually attach attribute comments in embed().
+                (root as ASTNode)._comments = root.comments;
+                delete root.comments;
 
-export { languages, options, parsers, printers }
-export default plugin
+                return root;
+            } catch (err: any) {
+                if (err.start != null && err.end != null) {
+                    // Prettier expects error objects to have loc.start and loc.end fields.
+                    // Svelte uses start and end directly on the error.
+                    err.loc = {
+                        start: err.start,
+                        end: err.end,
+                    };
+                }
+
+                throw err;
+            }
+        },
+        preprocess: (text, options: ParserOptions) => {
+            const result = snipScriptAndStyleTagContent(text);
+            text = result.text.trim();
+            // Prettier sets the preprocessed text as the originalText in case
+            // the Svelte formatter is called directly. In case it's called
+            // as an embedded parser (for example when there's a Svelte code block
+            // inside markdown), the originalText is not updated after preprocessing.
+            // Therefore we do it ourselves here.
+            options.originalText = text;
+            options._svelte_ts = result.isTypescript;
+            return text;
+        },
+        locStart,
+        locEnd,
+        astFormat: 'svelte-ast',
+    },
+    svelteExpressionParser: {
+        ...babelParser,
+        parse: (text: string, options: any) => {
+            const ast = babelParser.parse(text, options);
+
+            let program = ast.program.body[0];
+            if (!options._svelte_asFunction) {
+                program = program.expression;
+            }
+
+            return { ...ast, program };
+        },
+    },
+    svelteStatementParser: {
+        ...babelParser,
+        parse: (text: string, options: any) => {
+            const ast = babelParser.parse(text, options);
+
+            return { ...ast, program: ast.program.body[0] };
+        },
+    },
+    svelteTSExpressionParser: {
+        ...typescriptParser,
+        parse: (text: string, options: any) => {
+            const ast = typescriptParser.parse(text, options);
+
+            let program = ast.program.body[0];
+            if (!options._svelte_asFunction) {
+                program = program.expression;
+            }
+
+            return { ...ast, program };
+        },
+    },
+    svelteTSStatementParser: {
+        ...typescriptParser,
+        parse: (text: string, options: any) => {
+            const ast = typescriptParser.parse(text, options);
+
+            return { ...ast, program: ast.program.body[0] };
+        },
+    },
+};
+
+export const printers: Record<string, Printer> = {
+    'svelte-ast': {
+        print,
+        embed,
+        getVisitorKeys,
+        isBlockComment(comment: any) {
+            return comment.type === 'Block';
+        },
+        printComment(commentPath: any) {
+            const comment = commentPath.getValue();
+            if (comment.type === 'Line') {
+                return '//' + comment.value.replace(/\r$/, '');
+            }
+            return '/*' + comment.value + '*/';
+        },
+    },
+};
+
+export { options } from './options';

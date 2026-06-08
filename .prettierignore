@@ -1,9 +1,2 @@
-# Package Managers
-package-lock.json
+test/**/*.html
 pnpm-lock.yaml
-yarn.lock
-bun.lock
-bun.lockb
-
-out
-dist

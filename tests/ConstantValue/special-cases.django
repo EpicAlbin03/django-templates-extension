@@ -1,5 +1,0 @@
-{% if isRTL %}&#8206;{% endif %}
-
-{% if searchResultFailing %}
-<li><span><!--//--></span>No results found</li>
-{% endif %}

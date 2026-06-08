@@ -1,21 +1,9 @@
 {
-  "compilerOptions": {
-    "target": "ES2022",
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "lib": ["ES2022"],
-    "strict": false,
-    "skipLibCheck": true,
-    "noEmit": true,
-    "resolveJsonModule": true,
-    "allowSyntheticDefaultImports": true,
-    "types": ["node", "vitest/globals"]
-  },
-  "include": [
-    "src/**/*.ts",
-    "tests/**/*.ts",
-    "tests_config/**/*.ts",
-    "vite.config.ts",
-    "vitest.config.ts"
-  ]
+    "compilerOptions": {
+        "target": "es6",
+        "module": "commonjs",
+        "strict": true,
+        "esModuleInterop": true
+    },
+    "include": ["src/**/*", "index.d.ts"]
 }
