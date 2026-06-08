@@ -2,16 +2,14 @@
   {% if sections %}
     {% for section in sections %}
       <section id="{{ section.slug }}">
-        <header>
-          <h2>{{ section.title }}</h2>
-        </header>
+        <header><h2>{{ section.title }}</h2></header>
         <div class="content">
           {% if section.items %}
             <ul>
               {% for item in section.items %}
                 <li>
-                  <span>{{ item.name }}</span>
-                  {% if item.meta %}
+                  <span>{{ item.name }}</span
+                  >{% if item.meta %}
                     <small>{{ item.meta }}</small>
                   {% endif %}
                 </li>

@@ -1,43 +1,33 @@
-import { parsers as htmlParsers, printers as htmlPrinters } from 'prettier/plugins/html';
-import { transformTemplate } from './parser/transform';
-import { restoreDoc } from './print/restore';
+import type { Parser, Printer, SupportLanguage } from 'prettier';
+import type { DjangoNode } from './ast';
+import { parse } from './parser';
+import { embed, getVisitorKeys, print } from './printer';
 
-const htmlParser = htmlParsers.html;
-const htmlPrinter = htmlPrinters.html;
+const PLUGIN_KEY = 'django-html';
 
-const languages = [
+const languages: SupportLanguage[] = [
     {
         name: 'HTML+Django',
-        parsers: ['django-html'],
+        parsers: [PLUGIN_KEY],
         extensions: ['.html'],
         vscodeLanguageIds: ['html'],
     },
 ];
 
 const parsers = {
-    'django-html': {
-        ...htmlParser,
-        parse: (text: string, options: Record<string, unknown>) => {
-            const { transformed, placeholders } = transformTemplate(text);
-            options.__djangoOriginalText = text;
-            options.__djangoPlaceholders = placeholders;
-            options.originalText = transformed;
-            return htmlParser.parse(transformed, options as any);
-        },
-        astFormat: htmlParser.astFormat,
-        locStart: htmlParser.locStart,
-        locEnd: htmlParser.locEnd,
+    [PLUGIN_KEY]: <Parser<DjangoNode>>{
+        astFormat: PLUGIN_KEY,
+        parse,
+        locStart: (node) => node.index,
+        locEnd: (node) => node.index + node.length,
     },
 };
 
 const printers = {
-    html: {
-        ...htmlPrinter,
-        print(path: Parameters<typeof htmlPrinter.print>[0], options: Record<string, unknown>, print: Parameters<typeof htmlPrinter.print>[2]) {
-            const result = htmlPrinter.print(path, options as any, print);
-            const placeholders = (options.__djangoPlaceholders as Record<string, string> | undefined) ?? {};
-            return restoreDoc(result, placeholders);
-        },
+    [PLUGIN_KEY]: <Printer<DjangoNode>>{
+        print,
+        embed,
+        getVisitorKeys,
     },
 };
 
