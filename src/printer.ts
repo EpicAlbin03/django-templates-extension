@@ -1,8 +1,8 @@
 import type { AstPath, Doc, Options, Printer } from 'prettier';
 import { builders, utils } from 'prettier/doc';
-import type { BlockNode, DjangoNode, ExpressionNode, RootNode, StatementNode } from './ast';
+import type { BlockNode, DjangoNode, ExpressionNode, StatementNode } from './ast';
 
-function getPlaceholderIds(node: RootNode | BlockNode): string[] {
+function getPlaceholderIds(node: BlockNode | { nodes: Record<string, DjangoNode> }): string[] {
   return Object.keys(node.nodes).sort((left, right) => right.length - left.length);
 }
 
@@ -42,24 +42,28 @@ function replacePlaceholdersInString(
   return parts;
 }
 
-function splitAtBranches(node: RootNode | BlockNode): string[] {
-  const branches = Object.values(node.nodes)
+function splitAtStatements(node: BlockNode | { content: string; nodes: Record<string, DjangoNode> }): string[] {
+  const splitters = Object.values(node.nodes)
     .filter(
       (entry): entry is StatementNode =>
-        entry.type === 'statement' && ['else', 'elif', 'empty', 'plural'].includes(entry.keyword),
+        entry.type === 'statement' &&
+        !entry.inTag &&
+        !entry.inAttribute &&
+        (['else', 'elif', 'empty', 'plural'].includes(entry.keyword) ||
+          (entry.role === 'standalone' && entry.placeholderKind === 'block')),
     )
     .filter((entry) => node.content.includes(entry.id));
 
-  if (branches.length === 0) {
+  if (splitters.length === 0) {
     return [node.content];
   }
 
-  const pattern = new RegExp(`(${branches.map((branch) => escapeRegExp(branch.id)).join('|')})`);
+  const pattern = new RegExp(
+    `(${splitters
+      .map((entry) => entry.id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+      .join('|')})`,
+  );
   return node.content.split(pattern).filter(Boolean);
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function surroundingBlock(node: DjangoNode): BlockNode | undefined {
@@ -141,6 +145,8 @@ export const print: Printer<DjangoNode>['print'] = (path) => {
       return node.originalText;
     case 'raw':
       return node.originalText;
+    case 'ignore':
+      return node.originalText;
     default:
       return node.originalText;
   }
@@ -159,7 +165,7 @@ export const embed: Printer<DjangoNode>['embed'] = () => {
     }
 
     const ids = getPlaceholderIds(node);
-    const segments = splitAtBranches(node);
+    const segments = splitAtStatements(node);
     const mapped = await Promise.all(
       segments.map(async (segment) => {
         const doc = node.nodes[segment]
@@ -169,18 +175,30 @@ export const embed: Printer<DjangoNode>['embed'] = () => {
               parser: 'html',
             });
 
+        let ignoreDoc = false;
+
         return utils.mapDoc(doc, (currentDoc) => {
           if (typeof currentDoc !== 'string') {
             return currentDoc;
           }
 
-          if (!ids.some((id) => currentDoc.includes(id))) {
+          if (currentDoc === '<!-- prettier-ignore -->') {
+            ignoreDoc = true;
             return currentDoc;
           }
 
-          return replacePlaceholdersInString(currentDoc, ids, (id) =>
-            path.call(print, 'nodes', id),
-          );
+          if (!ids.some((id) => currentDoc.includes(id))) {
+            ignoreDoc = false;
+            return currentDoc;
+          }
+
+          return replacePlaceholdersInString(currentDoc, ids, (id) => {
+            const currentNode = node.nodes[id];
+            if (ignoreDoc) {
+              return currentNode.originalText;
+            }
+            return path.call(print, 'nodes', id);
+          });
         });
       }),
     );

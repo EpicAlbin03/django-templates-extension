@@ -1,10 +1,18 @@
+export const Placeholder = {
+  startToken: '#~',
+  endToken: '~#',
+};
+
+export type PlaceholderKind = 'inline' | 'block' | 'attr';
+
 export type DjangoNode =
   | RootNode
   | ExpressionNode
   | StatementNode
   | BlockNode
   | CommentNode
-  | RawNode;
+  | RawNode
+  | IgnoreNode;
 
 export interface BaseNode {
   type: string;
@@ -15,6 +23,7 @@ export interface BaseNode {
   index: number;
   length: number;
   nodes: Record<string, DjangoNode>;
+  placeholderKind: PlaceholderKind;
   inTag?: boolean;
   inAttribute?: boolean;
 }
@@ -46,4 +55,8 @@ export interface CommentNode extends BaseNode {
 
 export interface RawNode extends BaseNode {
   type: 'raw';
+}
+
+export interface IgnoreNode extends BaseNode {
+  type: 'ignore';
 }
