@@ -1,0 +1,625 @@
+import {
+    Node,
+    ElementNode,
+    TextNode,
+    AttributeNode,
+    CommentNode,
+    StyleDirectiveNode,
+    ASTNode,
+    CommentInfo,
+    ScriptNode,
+    StyleNode,
+    SvelteBoundary,
+} from './nodes';
+import { blockElements, TagName } from '../lib/elements';
+import { AstPath } from 'prettier';
+import { findLastIndex, isASTNode, isPreTagContent } from './helpers';
+import { ParserOptions, isBracketSameLine } from '../options';
+import { AST } from 'svelte/compiler';
+
+const unsupportedLanguages = ['coffee', 'coffeescript', 'styl', 'stylus', 'sass'];
+
+/**
+ * Characters treated as interchangeable/collapsible HTML whitespace for layout.
+ * Excludes NBSP (U+00A0) and other Unicode separators — see prettier/prettier#5796.
+ */
+const ONLY_HTML_COLLAPSE_WHITESPACE_RE = /^[\t\n\f\r ]*$/;
+const STARTS_WITH_HTML_COLLAPSE_WHITESPACE_RE = /^[\t\n\f\r ]/;
+const ENDS_WITH_HTML_COLLAPSE_WHITESPACE_RE = /[\t\n\f\r ]$/;
+const LEADING_HTML_COLLAPSE_WHITESPACE_RE = /^[\t\n\f\r ]+/;
+const TRAILING_HTML_COLLAPSE_WHITESPACE_RE = /[\t\n\f\r ]+$/;
+
+export function isOnlyHtmlCollapseWhitespace(text: string): boolean {
+    return ONLY_HTML_COLLAPSE_WHITESPACE_RE.test(text);
+}
+
+export function isInlineElement(
+    path: AstPath,
+    options: ParserOptions,
+    node: Node,
+): node is ElementNode {
+    return (
+        node &&
+        node.type === 'RegularElement' &&
+        !isBlockElement(node, options) &&
+        !isPreTagContent(path)
+    );
+}
+
+export function isBlockElement(node: Node, options: ParserOptions): node is ElementNode {
+    return (
+        node &&
+        node.type === 'RegularElement' &&
+        options.htmlWhitespaceSensitivity !== 'strict' &&
+        (options.htmlWhitespaceSensitivity === 'ignore' ||
+            blockElements.includes(node.name as TagName))
+    );
+}
+
+export function isSvelteBlock(node: Node): boolean {
+    return ['IfBlock', 'SnippetBlock', 'AwaitBlock', 'EachBlock', 'KeyBlock'].includes(node.type);
+}
+
+export function isNodeWithChildren(node: Node): boolean {
+    return !!getMaybeChildren(node);
+}
+
+function getMaybeChildren(_node: Node | AST.Fragment): Node[] | undefined {
+    if (_node.type === 'Fragment') return _node.nodes as Node[];
+
+    for (const key of Object.keys(_node)) {
+        const value = (_node as any)[key] as AST.SvelteNode;
+        if (typeof value === 'object' && value != null && value.type === 'Fragment') {
+            return value.nodes as Node[];
+        }
+    }
+}
+
+export function getChildren(_node: Node | AST.Fragment): Node[] {
+    return getMaybeChildren(_node) || [];
+}
+
+/**
+ * Returns siblings, that is, the children of the parent.
+ */
+export function getSiblings(path: AstPath): Node[] {
+    let parent = path.getParentNode();
+
+    if (isASTNode(parent)) {
+        parent = parent.fragment as any;
+    }
+
+    return (parent as AST.Fragment).nodes;
+}
+
+/**
+ * Returns the previous sibling node.
+ */
+export function getPreviousNode(path: AstPath): Node | undefined {
+    const node: Node = path.getNode();
+    return getSiblings(path).find((child) => child.end === node.start);
+}
+
+/**
+ * Returns the comment that is above the current node.
+ */
+export function getLeadingComment(path: AstPath): CommentNode | undefined {
+    const siblings = getSiblings(path);
+
+    let node: Node = path.getNode();
+    let prev: Node | undefined = siblings.find((child) => child.end === node.start);
+    while (prev) {
+        if (
+            prev.type === 'Comment' &&
+            !isIgnoreStartDirective(prev) &&
+            !isIgnoreEndDirective(prev)
+        ) {
+            return prev;
+        } else if (isEmptyTextNode(prev)) {
+            node = prev;
+            prev = siblings.find((child) => child.end === node.start);
+        } else {
+            return undefined;
+        }
+    }
+}
+
+export function isNodeTopLevelHTML(node: Node, path: AstPath): boolean {
+    const root = path.stack[0];
+    return !!root.fragment && !!root.fragment.nodes && root.fragment.nodes.includes(node);
+}
+
+export function isEmptyTextNode(node: Node | undefined): node is TextNode {
+    return !!node && node.type === 'Text' && isOnlyHtmlCollapseWhitespace(getUnencodedText(node));
+}
+
+export function isIgnoreDirective(node: Node | undefined | null): boolean {
+    return !!node && node.type === 'Comment' && node.data.trim() === 'prettier-ignore';
+}
+
+export function isIgnoreStartDirective(node: Node | undefined | null): boolean {
+    return !!node && node.type === 'Comment' && node.data.trim() === 'prettier-ignore-start';
+}
+
+export function isIgnoreEndDirective(node: Node | undefined | null): boolean {
+    return !!node && node.type === 'Comment' && node.data.trim() === 'prettier-ignore-end';
+}
+
+export function printRaw(
+    node: ElementNode | SvelteBoundary,
+    originalText: string,
+    stripLeadingAndTrailingNewline: boolean = false,
+): string {
+    const children = getChildren(node as any);
+    if (children.length === 0) {
+        return '';
+    }
+
+    const firstChild = children[0];
+    const lastChild = children[children.length - 1];
+
+    let raw = originalText.substring(firstChild.start, lastChild.end);
+
+    if (!stripLeadingAndTrailingNewline) {
+        return raw;
+    }
+
+    if (startsWithLinebreak(raw)) {
+        raw = raw.substring(raw.indexOf('\n') + 1);
+    }
+    if (endsWithLinebreak(raw)) {
+        raw = raw.substring(0, raw.lastIndexOf('\n'));
+        if (raw.charAt(raw.length - 1) === '\r') {
+            raw = raw.substring(0, raw.length - 1);
+        }
+    }
+
+    return raw;
+}
+
+function isTextNode(node: Node): node is TextNode {
+    return node.type === 'Text';
+}
+
+function getAttributeValue(attributeName: string, node: Node) {
+    const attributes = ((node as ElementNode).attributes ?? []) as AttributeNode[];
+
+    const langAttribute = attributes.find((attribute) => attribute.name === attributeName);
+
+    return langAttribute && langAttribute.value;
+}
+
+export function getAttributeTextValue(attributeName: string, node: Node): string | null {
+    const value = getAttributeValue(attributeName, node);
+
+    if (value != null && typeof value === 'object') {
+        const value_nodes = Array.isArray(value) ? value : [value];
+        const textValue = value_nodes.find(isTextNode);
+
+        if (textValue) {
+            return textValue.data;
+        }
+    }
+
+    return null;
+}
+
+function getLangAttribute(node: Node): string | null {
+    const value = getAttributeTextValue('lang', node) || getAttributeTextValue('type', node);
+
+    if (value != null) {
+        return value.replace(/^text\//, '');
+    } else {
+        return null;
+    }
+}
+
+/**
+ * Checks whether the node contains a `lang` or `type` attribute with a value corresponding to
+ * a language we cannot format. This might for example be `<template lang="pug">`.
+ * If the node does not contain a `lang` attribute, the result is true.
+ */
+export function isNodeSupportedLanguage(node: Node) {
+    const lang = getLangAttribute(node);
+
+    return !(lang && unsupportedLanguages.includes(lang));
+}
+
+/**
+ * Checks whether the node contains a `lang` or `type` attribute which indicates that
+ * the script contents are written in TypeScript. Note that the absence of the tag
+ * does not mean it's not TypeScript, because the user could have set the default
+ * to TypeScript in his settings.
+ */
+export function isTypeScript(node: Node) {
+    const lang = getLangAttribute(node) || '';
+    return ['typescript', 'ts'].includes(lang);
+}
+
+export function isJSON(node: Node) {
+    const lang = getLangAttribute(node) || '';
+    // todo: check if this is still necessary
+    // https://github.com/prettier/prettier/pull/6293
+    return lang.endsWith('json') || lang.endsWith('importmap');
+}
+
+export function isLess(node: Node) {
+    const lang = getLangAttribute(node) || '';
+    return ['less'].includes(lang);
+}
+
+export function isScss(node: Node) {
+    const lang = getLangAttribute(node) || '';
+    return ['sass', 'scss'].includes(lang);
+}
+
+export function isPugTemplate(node: Node): boolean {
+    return (
+        node.type === 'RegularElement' &&
+        node.name === 'template' &&
+        getLangAttribute(node) === 'pug'
+    );
+}
+
+export function isLoneMustacheTag(node: true | Node[] | Node): boolean {
+    if (node === true || node == null) {
+        return false;
+    }
+
+    if (Array.isArray(node)) {
+        return node.length === 1 && node[0].type === 'ExpressionTag';
+    }
+
+    return node.type === 'ExpressionTag';
+}
+
+/**
+ * True if node is of type `{a}` or `a={a}`
+ */
+export function isOrCanBeConvertedToShorthand(node: AttributeNode | StyleDirectiveNode): boolean {
+    if (isLoneMustacheTag(node.value)) {
+        const value_node = Array.isArray(node.value) ? node.value[0] : (node.value as any);
+        const expression = value_node.type === 'ExpressionTag' ? value_node.expression : null;
+        if (!expression) {
+            return false;
+        }
+        return expression.type === 'Identifier' && expression.name === node.name;
+    }
+
+    return false;
+}
+
+export function getUnencodedText(node: TextNode) {
+    // `raw` will contain HTML entities in unencoded form
+    return node.raw || node.data;
+}
+
+export function isTextNodeStartingWithLinebreak(node: Node, nrLines = 1): node is TextNode {
+    return node.type === 'Text' && startsWithLinebreak(getUnencodedText(node), nrLines);
+}
+
+export function startsWithLinebreak(text: string, nrLines = 1): boolean {
+    return new RegExp(`^([\\t\\f\\r ]*\\n){${nrLines}}`).test(text);
+}
+
+export function isTextNodeEndingWithLinebreak(node: Node, nrLines = 1): node is TextNode {
+    return node.type === 'Text' && endsWithLinebreak(getUnencodedText(node), nrLines);
+}
+
+export function endsWithLinebreak(text: string, nrLines = 1): boolean {
+    return new RegExp(`(\\n[\\t\\f\\r ]*){${nrLines}}$`).test(text);
+}
+
+export function isTextNodeStartingWithWhitespace(node: Node): node is TextNode {
+    return (
+        node.type === 'Text' && STARTS_WITH_HTML_COLLAPSE_WHITESPACE_RE.test(getUnencodedText(node))
+    );
+}
+
+export function isTextNodeEndingWithWhitespace(node: Node): node is TextNode {
+    return (
+        node.type === 'Text' && ENDS_WITH_HTML_COLLAPSE_WHITESPACE_RE.test(getUnencodedText(node))
+    );
+}
+
+export function trimTextNodeRight(node: TextNode): void {
+    node.raw = node.raw && node.raw.replace(TRAILING_HTML_COLLAPSE_WHITESPACE_RE, '');
+    node.data = node.data && node.data.replace(TRAILING_HTML_COLLAPSE_WHITESPACE_RE, '');
+}
+
+export function trimTextNodeLeft(node: TextNode): void {
+    node.raw = node.raw && node.raw.replace(LEADING_HTML_COLLAPSE_WHITESPACE_RE, '');
+    node.data = node.data && node.data.replace(LEADING_HTML_COLLAPSE_WHITESPACE_RE, '');
+}
+
+/**
+ * Remove all leading whitespace up until the first non-empty text node,
+ * and all trailing whitespace from the last non-empty text node onwards.
+ */
+export function trimChildren(children: Node[]): void {
+    let firstNonEmptyNode = children.findIndex((n) => !isEmptyTextNode(n));
+    firstNonEmptyNode = firstNonEmptyNode === -1 ? children.length - 1 : firstNonEmptyNode;
+
+    let lastNonEmptyNode = findLastIndex((n) => !isEmptyTextNode(n), children);
+    lastNonEmptyNode = lastNonEmptyNode === -1 ? 0 : lastNonEmptyNode;
+
+    for (let i = 0; i <= firstNonEmptyNode; i++) {
+        const n = children[i];
+        if (n.type === 'Text') {
+            trimTextNodeLeft(n);
+        }
+    }
+
+    for (let i = children.length - 1; i >= lastNonEmptyNode; i--) {
+        const n = children[i];
+        if (n.type === 'Text') {
+            trimTextNodeRight(n);
+        }
+    }
+}
+
+/**
+ * Check if given node's start tag should hug its first child. This is the case for inline elements when there's
+ * no whitespace between the `>` and the first child.
+ */
+export function shouldHugStart(
+    node: Node,
+    isSupportedLanguage: boolean,
+    options: ParserOptions,
+): boolean {
+    if (!isSupportedLanguage) {
+        return true;
+    }
+
+    if (node.type === 'SvelteBoundary') {
+        return false;
+    }
+
+    if (isBlockElement(node, options)) {
+        return false;
+    }
+
+    if (!isNodeWithChildren(node)) {
+        return false;
+    }
+
+    const children: Node[] = getChildren(node);
+    if (children.length === 0) {
+        return true;
+    }
+
+    if (options.htmlWhitespaceSensitivity === 'ignore') {
+        return false;
+    }
+
+    const firstChild = children[0];
+    return !isTextNodeStartingWithWhitespace(firstChild);
+}
+
+/**
+ * Check if given node's end tag should hug its last child. This is the case for inline elements when there's
+ * no whitespace between the last child and the `</`.
+ */
+export function shouldHugEnd(
+    node: Node,
+    isSupportedLanguage: boolean,
+    options: ParserOptions,
+): boolean {
+    if (!isSupportedLanguage) {
+        return true;
+    }
+
+    if (node.type === 'SvelteBoundary') {
+        return false;
+    }
+
+    if (isBlockElement(node, options)) {
+        return false;
+    }
+
+    if (!isNodeWithChildren(node)) {
+        return false;
+    }
+
+    const children: Node[] = getChildren(node);
+    if (children.length === 0) {
+        return true;
+    }
+
+    if (options.htmlWhitespaceSensitivity === 'ignore') {
+        return false;
+    }
+
+    const lastChild = children[children.length - 1];
+    return !isTextNodeEndingWithWhitespace(lastChild);
+}
+
+/**
+ * Check for a svelte block if there's whitespace at the start and if it's a space or a line.
+ */
+export function checkWhitespaceAtStartOfSvelteBlock(
+    node: AST.Fragment,
+    options: ParserOptions,
+): 'none' | 'space' | 'line' {
+    if (!isNodeWithChildren(node as Node)) {
+        return 'none';
+    }
+
+    const children: Node[] = node.nodes;
+    if (children.length === 0) {
+        return 'none';
+    }
+
+    const firstChild = children[0];
+
+    if (isTextNodeStartingWithLinebreak(firstChild)) {
+        return 'line';
+    } else if (isTextNodeStartingWithWhitespace(firstChild)) {
+        return 'space';
+    }
+
+    // This extra check is necessary because the Svelte AST might swallow whitespace between
+    // the block's starting end and its first child.
+    const parentOpeningEnd = options.originalText.lastIndexOf('}', firstChild.start);
+    if (parentOpeningEnd > 0 && firstChild.start > parentOpeningEnd + 1) {
+        const textBetween = options.originalText.substring(parentOpeningEnd + 1, firstChild.start);
+        if (ONLY_HTML_COLLAPSE_WHITESPACE_RE.test(textBetween)) {
+            return startsWithLinebreak(textBetween) ? 'line' : 'space';
+        }
+    }
+
+    return 'none';
+}
+
+/**
+ * Check for a svelte block if there's whitespace at the end and if it's a space or a line.
+ */
+export function checkWhitespaceAtEndOfSvelteBlock(
+    node: AST.Fragment,
+    options: ParserOptions,
+): 'none' | 'space' | 'line' {
+    if (!isNodeWithChildren(node as Node)) {
+        return 'none';
+    }
+
+    const children: Node[] = node.nodes;
+    if (children.length === 0) {
+        return 'none';
+    }
+
+    const lastChild = children[children.length - 1];
+    if (isTextNodeEndingWithLinebreak(lastChild)) {
+        return 'line';
+    } else if (isTextNodeEndingWithWhitespace(lastChild)) {
+        return 'space';
+    }
+
+    // This extra check is necessary because the Svelte AST might swallow whitespace between
+    // the last child and the block's ending start.
+    const parentClosingStart = options.originalText.indexOf('{', lastChild.end);
+    if (parentClosingStart > 0 && lastChild.end < parentClosingStart) {
+        const textBetween = options.originalText.substring(lastChild.end, parentClosingStart);
+        if (ONLY_HTML_COLLAPSE_WHITESPACE_RE.test(textBetween)) {
+            return endsWithLinebreak(textBetween) ? 'line' : 'space';
+        }
+    }
+
+    return 'none';
+}
+
+export function isInsideQuotedAttribute(path: AstPath, options: ParserOptions): boolean {
+    const stack = path.stack as Node[];
+
+    return stack.some(
+        (node) =>
+            (node.type === 'Attribute' || node.type === 'StyleDirective') &&
+            !isLoneMustacheTag(node.value),
+    );
+}
+
+/**
+ * Returns true if the softline between `</tagName` and `>` can be omitted.
+ */
+export function canOmitSoftlineBeforeClosingTag(
+    node: Node,
+    path: AstPath,
+    options: ParserOptions,
+): boolean {
+    return (
+        isBracketSameLine(options) &&
+        (!hugsStartOfNextNode(node, options) || isLastChildWithinParentBlockElement(path, options))
+    );
+}
+
+/**
+ * Return true if given node does not hug the next node, meaning there's whitespace
+ * or the end of the doc afterwards.
+ */
+function hugsStartOfNextNode(node: Node, options: ParserOptions): boolean {
+    if (node.end === options.originalText.length) {
+        // end of document
+        return false;
+    }
+
+    return !STARTS_WITH_HTML_COLLAPSE_WHITESPACE_RE.test(options.originalText.substring(node.end));
+}
+
+function isLastChildWithinParentBlockElement(path: AstPath, options: ParserOptions): boolean {
+    const fragment = path.getParentNode() as Node | undefined;
+    const parent = path.getParentNode(1) as Node | undefined;
+
+    if (!fragment || !parent || !isBlockElement(parent, options)) {
+        return false;
+    }
+
+    const children = (fragment as AST.Fragment).nodes.filter((child) => !isEmptyTextNode(child));
+    const lastChild = children[children.length - 1];
+    return lastChild === path.getNode();
+}
+
+export function assignCommentsToNodes(ast: ASTNode) {
+    if (ast.module) {
+        (ast.module as ScriptNode).comments = removeAndGetLeadingComments(ast, ast.module as any);
+    }
+    if (ast.instance) {
+        (ast.instance as ScriptNode).comments = removeAndGetLeadingComments(
+            ast,
+            ast.instance as any,
+        );
+    }
+    if (ast.css) {
+        (ast.css as StyleNode).comments = removeAndGetLeadingComments(ast, ast.css as any);
+    }
+}
+
+/**
+ * Returns the comments that are above the current node and deletes them from the html ast.
+ */
+function removeAndGetLeadingComments(ast: ASTNode, current: Node): CommentInfo[] {
+    const siblings = ast.fragment.nodes as Node[];
+    const comments: CommentNode[] = [];
+    const newlines: TextNode[] = [];
+
+    if (!siblings.length) {
+        return [];
+    }
+
+    let node: Node = current;
+    let prev: Node | undefined = siblings.find((child) => child.end === node.start);
+    while (prev) {
+        if (
+            prev.type === 'Comment' &&
+            !isIgnoreStartDirective(prev) &&
+            !isIgnoreEndDirective(prev)
+        ) {
+            comments.push(prev);
+            if (comments.length !== newlines.length) {
+                newlines.push({ type: 'Text', data: '', raw: '', start: -1, end: -1 });
+            }
+        } else if (isEmptyTextNode(prev)) {
+            newlines.push(prev);
+        } else {
+            break;
+        }
+
+        node = prev;
+        prev = siblings.find((child) => child.end === node.start);
+    }
+
+    newlines.length = comments.length; // could be one more if first comment is preceeded by empty text node
+
+    for (const comment of comments) {
+        siblings.splice(siblings.indexOf(comment), 1);
+    }
+
+    for (const text of newlines) {
+        siblings.splice(siblings.indexOf(text), 1);
+    }
+
+    return comments
+        .map((comment, i) => ({
+            comment,
+            emptyLineAfter: getUnencodedText(newlines[i]).split('\n').length > 2,
+        }))
+        .reverse();
+}
