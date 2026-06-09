@@ -15,20 +15,20 @@ const languages: SupportLanguage[] = [
 ];
 
 const parsers = {
-  [PLUGIN_KEY]: <Parser<DjangoNode>>{
+  [PLUGIN_KEY]: {
     astFormat: PLUGIN_KEY,
     parse,
     locStart: (node) => node.index,
     locEnd: (node) => node.index + node.length,
-  },
+  } as Parser<DjangoNode>,
 };
 
 const printers = {
-  [PLUGIN_KEY]: <Printer<DjangoNode>>{
+  [PLUGIN_KEY]: {
     print,
     embed,
     getVisitorKeys,
-  },
+  } as Printer<DjangoNode>,
 };
 
 const options = {};
