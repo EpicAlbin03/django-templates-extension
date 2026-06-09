@@ -43,7 +43,7 @@
     "url": "https://github.com/EpicAlbin03/prettier-plugin-django/issues"
   },
   "engines": {
-    "node": ">=24"
+    "node": ">=22"
   },
   "homepage": "https://github.com/EpicAlbin03/prettier-plugin-django#readme",
   "devDependencies": {

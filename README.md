@@ -4,11 +4,6 @@ Format Django templates with Prettier.
 
 ## Install
 
-Requirements:
-
-- Node.js `>=24`
-- Prettier `^3`
-
 ```bash
 npm i -D prettier prettier-plugin-django
 ```
@@ -45,15 +40,15 @@ Using range ignores is the best way to tell prettier to ignore part of files. Mo
 
 ```html
 <!-- prettier-ignore-start -->
-  <script>
-    window.someData = {{ data|safe }}
-  </script>
+<script>
+  window.someData = {{ data|safe }}
+</script>
 <!-- prettier-ignore-end -->
 
 <!-- prettier-ignore-start -->
-  <style>
-    :root { --accent-color: {{ theme_accent_color }} }
-  </style>
+<style>
+  :root { --accent-color: {{ theme_accent_color }} }
+</style>
 <!-- prettier-ignore-end -->
 ```
 
@@ -61,14 +56,12 @@ Or using Django comments:
 
 ```html
 {# prettier-ignore-start #}
-  <script>
-    window.someData = {{ data|safe }}
-  </script>
-{# prettier-ignore-end #} 
-
-{# prettier-ignore-start #}
-  <style>
-    :root { --accent-color: {{ theme_accent_color }} }
-  </style>
+<script>
+  window.someData = {{ data|safe }}
+</script>
+{# prettier-ignore-end #} {# prettier-ignore-start #}
+<style>
+  :root { --accent-color: {{ theme_accent_color }} }
+</style>
 {# prettier-ignore-end #}
 ```
