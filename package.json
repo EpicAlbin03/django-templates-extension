@@ -36,7 +36,11 @@
   },
   "keywords": [
     "prettier",
-    "django"
+    "plugin",
+    "django",
+    "html",
+    "templates",
+    "formatter"
   ],
   "author": "Albin Carlsson <inquires@albincarlsson.com>",
   "license": "MIT",
