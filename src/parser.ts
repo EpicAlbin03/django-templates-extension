@@ -398,6 +398,23 @@ function hasMatchingEnd(tokens: Token[], startIndex: number, startName: string):
     .some((token) => token.type === 'Tag' && endNames.has(token.name));
 }
 
+function followsIgnoredRegionOrHtmlComment(tokens: Token[], index: number): boolean {
+  for (let cursor = index - 1; cursor >= 0; cursor -= 1) {
+    const token = tokens[cursor];
+    if (token.type === 'Text' && /^\s*$/.test(token.raw)) {
+      continue;
+    }
+
+    if (token.type === 'IgnoreBlock') {
+      return true;
+    }
+
+    return token.type === 'Text' && token.raw.startsWith('<!--') && token.raw.endsWith('-->');
+  }
+
+  return false;
+}
+
 function placeholderKindForToken(token: Token, forceBlock = false): PlaceholderKind {
   if (token.inTag && !token.inAttribute) {
     return 'attr';
@@ -448,7 +465,11 @@ export const parse: Parser<DjangoNode>['parse'] = (text) => {
 
   for (const [tokenIndex, token] of tokens.entries()) {
     const currentIndex = token.start + delta;
-    const preNewLines = countPreNewLines(text, token.start);
+    const rawPreNewLines = countPreNewLines(text, token.start);
+    const preNewLines =
+      rawPreNewLines > 1 && followsIgnoredRegionOrHtmlComment(tokens, tokenIndex)
+        ? rawPreNewLines - 1
+        : rawPreNewLines;
 
     if (token.type === 'Text') {
       continue;
