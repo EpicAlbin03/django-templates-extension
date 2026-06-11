@@ -1,7 +1,7 @@
 {
-    "compilerOptions": {
-        "module": "esnext",
-        "target": "esnext",
-        "moduleResolution": "Bundler"
-    }
+	"compilerOptions": {
+		"module": "esnext",
+		"target": "esnext",
+		"moduleResolution": "Bundler"
+	}
 }

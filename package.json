@@ -1,24 +1,24 @@
 {
-    "name": "@svelte/language-tools",
-    "version": "1.0.0",
-    "author": "Svelte Contributors",
-    "license": "MIT",
-    "private": true,
-    "scripts": {
-        "bootstrap": "pnpm --filter django-vscode build:grammar",
-        "build": "tsc -b",
-        "test": "cross-env CI=true pnpm --filter svelte-language-server --filter django-vscode test",
-        "watch": "tsc -b -watch",
-        "format": "prettier --write .",
-        "lint": "prettier --check ."
-    },
-    "dependencies": {
-        "typescript": "^6.0.3"
-    },
-    "devDependencies": {
-        "cross-env": "^7.0.2",
-        "prettier": "~3.3.3",
-        "ts-node": "^10.0.0"
-    },
-    "packageManager": "pnpm@9.3.0"
+	"name": "@svelte/language-tools",
+	"version": "1.0.0",
+	"author": "Svelte Contributors",
+	"license": "MIT",
+	"private": true,
+	"scripts": {
+		"bootstrap": "pnpm --filter django-vscode build:grammar",
+		"build": "tsc -b",
+		"test": "cross-env CI=true pnpm --filter svelte-language-server --filter django-vscode test",
+		"watch": "tsc -b -watch",
+		"format": "prettier --write .",
+		"lint": "prettier --check ."
+	},
+	"dependencies": {
+		"typescript": "^6.0.3"
+	},
+	"devDependencies": {
+		"cross-env": "^7.0.2",
+		"prettier": "~3.3.3",
+		"ts-node": "^10.0.0"
+	},
+	"packageManager": "pnpm@9.3.0"
 }

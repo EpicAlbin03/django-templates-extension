@@ -1,7 +1,7 @@
 export interface PageLoadEvent<> {
-    test: {
-        exists: boolean;
-    };
+	test: {
+		exists: boolean
+	}
 }
 
-export type PageData = ReturnType<typeof import('./+page').load>;
+export type PageData = ReturnType<typeof import("./+page").load>

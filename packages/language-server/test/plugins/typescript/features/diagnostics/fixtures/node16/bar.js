@@ -1,2 +1,2 @@
-export const foo = true;
-export const baz = true;
+export const foo = true
+export const baz = true

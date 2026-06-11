@@ -1,16 +1,16 @@
-import { IPseudoClassData } from 'vscode-css-languageservice';
+import { IPseudoClassData } from "vscode-css-languageservice"
 
 export const pseudoClass: IPseudoClassData[] = [
-    {
-        name: ':global()',
-        description: `[svelte] :global modifier
+	{
+		name: ":global()",
+		description: `[svelte] :global modifier
 
 Applying styles to a selector globally`,
-        references: [
-            {
-                name: 'Svelte.dev Reference',
-                url: 'https://svelte.dev/docs/svelte/global-styles'
-            }
-        ]
-    }
-];
+		references: [
+			{
+				name: "Svelte.dev Reference",
+				url: "https://svelte.dev/docs/svelte/global-styles"
+			}
+		]
+	}
+]

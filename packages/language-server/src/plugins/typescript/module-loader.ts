@@ -1,133 +1,129 @@
-import ts from 'typescript';
-import { FileMap, FileSet } from '../../lib/documents/fileCollection';
-import { createGetCanonicalFileName, getLastPartOfPath, toFileNameLowerCase } from '../../utils';
-import { DocumentSnapshot } from './DocumentSnapshot';
-import { createSvelteSys } from './svelte-sys';
+import ts from "typescript"
+import { FileMap, FileSet } from "../../lib/documents/fileCollection"
+import { createGetCanonicalFileName, getLastPartOfPath, toFileNameLowerCase } from "../../utils"
+import { DocumentSnapshot } from "./DocumentSnapshot"
+import { createSvelteSys } from "./svelte-sys"
 import {
-    ensureRealSvelteFilePath,
-    getExtensionFromScriptKind,
-    isSvelteFilePath,
-    isVirtualSvelteFilePath,
-    toVirtualSvelteFilePath
-} from './utils';
+	ensureRealSvelteFilePath,
+	getExtensionFromScriptKind,
+	isSvelteFilePath,
+	isVirtualSvelteFilePath,
+	toVirtualSvelteFilePath
+} from "./utils"
 
-const CACHE_KEY_SEPARATOR = ':::';
+const CACHE_KEY_SEPARATOR = ":::"
 /**
  * Caches resolved modules.
  */
 class ModuleResolutionCache {
-    private cache = new FileMap<ts.ResolvedModuleWithFailedLookupLocations>();
-    private pendingInvalidations = new FileSet();
-    private getCanonicalFileName = createGetCanonicalFileName(ts.sys.useCaseSensitiveFileNames);
+	private cache = new FileMap<ts.ResolvedModuleWithFailedLookupLocations>()
+	private pendingInvalidations = new FileSet()
+	private getCanonicalFileName = createGetCanonicalFileName(ts.sys.useCaseSensitiveFileNames)
 
-    /**
-     * Tries to get a cached module.
-     * Careful: `undefined` can mean either there's no match found, or that the result resolved to `undefined`.
-     */
-    get(
-        moduleName: string,
-        containingFile: string
-    ): ts.ResolvedModuleWithFailedLookupLocations | undefined {
-        return this.cache.get(this.getKey(moduleName, containingFile));
-    }
+	/**
+	 * Tries to get a cached module.
+	 * Careful: `undefined` can mean either there's no match found, or that the result resolved to `undefined`.
+	 */
+	get(
+		moduleName: string,
+		containingFile: string
+	): ts.ResolvedModuleWithFailedLookupLocations | undefined {
+		return this.cache.get(this.getKey(moduleName, containingFile))
+	}
 
-    /**
-     * Checks if has cached module.
-     */
-    has(moduleName: string, containingFile: string): boolean {
-        return this.cache.has(this.getKey(moduleName, containingFile));
-    }
+	/**
+	 * Checks if has cached module.
+	 */
+	has(moduleName: string, containingFile: string): boolean {
+		return this.cache.has(this.getKey(moduleName, containingFile))
+	}
 
-    /**
-     * Caches resolved module (or undefined).
-     */
-    set(
-        moduleName: string,
-        containingFile: string,
-        resolvedModule: ts.ResolvedModuleWithFailedLookupLocations
-    ) {
-        this.cache.set(this.getKey(moduleName, containingFile), resolvedModule);
-    }
+	/**
+	 * Caches resolved module (or undefined).
+	 */
+	set(
+		moduleName: string,
+		containingFile: string,
+		resolvedModule: ts.ResolvedModuleWithFailedLookupLocations
+	) {
+		this.cache.set(this.getKey(moduleName, containingFile), resolvedModule)
+	}
 
-    /**
-     * Deletes module from cache. Call this if a file was deleted.
-     * @param resolvedModuleName full path of the module
-     */
-    delete(resolvedModuleName: string): void {
-        resolvedModuleName = this.getCanonicalFileName(resolvedModuleName);
-        this.cache.forEach((val, key) => {
-            if (
-                val.resolvedModule &&
-                this.getCanonicalFileName(val.resolvedModule.resolvedFileName) ===
-                    resolvedModuleName
-            ) {
-                this.cache.delete(key);
-                this.pendingInvalidations.add(key.split(CACHE_KEY_SEPARATOR).shift() || '');
-            }
-        });
-    }
+	/**
+	 * Deletes module from cache. Call this if a file was deleted.
+	 * @param resolvedModuleName full path of the module
+	 */
+	delete(resolvedModuleName: string): void {
+		resolvedModuleName = this.getCanonicalFileName(resolvedModuleName)
+		this.cache.forEach((val, key) => {
+			if (
+				val.resolvedModule &&
+				this.getCanonicalFileName(val.resolvedModule.resolvedFileName) === resolvedModuleName
+			) {
+				this.cache.delete(key)
+				this.pendingInvalidations.add(key.split(CACHE_KEY_SEPARATOR).shift() || "")
+			}
+		})
+	}
 
-    /**
-     * Deletes everything from cache that resolved to `undefined`
-     * and which might match the path.
-     */
-    deleteByValues(list: ts.ResolvedModuleWithFailedLookupLocations[]): void {
-        this.cache.forEach((val, key) => {
-            if (list.includes(val)) {
-                this.cache.delete(key);
-            }
-        });
-    }
+	/**
+	 * Deletes everything from cache that resolved to `undefined`
+	 * and which might match the path.
+	 */
+	deleteByValues(list: ts.ResolvedModuleWithFailedLookupLocations[]): void {
+		this.cache.forEach((val, key) => {
+			if (list.includes(val)) {
+				this.cache.delete(key)
+			}
+		})
+	}
 
-    private getKey(moduleName: string, containingFile: string) {
-        return containingFile + CACHE_KEY_SEPARATOR + ensureRealSvelteFilePath(moduleName);
-    }
+	private getKey(moduleName: string, containingFile: string) {
+		return containingFile + CACHE_KEY_SEPARATOR + ensureRealSvelteFilePath(moduleName)
+	}
 
-    clearPendingInvalidations() {
-        this.pendingInvalidations.clear();
-    }
+	clearPendingInvalidations() {
+		this.pendingInvalidations.clear()
+	}
 
-    oneOfResolvedModuleChanged(path: string) {
-        return this.pendingInvalidations.size > 0 && this.pendingInvalidations.has(path);
-    }
+	oneOfResolvedModuleChanged(path: string) {
+		return this.pendingInvalidations.size > 0 && this.pendingInvalidations.has(path)
+	}
 }
 
 class ImpliedNodeFormatResolver {
-    constructor(private readonly tsSystem: ts.System) {}
+	constructor(private readonly tsSystem: ts.System) {}
 
-    resolve(
-        importPath: string,
-        importIdxInFile: number,
-        sourceFile: ts.SourceFile | undefined,
-        compilerOptions: ts.CompilerOptions
-    ) {
-        if (isSvelteFilePath(importPath)) {
-            // Svelte imports should use the old resolution algorithm, else they are not found
-            return undefined;
-        }
+	resolve(
+		importPath: string,
+		importIdxInFile: number,
+		sourceFile: ts.SourceFile | undefined,
+		compilerOptions: ts.CompilerOptions
+	) {
+		if (isSvelteFilePath(importPath)) {
+			// Svelte imports should use the old resolution algorithm, else they are not found
+			return undefined
+		}
 
-        let mode: ReturnType<typeof ts.getModeForResolutionAtIndex> = undefined;
-        if (sourceFile) {
-            mode = ts.getModeForResolutionAtIndex(sourceFile, importIdxInFile, compilerOptions);
-        }
-        return mode;
-    }
+		let mode: ReturnType<typeof ts.getModeForResolutionAtIndex> = undefined
+		if (sourceFile) {
+			mode = ts.getModeForResolutionAtIndex(sourceFile, importIdxInFile, compilerOptions)
+		}
+		return mode
+	}
 
-    resolveForTypeReference(
-        entry: string | ts.FileReference,
-        sourceFile: ts.SourceFile | undefined
-    ) {
-        let mode = undefined;
-        if (sourceFile) {
-            mode = ts.getModeForFileReference(entry, sourceFile?.impliedNodeFormat);
-        }
-        return mode;
-    }
+	resolveForTypeReference(entry: string | ts.FileReference, sourceFile: ts.SourceFile | undefined) {
+		let mode = undefined
+		if (sourceFile) {
+			mode = ts.getModeForFileReference(entry, sourceFile?.impliedNodeFormat)
+		}
+		return mode
+	}
 }
 
 // https://github.com/microsoft/TypeScript/blob/dddd0667f012c51582c2ac92c08b8e57f2456587/src/compiler/program.ts#L989
 function getTypeReferenceResolutionName<T extends ts.FileReference | string>(entry: T) {
-    return typeof entry !== 'string' ? toFileNameLowerCase(entry.fileName) : entry;
+	return typeof entry !== "string" ? toFileNameLowerCase(entry.fileName) : entry
 }
 
 /**
@@ -143,243 +139,238 @@ function getTypeReferenceResolutionName<T extends ts.FileReference | string>(ent
  * @param compilerOptions The typescript compiler options
  */
 export function createSvelteModuleLoader(
-    getSnapshot: (fileName: string) => DocumentSnapshot,
-    compilerOptions: ts.CompilerOptions,
-    tsSystem: ts.System,
-    tsModule: typeof ts,
-    getModuleResolutionHost: () => ts.ModuleResolutionHost | undefined
+	getSnapshot: (fileName: string) => DocumentSnapshot,
+	compilerOptions: ts.CompilerOptions,
+	tsSystem: ts.System,
+	tsModule: typeof ts,
+	getModuleResolutionHost: () => ts.ModuleResolutionHost | undefined
 ) {
-    const getCanonicalFileName = createGetCanonicalFileName(tsSystem.useCaseSensitiveFileNames);
-    const svelteSys = createSvelteSys(tsSystem);
-    // tsModuleCache caches package.json parsing and module resolution for directory
-    const tsModuleCache = tsModule.createModuleResolutionCache(
-        tsSystem.getCurrentDirectory(),
-        createGetCanonicalFileName(tsSystem.useCaseSensitiveFileNames)
-    );
-    const tsTypeReferenceDirectiveCache = tsModule.createTypeReferenceDirectiveResolutionCache(
-        tsSystem.getCurrentDirectory(),
-        getCanonicalFileName,
-        undefined,
-        tsModuleCache.getPackageJsonInfoCache()
-    );
-    const moduleCache = new ModuleResolutionCache();
-    const typeReferenceCache = new Map<
-        string,
-        ts.ResolvedTypeReferenceDirectiveWithFailedLookupLocations
-    >();
+	const getCanonicalFileName = createGetCanonicalFileName(tsSystem.useCaseSensitiveFileNames)
+	const svelteSys = createSvelteSys(tsSystem)
+	// tsModuleCache caches package.json parsing and module resolution for directory
+	const tsModuleCache = tsModule.createModuleResolutionCache(
+		tsSystem.getCurrentDirectory(),
+		createGetCanonicalFileName(tsSystem.useCaseSensitiveFileNames)
+	)
+	const tsTypeReferenceDirectiveCache = tsModule.createTypeReferenceDirectiveResolutionCache(
+		tsSystem.getCurrentDirectory(),
+		getCanonicalFileName,
+		undefined,
+		tsModuleCache.getPackageJsonInfoCache()
+	)
+	const moduleCache = new ModuleResolutionCache()
+	const typeReferenceCache = new Map<
+		string,
+		ts.ResolvedTypeReferenceDirectiveWithFailedLookupLocations
+	>()
 
-    const impliedNodeFormatResolver = new ImpliedNodeFormatResolver(tsSystem);
-    const resolutionWithFailedLookup = new Set<
-        ts.ResolvedModuleWithFailedLookupLocations & {
-            files?: Set<string>;
-        }
-    >();
-    const failedLocationInvalidated = new FileSet(tsSystem.useCaseSensitiveFileNames);
-    const pendingFailedLocationCheck = new FileSet(tsSystem.useCaseSensitiveFileNames);
+	const impliedNodeFormatResolver = new ImpliedNodeFormatResolver(tsSystem)
+	const resolutionWithFailedLookup = new Set<
+		ts.ResolvedModuleWithFailedLookupLocations & {
+			files?: Set<string>
+		}
+	>()
+	const failedLocationInvalidated = new FileSet(tsSystem.useCaseSensitiveFileNames)
+	const pendingFailedLocationCheck = new FileSet(tsSystem.useCaseSensitiveFileNames)
 
-    return {
-        svelteFileExists: svelteSys.svelteFileExists,
-        fileExists: svelteSys.fileExists,
-        readFile: svelteSys.readFile,
-        readDirectory: svelteSys.readDirectory,
-        deleteFromModuleCache: (path: string) => {
-            svelteSys.deleteFromCache(path);
-            moduleCache.delete(path);
-        },
-        scheduleResolutionFailedLocationCheck: (path: string) => {
-            svelteSys.deleteFromCache(path);
-            if (isSvelteFilePath(path)) {
-                pendingFailedLocationCheck.add(toVirtualSvelteFilePath(path));
-            } else {
-                pendingFailedLocationCheck.add(path);
-            }
-        },
-        resolveModuleNames,
-        resolveTypeReferenceDirectiveReferences,
-        mightHaveInvalidatedResolutions,
-        clearPendingInvalidations,
-        getModuleResolutionCache: () => tsModuleCache,
-        invalidateFailedLocationResolution
-    };
+	return {
+		svelteFileExists: svelteSys.svelteFileExists,
+		fileExists: svelteSys.fileExists,
+		readFile: svelteSys.readFile,
+		readDirectory: svelteSys.readDirectory,
+		deleteFromModuleCache: (path: string) => {
+			svelteSys.deleteFromCache(path)
+			moduleCache.delete(path)
+		},
+		scheduleResolutionFailedLocationCheck: (path: string) => {
+			svelteSys.deleteFromCache(path)
+			if (isSvelteFilePath(path)) {
+				pendingFailedLocationCheck.add(toVirtualSvelteFilePath(path))
+			} else {
+				pendingFailedLocationCheck.add(path)
+			}
+		},
+		resolveModuleNames,
+		resolveTypeReferenceDirectiveReferences,
+		mightHaveInvalidatedResolutions,
+		clearPendingInvalidations,
+		getModuleResolutionCache: () => tsModuleCache,
+		invalidateFailedLocationResolution
+	}
 
-    function resolveModuleNames(
-        moduleNames: string[],
-        containingFile: string,
-        _reusedNames: string[] | undefined,
-        redirectedReference: ts.ResolvedProjectReference | undefined,
-        options: ts.CompilerOptions,
-        containingSourceFile?: ts.SourceFile | undefined
-    ): Array<ts.ResolvedModule | undefined> {
-        return moduleNames.map((moduleName, index) => {
-            const cached = moduleCache.get(moduleName, containingFile);
-            if (cached) {
-                return cached.resolvedModule;
-            }
+	function resolveModuleNames(
+		moduleNames: string[],
+		containingFile: string,
+		_reusedNames: string[] | undefined,
+		redirectedReference: ts.ResolvedProjectReference | undefined,
+		options: ts.CompilerOptions,
+		containingSourceFile?: ts.SourceFile | undefined
+	): Array<ts.ResolvedModule | undefined> {
+		return moduleNames.map((moduleName, index) => {
+			const cached = moduleCache.get(moduleName, containingFile)
+			if (cached) {
+				return cached.resolvedModule
+			}
 
-            const resolvedModule = resolveModuleName(
-                moduleName,
-                containingFile,
-                containingSourceFile,
-                index,
-                redirectedReference,
-                options
-            );
+			const resolvedModule = resolveModuleName(
+				moduleName,
+				containingFile,
+				containingSourceFile,
+				index,
+				redirectedReference,
+				options
+			)
 
-            cacheResolutionWithFailedLookup(resolvedModule, containingFile);
+			cacheResolutionWithFailedLookup(resolvedModule, containingFile)
 
-            moduleCache.set(moduleName, containingFile, resolvedModule);
-            return resolvedModule?.resolvedModule;
-        });
-    }
+			moduleCache.set(moduleName, containingFile, resolvedModule)
+			return resolvedModule?.resolvedModule
+		})
+	}
 
-    function resolveModuleName(
-        name: string,
-        containingFile: string,
-        containingSourceFile: ts.SourceFile | undefined,
-        index: number,
-        redirectedReference: ts.ResolvedProjectReference | undefined,
-        option: ts.CompilerOptions
-    ): ts.ResolvedModuleWithFailedLookupLocations {
-        const mode = impliedNodeFormatResolver.resolve(
-            name,
-            index,
-            containingSourceFile,
-            // use the same compiler options as resolveModuleName
-            // otherwise it might not find the module because of inconsistent module resolution strategy
-            redirectedReference?.commandLine.options ?? option
-        );
-        const resolvedModuleWithFailedLookup = tsModule.resolveModuleName(
-            name,
-            containingFile,
-            compilerOptions,
-            getModuleResolutionHost() ?? svelteSys,
-            tsModuleCache,
-            redirectedReference,
-            mode
-        );
+	function resolveModuleName(
+		name: string,
+		containingFile: string,
+		containingSourceFile: ts.SourceFile | undefined,
+		index: number,
+		redirectedReference: ts.ResolvedProjectReference | undefined,
+		option: ts.CompilerOptions
+	): ts.ResolvedModuleWithFailedLookupLocations {
+		const mode = impliedNodeFormatResolver.resolve(
+			name,
+			index,
+			containingSourceFile,
+			// use the same compiler options as resolveModuleName
+			// otherwise it might not find the module because of inconsistent module resolution strategy
+			redirectedReference?.commandLine.options ?? option
+		)
+		const resolvedModuleWithFailedLookup = tsModule.resolveModuleName(
+			name,
+			containingFile,
+			compilerOptions,
+			getModuleResolutionHost() ?? svelteSys,
+			tsModuleCache,
+			redirectedReference,
+			mode
+		)
 
-        const resolvedModule = resolvedModuleWithFailedLookup.resolvedModule;
+		const resolvedModule = resolvedModuleWithFailedLookup.resolvedModule
 
-        if (!resolvedModule || !isVirtualSvelteFilePath(resolvedModule.resolvedFileName)) {
-            return resolvedModuleWithFailedLookup;
-        }
+		if (!resolvedModule || !isVirtualSvelteFilePath(resolvedModule.resolvedFileName)) {
+			return resolvedModuleWithFailedLookup
+		}
 
-        const resolvedFileName = svelteSys.getRealSveltePathIfExists(
-            resolvedModule.resolvedFileName
-        );
+		const resolvedFileName = svelteSys.getRealSveltePathIfExists(resolvedModule.resolvedFileName)
 
-        if (!isSvelteFilePath(resolvedFileName)) {
-            return resolvedModuleWithFailedLookup;
-        }
+		if (!isSvelteFilePath(resolvedFileName)) {
+			return resolvedModuleWithFailedLookup
+		}
 
-        const snapshot = getSnapshot(resolvedFileName);
+		const snapshot = getSnapshot(resolvedFileName)
 
-        const resolvedSvelteModule: ts.ResolvedModuleFull = {
-            extension: getExtensionFromScriptKind(snapshot && snapshot.scriptKind),
-            resolvedFileName,
-            isExternalLibraryImport: resolvedModule.isExternalLibraryImport
-        };
-        return {
-            ...resolvedModuleWithFailedLookup,
-            resolvedModule: resolvedSvelteModule
-        };
-    }
+		const resolvedSvelteModule: ts.ResolvedModuleFull = {
+			extension: getExtensionFromScriptKind(snapshot && snapshot.scriptKind),
+			resolvedFileName,
+			isExternalLibraryImport: resolvedModule.isExternalLibraryImport
+		}
+		return {
+			...resolvedModuleWithFailedLookup,
+			resolvedModule: resolvedSvelteModule
+		}
+	}
 
-    function resolveTypeReferenceDirectiveReferences<T extends ts.FileReference | string>(
-        typeDirectiveNames: readonly T[],
-        containingFile: string,
-        redirectedReference: ts.ResolvedProjectReference | undefined,
-        options: ts.CompilerOptions,
-        containingSourceFile: ts.SourceFile | undefined
-    ): readonly ts.ResolvedTypeReferenceDirectiveWithFailedLookupLocations[] {
-        return typeDirectiveNames.map((typeDirectiveName) => {
-            const entry = getTypeReferenceResolutionName(typeDirectiveName);
-            const mode = impliedNodeFormatResolver.resolveForTypeReference(
-                entry,
-                containingSourceFile
-            );
+	function resolveTypeReferenceDirectiveReferences<T extends ts.FileReference | string>(
+		typeDirectiveNames: readonly T[],
+		containingFile: string,
+		redirectedReference: ts.ResolvedProjectReference | undefined,
+		options: ts.CompilerOptions,
+		containingSourceFile: ts.SourceFile | undefined
+	): readonly ts.ResolvedTypeReferenceDirectiveWithFailedLookupLocations[] {
+		return typeDirectiveNames.map((typeDirectiveName) => {
+			const entry = getTypeReferenceResolutionName(typeDirectiveName)
+			const mode = impliedNodeFormatResolver.resolveForTypeReference(entry, containingSourceFile)
 
-            const key = `${entry}|${mode}`;
-            let result = typeReferenceCache.get(key);
-            if (!result) {
-                result = ts.resolveTypeReferenceDirective(
-                    entry,
-                    containingFile,
-                    options,
-                    {
-                        ...tsSystem
-                    },
-                    redirectedReference,
-                    tsTypeReferenceDirectiveCache,
-                    mode
-                );
+			const key = `${entry}|${mode}`
+			let result = typeReferenceCache.get(key)
+			if (!result) {
+				result = ts.resolveTypeReferenceDirective(
+					entry,
+					containingFile,
+					options,
+					{
+						...tsSystem
+					},
+					redirectedReference,
+					tsTypeReferenceDirectiveCache,
+					mode
+				)
 
-                typeReferenceCache.set(key, result);
-            }
+				typeReferenceCache.set(key, result)
+			}
 
-            return result;
-        });
-    }
+			return result
+		})
+	}
 
-    function mightHaveInvalidatedResolutions(path: string) {
-        return (
-            moduleCache.oneOfResolvedModuleChanged(path) ||
-            // tried but failed file might now exist
-            (failedLocationInvalidated.size > 0 && failedLocationInvalidated.has(path))
-        );
-    }
+	function mightHaveInvalidatedResolutions(path: string) {
+		return (
+			moduleCache.oneOfResolvedModuleChanged(path) ||
+			// tried but failed file might now exist
+			(failedLocationInvalidated.size > 0 && failedLocationInvalidated.has(path))
+		)
+	}
 
-    function clearPendingInvalidations() {
-        moduleCache.clearPendingInvalidations();
-        failedLocationInvalidated.clear();
-        pendingFailedLocationCheck.clear();
-    }
+	function clearPendingInvalidations() {
+		moduleCache.clearPendingInvalidations()
+		failedLocationInvalidated.clear()
+		pendingFailedLocationCheck.clear()
+	}
 
-    function cacheResolutionWithFailedLookup(
-        resolvedModule: ts.ResolvedModuleWithFailedLookupLocations & {
-            files?: Set<string>;
-        },
-        containingFile: string
-    ) {
-        if (!resolvedModule.failedLookupLocations?.length) {
-            return;
-        }
+	function cacheResolutionWithFailedLookup(
+		resolvedModule: ts.ResolvedModuleWithFailedLookupLocations & {
+			files?: Set<string>
+		},
+		containingFile: string
+	) {
+		if (!resolvedModule.failedLookupLocations?.length) {
+			return
+		}
 
-        // The resolvedModule object will be reused in different files. A bit hacky, but TypeScript also does this.
-        // https://github.com/microsoft/TypeScript/blob/11e79327598db412a161616849041487673fadab/src/compiler/resolutionCache.ts#L1103
-        resolvedModule.files ??= new Set();
-        resolvedModule.files.add(containingFile);
-        resolutionWithFailedLookup.add(resolvedModule);
-    }
+		// The resolvedModule object will be reused in different files. A bit hacky, but TypeScript also does this.
+		// https://github.com/microsoft/TypeScript/blob/11e79327598db412a161616849041487673fadab/src/compiler/resolutionCache.ts#L1103
+		resolvedModule.files ??= new Set()
+		resolvedModule.files.add(containingFile)
+		resolutionWithFailedLookup.add(resolvedModule)
+	}
 
-    function invalidateFailedLocationResolution() {
-        if (pendingFailedLocationCheck.size === 0) {
-            return;
-        }
+	function invalidateFailedLocationResolution() {
+		if (pendingFailedLocationCheck.size === 0) {
+			return
+		}
 
-        const toRemoves: ts.ResolvedModuleWithFailedLookupLocations[] = [];
-        resolutionWithFailedLookup.forEach((resolvedModule) => {
-            if (!resolvedModule.failedLookupLocations) {
-                return;
-            }
+		const toRemoves: ts.ResolvedModuleWithFailedLookupLocations[] = []
+		resolutionWithFailedLookup.forEach((resolvedModule) => {
+			if (!resolvedModule.failedLookupLocations) {
+				return
+			}
 
-            for (const location of resolvedModule.failedLookupLocations) {
-                if (pendingFailedLocationCheck.has(location)) {
-                    resolutionWithFailedLookup.delete(resolvedModule);
-                    toRemoves.push(resolvedModule);
-                    resolvedModule.files?.forEach((file) => {
-                        failedLocationInvalidated.add(file);
-                    });
-                    break;
-                }
-            }
-        });
+			for (const location of resolvedModule.failedLookupLocations) {
+				if (pendingFailedLocationCheck.has(location)) {
+					resolutionWithFailedLookup.delete(resolvedModule)
+					toRemoves.push(resolvedModule)
+					resolvedModule.files?.forEach((file) => {
+						failedLocationInvalidated.add(file)
+					})
+					break
+				}
+			}
+		})
 
-        if (toRemoves.length) {
-            moduleCache.deleteByValues(toRemoves);
-            tsModuleCache.clear();
-            tsTypeReferenceDirectiveCache.clear();
-        }
-        pendingFailedLocationCheck.clear();
-    }
+		if (toRemoves.length) {
+			moduleCache.deleteByValues(toRemoves)
+			tsModuleCache.clear()
+			tsTypeReferenceDirectiveCache.clear()
+		}
+		pendingFailedLocationCheck.clear()
+	}
 }

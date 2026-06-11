@@ -8,8 +8,8 @@ If you added `"files.associations": {"*.svelte": "html" }` to your VSCode settin
 
 If you have previously installed the old "Svelte" extension by James Birtles, uninstall it:
 
--   Through the UI: You can find it when searching for `@installed` in the extensions window (searching `Svelte` won't work).
--   Command line: `code --uninstall-extension JamesBirtles.django-vscode`
+- Through the UI: You can find it when searching for `@installed` in the extensions window (searching `Svelte` won't work).
+- Command line: `code --uninstall-extension JamesBirtles.django-vscode`
 
 This extension comes bundled with a formatter for Svelte files. To let this extension format Svelte files, adjust your VS Code settings:
 
@@ -31,18 +31,18 @@ More docs and troubleshooting: [See here](/docs/README.md).
 
 You can expect the following within Svelte files:
 
--   Diagnostic messages
--   Support for svelte preprocessors that provide source maps
--   Formatting (via [prettier-plugin-svelte](https://github.com/sveltejs/prettier-plugin-svelte))
--   A command to preview the compiled code (DOM mode): "Svelte: Show Compiled Code"
--   A command to extract template content into a new component: "Svelte: Extract Component"
--   Hover info
--   Autocompletions
--   [Emmet](https://emmet.io/)
--   Symbols in outline panel
--   CSS Color highlighting and color picker
--   Go to definition
--   Code Actions
+- Diagnostic messages
+- Support for svelte preprocessors that provide source maps
+- Formatting (via [prettier-plugin-svelte](https://github.com/sveltejs/prettier-plugin-svelte))
+- A command to preview the compiled code (DOM mode): "Svelte: Show Compiled Code"
+- A command to extract template content into a new component: "Svelte: Extract Component"
+- Hover info
+- Autocompletions
+- [Emmet](https://emmet.io/)
+- Symbols in outline panel
+- CSS Color highlighting and color picker
+- Go to definition
+- Code Actions
 
 The extension also comes packaged with a TypeScript plugin, which when activated provides intellisense within JavaScript and TypeScript files for interacting with Svelte files.
 
@@ -97,4 +97,4 @@ Settings to toggle specific features of the extension. The full list of all sett
 
 ### Credits
 
--   The PostCSS grammar is based on [hudochenkov/Syntax-highlighting-for-PostCSS](https://github.com/hudochenkov/Syntax-highlighting-for-PostCSS)
+- The PostCSS grammar is based on [hudochenkov/Syntax-highlighting-for-PostCSS](https://github.com/hudochenkov/Syntax-highlighting-for-PostCSS)

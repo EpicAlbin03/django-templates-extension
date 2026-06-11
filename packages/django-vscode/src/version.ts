@@ -1,4 +1,4 @@
-import { lt, coerce, gte } from 'semver';
+import { lt, coerce, gte } from "semver"
 
 /**
  * @example
@@ -10,42 +10,42 @@ import { lt, coerce, gte } from 'semver';
  * });
  */
 export function atLeast(o: {
-    packageName: string;
-    versionMin: string;
-    versionToCheck: string;
-    fallback: boolean;
-}): boolean;
+	packageName: string
+	versionMin: string
+	versionToCheck: string
+	fallback: boolean
+}): boolean
 export function atLeast(o: {
-    packageName: string;
-    versionMin: string;
-    versionToCheck: string;
-    fallback?: undefined;
-}): boolean | undefined;
+	packageName: string
+	versionMin: string
+	versionToCheck: string
+	fallback?: undefined
+}): boolean | undefined
 
 // Implementation
 export function atLeast(o: {
-    packageName: string;
-    versionMin: string;
-    versionToCheck: string;
-    fallback?: boolean;
+	packageName: string
+	versionMin: string
+	versionToCheck: string
+	fallback?: boolean
 }): boolean | undefined {
-    const { packageName, versionMin, versionToCheck, fallback } = o;
-    if (versionToCheck === undefined || versionToCheck === '') return fallback;
+	const { packageName, versionMin, versionToCheck, fallback } = o
+	if (versionToCheck === undefined || versionToCheck === "") return fallback
 
-    if (
-        versionToCheck.includes('latest') ||
-        versionToCheck.includes('catalog:') ||
-        versionToCheck.includes('http')
-    ) {
-        console.warn(`Version '${versionToCheck}' for '${packageName}' is not supported`);
-        return fallback;
-    }
-    try {
-        const vMin = coerce(versionMin);
-        const vToCheck = coerce(versionToCheck);
-        if (vMin && vToCheck) {
-            return gte(vToCheck, vMin);
-        }
-    } catch (error) {}
-    return fallback;
+	if (
+		versionToCheck.includes("latest") ||
+		versionToCheck.includes("catalog:") ||
+		versionToCheck.includes("http")
+	) {
+		console.warn(`Version '${versionToCheck}' for '${packageName}' is not supported`)
+		return fallback
+	}
+	try {
+		const vMin = coerce(versionMin)
+		const vToCheck = coerce(versionToCheck)
+		if (vMin && vToCheck) {
+			return gte(vToCheck, vMin)
+		}
+	} catch (error) {}
+	return fallback
 }

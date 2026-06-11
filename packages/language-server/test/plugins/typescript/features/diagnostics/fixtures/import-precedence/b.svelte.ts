@@ -1,1 +1,1 @@
-export const b = true;
+export const b = true

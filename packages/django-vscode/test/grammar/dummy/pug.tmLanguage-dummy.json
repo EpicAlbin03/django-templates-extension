@@ -1,4 +1,4 @@
 {
-    "comment": "Dummy Pug TextMate grammar for use in testing",
-    "scopeName": "text.pug"
+	"comment": "Dummy Pug TextMate grammar for use in testing",
+	"scopeName": "text.pug"
 }

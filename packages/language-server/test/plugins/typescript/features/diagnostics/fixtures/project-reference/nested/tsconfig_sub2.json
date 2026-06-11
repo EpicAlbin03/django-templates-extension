@@ -1,7 +1,7 @@
 {
-    "include": [],
-    "compilerOptions": {
-        "composite": true
-    },
-    "references": [{ "path": "./tsconfig_sub3.json" }]
+	"include": [],
+	"compilerOptions": {
+		"composite": true
+	},
+	"references": [{ "path": "./tsconfig_sub3.json" }]
 }

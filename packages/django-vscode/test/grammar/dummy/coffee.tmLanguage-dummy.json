@@ -1,4 +1,4 @@
 {
-    "comment": "Dummy CoffeeScript TextMate grammar for use in testing",
-    "scopeName": "source.coffee"
+	"comment": "Dummy CoffeeScript TextMate grammar for use in testing",
+	"scopeName": "source.coffee"
 }

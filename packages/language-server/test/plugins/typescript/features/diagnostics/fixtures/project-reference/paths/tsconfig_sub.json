@@ -1,11 +1,11 @@
 {
-    "compilerOptions": {
-        "baseUrl": ".",
-        "composite": true,
-        "strict": true,
-        "paths": {
-            "hi": ["./imported.ts"]
-        },
-        "types": []
-    }
+	"compilerOptions": {
+		"baseUrl": ".",
+		"composite": true,
+		"strict": true,
+		"paths": {
+			"hi": ["./imported.ts"]
+		},
+		"types": []
+	}
 }

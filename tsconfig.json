@@ -1,9 +1,6 @@
 {
-    "references": [
-        { "path": "./packages/language-server" },
-        { "path": "./packages/django-vscode" }
-    ],
-    "files": [],
-    "include": [],
-    "exclude": ["**/node_modules"]
+	"references": [{ "path": "./packages/language-server" }, { "path": "./packages/django-vscode" }],
+	"files": [],
+	"include": [],
+	"exclude": ["**/node_modules"]
 }

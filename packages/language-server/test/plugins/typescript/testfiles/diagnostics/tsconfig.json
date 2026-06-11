@@ -1,13 +1,13 @@
 {
-    "compilerOptions": {
-        "allowJs": true,
-        "target": "ESNext",
-        "strict": true,
-        /**
+	"compilerOptions": {
+		"allowJs": true,
+		"target": "ESNext",
+		"strict": true,
+		/**
           This is actually not needed, but makes the tests faster
           because TS does not look up other types.
         */
-        "types": ["svelte"]
-    },
-    "exclude": ["different-ts-service/**"]
+		"types": ["svelte"]
+	},
+	"exclude": ["different-ts-service/**"]
 }

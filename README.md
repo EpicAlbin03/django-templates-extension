@@ -22,14 +22,14 @@ A `.svelte` file would look something like this:
 
 ```html
 <script>
-    let count = $state(1);
+	let count = $state(1)
 
-    let doubled = $derived(count * 2);
-    let quadrupled = $derived(doubled * 2);
+	let doubled = $derived(count * 2)
+	let quadrupled = $derived(doubled * 2)
 
-    function handleClick() {
-        count += 1;
-    }
+	function handleClick() {
+		count += 1
+	}
 </script>
 
 <button onclick="{handleClick}">Count: {count}</button>
@@ -48,7 +48,7 @@ This repo contains the tools which provide editor integrations for Svelte files 
 
 ## Credits
 
--   [James Birtles](https://github.com/jamesbirtles) for creating the foundation which this language server, and the extensions are built on
--   Vue's [Vetur](https://github.com/vuejs/vetur) language server which heavily inspires this project
--   [halfnelson](https://github.com/halfnelson) for creating `svelte2tsx`
--   [jasonlyu123](https://github.com/jasonlyu123) for his ongoing work in all areas of the language-tools
+- [James Birtles](https://github.com/jamesbirtles) for creating the foundation which this language server, and the extensions are built on
+- Vue's [Vetur](https://github.com/vuejs/vetur) language server which heavily inspires this project
+- [halfnelson](https://github.com/halfnelson) for creating `svelte2tsx`
+- [jasonlyu123](https://github.com/jasonlyu123) for his ongoing work in all areas of the language-tools

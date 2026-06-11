@@ -1,4 +1,4 @@
-import { GenerateConfig, Resource } from '../types';
+import { GenerateConfig, Resource } from "../types"
 
 const defaultScriptTemplate = `
 <script>
@@ -6,7 +6,7 @@ const defaultScriptTemplate = `
 </script>
 
 <h1>{$page.status}: {$page.error.message}</h1>
-`;
+`
 
 const jsSv5ScriptTemplateAppState = `
 <script>
@@ -14,7 +14,7 @@ const jsSv5ScriptTemplateAppState = `
 </script>
 
 <h1>{page.status}: {page.error.message}</h1>
-`;
+`
 
 const tsScriptTemplate = `
 <script lang="ts">
@@ -22,7 +22,7 @@ const tsScriptTemplate = `
 </script>
 
 <h1>{$page.status}: {$page.error?.message}</h1>
-`;
+`
 
 const tsSv5ScriptTemplateAppState = `
 <script lang="ts">
@@ -30,21 +30,21 @@ const tsSv5ScriptTemplateAppState = `
 </script>
 
 <h1>{page.status}: {page.error?.message}</h1>
-`;
+`
 
-export default async function (config: GenerateConfig): ReturnType<Resource['generate']> {
-    const { withTs, withAppState } = config.kind;
-    let template = defaultScriptTemplate;
+export default async function (config: GenerateConfig): ReturnType<Resource["generate"]> {
+	const { withTs, withAppState } = config.kind
+	let template = defaultScriptTemplate
 
-    if (withAppState && withTs) {
-        template = tsSv5ScriptTemplateAppState;
-    } else if (withAppState && !withTs) {
-        template = jsSv5ScriptTemplateAppState;
-    } else if (!withAppState && withTs) {
-        template = tsScriptTemplate;
-    } else if (!withAppState && !withTs) {
-        template = defaultScriptTemplate;
-    }
+	if (withAppState && withTs) {
+		template = tsSv5ScriptTemplateAppState
+	} else if (withAppState && !withTs) {
+		template = jsSv5ScriptTemplateAppState
+	} else if (!withAppState && withTs) {
+		template = tsScriptTemplate
+	} else if (!withAppState && !withTs) {
+		template = defaultScriptTemplate
+	}
 
-    return template.trim();
+	return template.trim()
 }

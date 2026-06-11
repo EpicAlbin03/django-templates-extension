@@ -1,4 +1,4 @@
-import { GenerateConfig, Resource } from '../types';
+import { GenerateConfig, Resource } from "../types"
 
 const defaultScriptTemplate = `
 <script>
@@ -7,7 +7,7 @@ const defaultScriptTemplate = `
 </script>
 
 <slot />
-`;
+`
 
 const tsSv5ScriptTemplate = `
 <script lang="ts">
@@ -18,7 +18,7 @@ const tsSv5ScriptTemplate = `
 </script>
 
 {@render children()}
-`;
+`
 
 const tsSv5ScriptTemplateProps = `
 <script lang="ts">
@@ -28,7 +28,7 @@ const tsSv5ScriptTemplateProps = `
 </script>
 
 {@render children()}
-`;
+`
 
 const tsScriptTemplate = `
 <script lang="ts">
@@ -38,7 +38,7 @@ const tsScriptTemplate = `
 </script>
 
 <slot />
-`;
+`
 
 const jsSv5ScriptTemplate = `
 <script>
@@ -47,7 +47,7 @@ const jsSv5ScriptTemplate = `
 </script>
 
 {@render children()}
-`;
+`
 
 const jsSv5ScriptTemplateProps = `
 <script>
@@ -56,25 +56,25 @@ const jsSv5ScriptTemplateProps = `
 </script>
 
 {@render children()}
-`;
+`
 
-export default async function (config: GenerateConfig): ReturnType<Resource['generate']> {
-    const { withRunes, withTs, withProps } = config.kind;
-    let template = defaultScriptTemplate;
+export default async function (config: GenerateConfig): ReturnType<Resource["generate"]> {
+	const { withRunes, withTs, withProps } = config.kind
+	let template = defaultScriptTemplate
 
-    if (withRunes && withTs && withProps) {
-        template = tsSv5ScriptTemplateProps;
-    } else if (withRunes && withTs && !withProps) {
-        template = tsSv5ScriptTemplate;
-    } else if (withRunes && !withTs && withProps) {
-        template = jsSv5ScriptTemplateProps;
-    } else if (withRunes && !withTs && !withProps) {
-        template = jsSv5ScriptTemplate;
-    } else if (!withRunes && withTs) {
-        template = tsScriptTemplate;
-    } else if (!withRunes && !withTs) {
-        template = defaultScriptTemplate;
-    }
+	if (withRunes && withTs && withProps) {
+		template = tsSv5ScriptTemplateProps
+	} else if (withRunes && withTs && !withProps) {
+		template = tsSv5ScriptTemplate
+	} else if (withRunes && !withTs && withProps) {
+		template = jsSv5ScriptTemplateProps
+	} else if (withRunes && !withTs && !withProps) {
+		template = jsSv5ScriptTemplate
+	} else if (!withRunes && withTs) {
+		template = tsScriptTemplate
+	} else if (!withRunes && !withTs) {
+		template = defaultScriptTemplate
+	}
 
-    return template.trim();
+	return template.trim()
 }

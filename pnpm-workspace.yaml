@@ -1,3 +1,3 @@
 packages:
-    - 'packages/language-server'
-    - 'packages/django-vscode'
+  - "packages/language-server"
+  - "packages/django-vscode"

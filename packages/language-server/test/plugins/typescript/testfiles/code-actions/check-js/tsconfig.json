@@ -1,10 +1,10 @@
 {
-    "compilerOptions": {
-        /**
+	"compilerOptions": {
+		/**
           This is actually not needed, but makes the tests faster
           because TS does not look up other types.
         */
-        "types": ["svelte"],
-        "checkJs": true
-    }
+		"types": ["svelte"],
+		"checkJs": true
+	}
 }

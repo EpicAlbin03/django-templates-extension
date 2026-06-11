@@ -1,1 +1,1 @@
-export declare const a: boolean;
+export declare const a: boolean
