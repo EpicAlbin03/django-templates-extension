@@ -1,0 +1,4 @@
+test/**/*.html
+pnpm-lock.yaml
+repos
+README.md
