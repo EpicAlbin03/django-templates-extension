@@ -1,0 +1,13 @@
+<div>
+  {% for row in rows %}
+    <ul>
+      {% for element in row %}
+        <li>
+          {% if element.active %}
+            {{ element.description }}
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% endfor %}
+</div>

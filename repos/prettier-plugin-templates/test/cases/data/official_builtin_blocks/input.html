@@ -1,0 +1,14 @@
+{% load i18n l10n tz %}
+{%language 'en'%}
+{%localize off%}
+{%localtime on%}
+{%timezone "Europe/Paris"%}
+{%blocktranslate count counter=list|length%}
+There is {{counter}} object.
+{%plural%}
+There are {{counter}} objects.
+{%endblocktranslate%}
+{%endtimezone%}
+{%endlocaltime%}
+{%endlocalize%}
+{%endlanguage%}
