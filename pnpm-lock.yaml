@@ -116,7 +116,7 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
-  packages/svelte-vscode:
+  packages/django-vscode:
     dependencies:
       lodash:
         specifier: ^4.17.21

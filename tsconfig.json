@@ -1,5 +1,8 @@
 {
-    "references": [{ "path": "./packages/language-server" }, { "path": "./packages/svelte-vscode" }],
+    "references": [
+        { "path": "./packages/language-server" },
+        { "path": "./packages/django-vscode" }
+    ],
     "files": [],
     "include": [],
     "exclude": ["**/node_modules"]

@@ -571,11 +571,11 @@ function createLanguageServer(serverOptions: ServerOptions, clientOptions: Langu
 }
 
 function warnIfOldExtensionInstalled() {
-    if (extensions.getExtension('JamesBirtles.svelte-vscode')) {
+    if (extensions.getExtension('JamesBirtles.django-vscode')) {
         window.showWarningMessage(
             'It seems you have the old and deprecated extension named "Svelte" installed. Please remove it. ' +
                 'Through the UI: You can find it when searching for "@installed" in the extensions window (searching "Svelte" won\'t work). ' +
-                'Command line: "code --uninstall-extension JamesBirtles.svelte-vscode"'
+                'Command line: "code --uninstall-extension JamesBirtles.django-vscode"'
         );
     }
 }

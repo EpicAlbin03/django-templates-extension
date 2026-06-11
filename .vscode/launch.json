@@ -6,10 +6,10 @@
             "type": "extensionHost",
             "request": "launch",
             "runtimeExecutable": "${execPath}",
-            "args": ["--extensionDevelopmentPath=${workspaceRoot}/packages/svelte-vscode"],
+            "args": ["--extensionDevelopmentPath=${workspaceRoot}/packages/django-vscode"],
             "stopOnEntry": false,
             "sourceMaps": true,
-            "outFiles": ["${workspaceRoot}/packages/svelte-vscode/dist/**/*.js"],
+            "outFiles": ["${workspaceRoot}/packages/django-vscode/dist/**/*.js"],
             "preLaunchTask": "npm: watch",
             "env": {
                 "TSS_DEBUG": "5859",

@@ -284,7 +284,7 @@ export class CodeLensProviderImpl implements CodeLensProvider {
         codeLensToResolve.command = {
             title: references.length === 1 ? `1 reference` : `${references.length} references`,
             // language clients need to map this to the corresponding command in each editor
-            // see example in svelte-vscode/src/middlewares.ts
+            // see example in django-vscode/src/middlewares.ts
             command: '',
             arguments: [textDocument.uri, codeLensToResolve.range.start, references]
         };

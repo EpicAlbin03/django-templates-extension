@@ -48,7 +48,7 @@ Currently Supported:
 
 Install a plugin for your editor:
 
--   [VS Code](../svelte-vscode)
+-   [VS Code](../django-vscode)
 
 ## Settings
 

@@ -71,7 +71,7 @@ const defaultLSConfig: LSConfig = {
 
 /**
  * Representation of the language server config.
- * Should be kept in sync with infos in `packages/svelte-vscode/package.json`.
+ * Should be kept in sync with infos in `packages/django-vscode/package.json`.
  */
 export interface LSConfig {
     typescript: LSTypescriptConfig;

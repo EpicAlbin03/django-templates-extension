@@ -9,13 +9,13 @@ If you added `"files.associations": {"*.svelte": "html" }` to your VSCode settin
 If you have previously installed the old "Svelte" extension by James Birtles, uninstall it:
 
 -   Through the UI: You can find it when searching for `@installed` in the extensions window (searching `Svelte` won't work).
--   Command line: `code --uninstall-extension JamesBirtles.svelte-vscode`
+-   Command line: `code --uninstall-extension JamesBirtles.django-vscode`
 
 This extension comes bundled with a formatter for Svelte files. To let this extension format Svelte files, adjust your VS Code settings:
 
 ```
    "[svelte]": {
-     "editor.defaultFormatter": "svelte.svelte-vscode"
+     "editor.defaultFormatter": "svelte.django-vscode"
    },
 ```
 

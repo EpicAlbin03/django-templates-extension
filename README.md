@@ -16,7 +16,7 @@
 
 ## What is Svelte Language Tools?
 
-This trimmed workspace keeps only the Language Server Protocol (LSP) package and the [VS Code extension](https://marketplace.visualstudio.com/items?itemName=svelte.svelte-vscode) package as a starting point.
+This trimmed workspace keeps only the Language Server Protocol (LSP) package and the [VS Code extension](https://marketplace.visualstudio.com/items?itemName=svelte.django-vscode) package as a starting point.
 
 A `.svelte` file would look something like this:
 
@@ -41,7 +41,6 @@ A `.svelte` file would look something like this:
 Which is a mix of [HTMLx](https://github.com/htmlx-org/HTMLx) and vanilla JavaScript (but with additional runtime behavior coming from the svelte compiler).
 
 This repo contains the tools which provide editor integrations for Svelte files like this.
-
 
 ## License
 
