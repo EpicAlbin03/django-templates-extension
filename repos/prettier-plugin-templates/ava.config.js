@@ -1,7 +1,0 @@
-process.env.TS_NODE_TRANSPILE_ONLY = true;
-
-export default {
-  extensions: ['ts'],
-  files: ['test/**/*.ts'],
-  require: ['ts-node/register'],
-};

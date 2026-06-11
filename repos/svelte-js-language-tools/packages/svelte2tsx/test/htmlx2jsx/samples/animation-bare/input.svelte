@@ -1,1 +1,0 @@
-<h1 animate:blink>Hello</h1>

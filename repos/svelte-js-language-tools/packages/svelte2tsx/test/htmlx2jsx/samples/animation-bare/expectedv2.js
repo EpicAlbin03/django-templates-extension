@@ -1,1 +1,0 @@
- { svelteHTML.createElement("h1", { });__sveltets_2_ensureAnimation(blink(svelteHTML.mapElementTag('h1'),__sveltets_2_AnimationMove));  }

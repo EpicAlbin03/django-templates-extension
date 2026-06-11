@@ -1,1 +1,0 @@
- { svelteHTML.createElement("h1", {    "on:click":()=>console.log("click"),"on:UpperCaseEvent":() => log('hi'),});  }

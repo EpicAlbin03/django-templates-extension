@@ -1,1 +1,0 @@
- { svelteHTML.createElement("div", {    ...__sveltets_2_empty({"data-foo":true}),...__sveltets_2_empty({"data-bare":true}),...__sveltets_2_empty({"data-bar":`to`}),});}
