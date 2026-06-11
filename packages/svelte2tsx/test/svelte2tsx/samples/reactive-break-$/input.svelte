@@ -1,3 +1,0 @@
-<script>
-    $: { break $; }
-</script>

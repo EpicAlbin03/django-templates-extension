@@ -11,7 +11,7 @@
     },
     "scripts": {
         "test": "cross-env TS_NODE_TRANSPILE_ONLY=true mocha --require ts-node/register \"test/**/*.test.ts\" --no-experimental-strip-types",
-        "build": "pnpm --filter @sveltejs/load-config build && tsc",
+        "build": "tsc",
         "prepublishOnly": "npm run build",
         "watch": "tsc -w"
     },
@@ -53,7 +53,7 @@
     },
     "dependencies": {
         "@jridgewell/trace-mapping": "^0.3.25",
-        "@sveltejs/load-config": "workspace:*",
+        "@sveltejs/load-config": "^0.1.1",
         "@vscode/emmet-helper": "2.8.4",
         "chokidar": "^4.0.1",
         "estree-walker": "^2.0.1",
@@ -63,7 +63,7 @@
         "prettier": "~3.3.3",
         "prettier-plugin-svelte": "^3.5.0",
         "svelte": "^4.2.19",
-        "svelte2tsx": "workspace:~",
+        "svelte2tsx": "~0.7.56",
         "typescript-auto-import-cache": "^0.3.6",
         "vscode-css-languageservice": "~6.3.5",
         "vscode-html-languageservice": "~5.4.0",

@@ -1,2 +1,0 @@
- { const $$_emaNtnenopmoC_dettoD0C = __sveltets_2_ensureComponent(Dotted.ComponentName); new $$_emaNtnenopmoC_dettoD0C({ target: __sveltets_2_any(), props: {}});}
- { const $$_emaNtnenopmoC_dettoD0C = __sveltets_2_ensureComponent(Dotted.ComponentName); new $$_emaNtnenopmoC_dettoD0C({ target: __sveltets_2_any(), props: {}}); Dotted.ComponentName}

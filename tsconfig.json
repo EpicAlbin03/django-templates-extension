@@ -1,9 +1,5 @@
 {
-    "references": [
-        { "path": "./packages/load-config" },
-        { "path": "./packages/language-server" },
-        { "path": "./packages/svelte-vscode" }
-    ],
+    "references": [{ "path": "./packages/language-server" }, { "path": "./packages/svelte-vscode" }],
     "files": [],
     "include": [],
     "exclude": ["**/node_modules"]

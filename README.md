@@ -16,7 +16,7 @@
 
 ## What is Svelte Language Tools?
 
-Svelte Language Tools contains a library implementing the Language Server Protocol (LSP). LSP powers the [VSCode extension](https://marketplace.visualstudio.com/items?itemName=svelte.svelte-vscode), which is also hosted in this repository. Additionally, LSP is capable of powering plugins for [numerous other IDEs](https://microsoft.github.io/language-server-protocol/implementors/tools/).
+This trimmed workspace keeps only the Language Server Protocol (LSP) package and the [VS Code extension](https://marketplace.visualstudio.com/items?itemName=svelte.svelte-vscode) package as a starting point.
 
 A `.svelte` file would look something like this:
 
@@ -42,17 +42,6 @@ Which is a mix of [HTMLx](https://github.com/htmlx-org/HTMLx) and vanilla JavaSc
 
 This repo contains the tools which provide editor integrations for Svelte files like this.
 
-## Contributing
-
-Contributions are encouraged and always welcome. [Read the contribution guide for more info](CONTRIBUTING.md) and help us out!
-
-## Supporting Svelte
-
-Svelte is an MIT-licensed open source project with its ongoing development made possible entirely by the support of awesome volunteers. If you'd like to support their efforts, please consider:
-
--   [Becoming a backer on Open Collective](https://opencollective.com/svelte).
-
-Funds donated via Open Collective will be used for compensating expenses related to Svelte's development such as hosting costs. If sufficient donations are received, funds may also be used to support Svelte's development more directly.
 
 ## License
 

@@ -783,7 +783,7 @@
     "dependencies": {
         "lodash": "^4.17.21",
         "svelte-language-server": "workspace:*",
-        "typescript-svelte-plugin": "workspace:*",
+        "typescript-svelte-plugin": "^0.3.52",
         "vscode-languageclient": "^9.0.1",
         "vscode-languageserver-protocol": "3.17.5",
         "typescript": "^6.0.3"
