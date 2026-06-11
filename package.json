@@ -5,9 +5,9 @@
 	"license": "MIT",
 	"private": true,
 	"scripts": {
-		"bootstrap": "pnpm --filter django-vscode build:grammar",
+		"bootstrap": "pnpm build",
 		"build": "tsc -b",
-		"test": "cross-env CI=true pnpm --filter svelte-language-server --filter django-vscode test",
+		"test": "cross-env CI=true pnpm --filter django-vscode test",
 		"watch": "tsc -b -watch",
 		"format": "prettier --write .",
 		"lint": "prettier --check ."
