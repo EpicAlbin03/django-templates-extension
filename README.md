@@ -70,7 +70,7 @@ Or using template comments:
 
 ## Usage in the browser
 
-Usage in the browser is semi-supported. You can import the plugin from `prettier-plugin-django-templates/browser` to get a version that depends on `prettier/standalone` and therefore doesn't use any node APIs. What isn't supported in a good way yet is using this without a build step - you still need a bundler like Vite to build everything together as one self-contained package in advance.
+Usage in the browser is semi-supported. Import `prettier-plugin-django-templates/browser` from an ESM-aware bundler to get a version that depends on `prettier/standalone` and does not use Node APIs. What isn't supported in a good way yet is using this without a build step, you still need a bundler like Vite to build everything together as one self-contained package in advance.
 
 ## Credits
 

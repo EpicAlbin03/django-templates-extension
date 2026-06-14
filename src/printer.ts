@@ -1,11 +1,20 @@
 import type { AstPath, Doc, Options, Printer } from 'prettier';
 import { doc } from 'prettier';
-import type { RootNode, TemplateBlockNode, DjangoNode, ExpressionNode, RawBlockNode, TemplateTagNode } from './ast';
+import type {
+  RootNode,
+  TemplateBlockNode,
+  DjangoNode,
+  ExpressionNode,
+  RawBlockNode,
+  TemplateTagNode,
+} from './ast';
 
 const { builders, utils } = doc;
 const { mapDoc } = utils;
 
-function getProtectedMarkerIds(node: TemplateBlockNode | { nodes: Record<string, DjangoNode> }): string[] {
+function getProtectedMarkerIds(
+  node: TemplateBlockNode | { nodes: Record<string, DjangoNode> },
+): string[] {
   return Object.keys(node.nodes).sort((left, right) => right.length - left.length);
 }
 
@@ -61,11 +70,7 @@ function replaceProtectedMarkersInString(
 
     if (matchedIndex > cursor) {
       const between = currentDoc.slice(cursor, matchedIndex);
-      if (
-        !(
-          ((rendered.trimLeadingWhitespace || trimFollowingWhitespace) && /^\s*$/.test(between))
-        )
-      ) {
+      if (!((rendered.trimLeadingWhitespace || trimFollowingWhitespace) && /^\s*$/.test(between))) {
         parts.push(between);
       }
     }
@@ -143,14 +148,16 @@ function splitAtTemplateTags(
 
 function surroundingTemplateBlock(node: DjangoNode): TemplateBlockNode | undefined {
   return Object.values(node.nodes).find(
-    (entry): entry is TemplateBlockNode => entry.type === 'template-block' && entry.content.includes(node.id),
+    (entry): entry is TemplateBlockNode =>
+      entry.type === 'template-block' && entry.content.includes(node.id),
   );
 }
 
 function parentTemplateBlock(node: DjangoNode): TemplateBlockNode | undefined {
   return Object.values(node.nodes).find(
     (entry): entry is TemplateBlockNode =>
-      entry.type === 'template-block' && (entry.content.includes(node.id) || entry.end.id === node.id),
+      entry.type === 'template-block' &&
+      (entry.content.includes(node.id) || entry.end.id === node.id),
   );
 }
 
@@ -184,9 +191,7 @@ function printDocumentFlowNode(
   const hasContentBefore = /\S/.test(cleanPrefix);
   const hasContentAfter =
     !inlineWithNext &&
-    (/<!--DJ\d+-->|\S/.test(lineSuffix) ||
-      /\S/.test(cleanSuffix) ||
-      hasProtectedMarkerOnNextLine);
+    (/<!--DJ\d+-->|\S/.test(lineSuffix) || /\S/.test(cleanSuffix) || hasProtectedMarkerOnNextLine);
 
   return [
     hasContentBefore ? builders.hardline : '',
@@ -204,19 +209,18 @@ function printExpression(node: ExpressionNode): Doc {
 }
 
 function printRawBlock(node: RawBlockNode): Doc {
-  if (node.keyword === 'comment' && node.args?.trim()) {
-    const body = (node.body ?? '').replace(/^\n+|\n+$/g, '').replace(/^(?=\S)/gm, '  ');
+  const args = node.args?.trim();
+  const endArgs = node.endArgs?.trim();
 
-    return [
-      `{%comment ${node.args.trim()} %}`,
-      builders.hardline,
-      body,
-      builders.hardline,
-      '{%endcomment%}',
-    ];
+  if (!node.keyword || node.body === undefined) {
+    return node.originalText;
   }
 
-  return node.originalText;
+  return [
+    `{% ${node.keyword}${args ? ` ${args}` : ''} %}`,
+    node.body,
+    `{% end${node.keyword}${endArgs ? ` ${endArgs}` : ''} %}`,
+  ];
 }
 
 function printTemplateTag(node: TemplateTagNode): Doc {
@@ -502,7 +506,10 @@ function restoreInlineProtectedMarkerRuns(
     for (let index = 0; index < protectedMarkers.length - 1; index += 1) {
       const left = protectedMarkers[index].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const right = protectedMarkers[index + 1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      restored = restored.replace(new RegExp(`${left}\\s*\\n\\s*${right}`, 'g'), `${protectedMarkers[index]} ${protectedMarkers[index + 1]}`);
+      restored = restored.replace(
+        new RegExp(`${left}\\s*\\n\\s*${right}`, 'g'),
+        `${protectedMarkers[index]} ${protectedMarkers[index + 1]}`,
+      );
     }
   }
 
@@ -517,7 +524,7 @@ function normalizeHtmlAroundProtectedMarkers(currentDoc: string): string {
     .replace(
       /^(?<indent>\s*)(?<open><([A-Za-z][^\s/>]*)(?:[^>]*)>)(?<body>DJ\d+X)(?<close><\/\3>)(?<trail>\s*)$/gm,
       (match, indent, open, _tagName, body, close, trail) => {
-        if (((open.match(/\s+\S+=/g) ?? []).length) <= 1) {
+        if ((open.match(/\s+\S+=/g) ?? []).length <= 1) {
           return match;
         }
 
@@ -541,7 +548,7 @@ function prepareSegmentForHtml(
   let prepared = segment.replace(
     /((?:<!--DJ\d+-->|DJ\d+X)(?:[ \t]+(?:<!--DJ\d+-->|DJ\d+X))+)/g,
     (run) => {
-      const token = `DJ_INLINE_RUN_${index += 1}`;
+      const token = `DJ_INLINE_RUN_${(index += 1)}`;
       beforeReplacements.push({ token, value: run });
       return token;
     },
@@ -553,18 +560,19 @@ function prepareSegmentForHtml(
     .replace(
       /^(?<open><([A-Za-z][^\s/>]*)(?:[^>]*)>)(?<body>DJ\d+X)(?<close><\/\2>)(?<trail>\s*)$/,
       (match, open, _tagName, body, close, trail) =>
-        ((open.match(/\s+\S+=/g) ?? []).length > 1
-          ? `${open}\n  ${body}\n${close}${trail}`
-          : match),
+        (open.match(/\s+\S+=/g) ?? []).length > 1 ? `${open}\n  ${body}\n${close}${trail}` : match,
     );
 
-  prepared = prepared.replace(/(<script\b[^>]*>)([\s\S]*?)(<\/script>)/gi, (match, _openTag, body) => {
-    if (ids.some((id) => body.includes(id)) || /\{[%#{]/.test(body)) {
-      return match;
-    }
+  prepared = prepared.replace(
+    /(<script\b[^>]*>)([\s\S]*?)(<\/script>)/gi,
+    (match, _openTag, body) => {
+      if (ids.some((id) => body.includes(id)) || /\{[%#{]/.test(body)) {
+        return match;
+      }
 
-    return match;
-  });
+      return match;
+    },
+  );
 
   return { segment: prepared, beforeReplacements, afterReplacements };
 }
@@ -582,8 +590,12 @@ export const embed: Printer<DjangoNode>['embed'] = () => {
     }
 
     const ids = getProtectedMarkerIds(node);
-    const leadingStandaloneSplit = node.type === 'root' ? splitLeadingStandaloneBlockTag(node) : undefined;
-    if (leadingStandaloneSplit && node.nodes[leadingStandaloneSplit[1]]?.type === 'template-block') {
+    const leadingStandaloneSplit =
+      node.type === 'root' ? splitLeadingStandaloneBlockTag(node) : undefined;
+    if (
+      leadingStandaloneSplit &&
+      node.nodes[leadingStandaloneSplit[1]]?.type === 'template-block'
+    ) {
       return [
         path.call(print, 'nodes', leadingStandaloneSplit[0]),
         builders.hardline,
@@ -690,8 +702,10 @@ export const embed: Printer<DjangoNode>['embed'] = () => {
           for (const replacement of preparedSegment.afterReplacements) {
             if (typeof replacedDoc === 'string') {
               replacedDoc = replacedDoc
-                .split(`${replacement.token};`).join(replacement.value)
-                .split(replacement.token).join(replacement.value);
+                .split(`${replacement.token};`)
+                .join(replacement.value)
+                .split(replacement.token)
+                .join(replacement.value);
             } else {
               replacedDoc = mapDoc(replacedDoc, (docPart) => {
                 if (typeof docPart !== 'string') {
@@ -699,8 +713,10 @@ export const embed: Printer<DjangoNode>['embed'] = () => {
                 }
 
                 return docPart
-                  .split(`${replacement.token};`).join(replacement.value)
-                  .split(replacement.token).join(replacement.value);
+                  .split(`${replacement.token};`)
+                  .join(replacement.value)
+                  .split(replacement.token)
+                  .join(replacement.value);
               });
             }
           }

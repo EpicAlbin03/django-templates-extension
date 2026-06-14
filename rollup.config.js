@@ -38,7 +38,7 @@ export default [
     ],
     external: ['prettier/standalone', 'prettier/plugins/html'],
     output: {
-      file: 'browser.js',
+      file: 'browser.mjs',
       format: 'esm',
     },
   },

@@ -1,5 +1,12 @@
 import type { Parser } from 'prettier';
-import { getTagRole, isBlockStandaloneTag, isBranchTag, isEndTag, isInlineStandaloneTag } from './tags';
+import {
+  getTagRole,
+  isBlockStandaloneTag,
+  isBranchTag,
+  isEndTag,
+  isInlineStandaloneTag,
+  isRawTag,
+} from './tags';
 import type {
   TemplateBlockNode,
   CommentNode,
@@ -62,9 +69,15 @@ type Token = TextToken | VariableToken | CommentToken | IgnoreBlockToken | TagTo
 const IGNORE_BLOCK_STARTS = ['<!-- prettier-ignore-start -->', '{# prettier-ignore-start #}'];
 const IGNORE_BLOCK_ENDS = ['<!-- prettier-ignore-end -->', '{# prettier-ignore-end #}'];
 
-function readUntil(text: string, start: number, endToken: string): number {
+function readUntil(text: string, start: number, endToken: string, errorMessage?: string): number {
   const end = text.indexOf(endToken, start);
-  return end === -1 ? text.length : end + endToken.length;
+  if (end === -1) {
+    if (errorMessage) {
+      throw new Error(errorMessage);
+    }
+    return text.length;
+  }
+  return end + endToken.length;
 }
 
 function findNextSpecial(text: string, from: number): number {
@@ -155,6 +168,42 @@ function createTagToken(
   };
 }
 
+function findRawBlockEnd(
+  text: string,
+  from: number,
+  name: string,
+): { end: number; closingStart: number; endArgs: string } | null {
+  const endName = `end${name}`;
+  let cursor = from;
+
+  while (cursor < text.length) {
+    const tagStart = text.indexOf('{%', cursor);
+    if (tagStart === -1) {
+      return null;
+    }
+
+    const closeDelimiter = text.indexOf('%}', tagStart + 2);
+    if (closeDelimiter === -1) {
+      return null;
+    }
+
+    const tagContent = text.slice(tagStart + 2, closeDelimiter).trim();
+    const [tagName, ...rest] = tagContent.split(/\s+/);
+
+    if (tagName === endName) {
+      return {
+        end: closeDelimiter + 2,
+        closingStart: tagStart,
+        endArgs: rest.join(' '),
+      };
+    }
+
+    cursor = closeDelimiter + 2;
+  }
+
+  return null;
+}
+
 function findIgnoreBlockEnd(text: string, from: number): number {
   const ends = IGNORE_BLOCK_ENDS.map((marker) => text.indexOf(marker, from)).filter(
     (index) => index !== -1,
@@ -203,7 +252,12 @@ function tokenize(text: string): Token[] {
     }
 
     if (text.startsWith('{{', cursor)) {
-      const end = readUntil(text, cursor + 2, '}}');
+      const end = readUntil(
+        text,
+        cursor + 2,
+        '}}',
+        `Unterminated template expression starting at index ${cursor}.`,
+      );
       const raw = text.slice(cursor, end);
       tokens.push({
         type: 'Variable',
@@ -219,7 +273,12 @@ function tokenize(text: string): Token[] {
     }
 
     if (text.startsWith('{#', cursor)) {
-      const end = readUntil(text, cursor + 2, '#}');
+      const end = readUntil(
+        text,
+        cursor + 2,
+        '#}',
+        `Unterminated template comment starting at index ${cursor}.`,
+      );
       const raw = text.slice(cursor, end);
       tokens.push({
         type: 'Comment',
@@ -235,9 +294,36 @@ function tokenize(text: string): Token[] {
     }
 
     if (text.startsWith('{%', cursor)) {
-      const end = readUntil(text, cursor + 2, '%}');
+      const end = readUntil(
+        text,
+        cursor + 2,
+        '%}',
+        `Unterminated template tag starting at index ${cursor}.`,
+      );
       const raw = text.slice(cursor, end);
       const tag = createTagToken(raw, cursor, end, tokenState);
+
+      if (isRawTag(tag.name) && !tag.inTag && !tag.inAttribute) {
+        const blockEndInfo = findRawBlockEnd(text, end, tag.name);
+        if (blockEndInfo) {
+          const blockRaw = text.slice(cursor, blockEndInfo.end);
+          tokens.push({
+            type: 'RawBlock',
+            raw: blockRaw,
+            content: tag.content,
+            name: tag.name,
+            args: tag.args,
+            body: text.slice(end, blockEndInfo.closingStart),
+            endArgs: blockEndInfo.endArgs,
+            start: cursor,
+            end: blockEndInfo.end,
+            inAttribute: tokenState.inAttribute,
+            inTag: tokenState.inTag,
+          });
+          cursor = blockEndInfo.end;
+          continue;
+        }
+      }
 
       tokens.push(tag);
       cursor = end;
@@ -561,12 +647,17 @@ export const parse: Parser<DjangoNode>['parse'] = (text) => {
       }
 
       if (matchIndex === NOT_FOUND) {
+        throw new Error(`No start tag found for template end tag "${endNode.originalText}".`);
+      }
+
+      if (matchIndex !== stack.length - 1) {
+        const innerOpen = stack[stack.length - 1];
         throw new Error(
-          `No start tag found for template end tag "${endNode.originalText}".`,
+          `Unexpected template end tag "${endNode.originalText}" while "${innerOpen.originalText}" is still open.`,
         );
       }
 
-      const startNode = stack.splice(matchIndex, 1)[0];
+      const startNode = stack.pop()!;
       const blockText = root.content.slice(startNode.index, currentIndex + token.raw.length);
       const blockId = createProtectedMarker(
         nextId++,
@@ -595,9 +686,7 @@ export const parse: Parser<DjangoNode>['parse'] = (text) => {
     }
 
     if (token.role === 'end') {
-      throw new Error(
-        `No start tag found for template end tag "${templateTagBase.originalText}".`,
-      );
+      throw new Error(`No start tag found for template end tag "${templateTagBase.originalText}".`);
     }
 
     if (token.role === 'standalone' && !isBranchTag(token.name) && !isEndTag(token.name)) {
