@@ -24,7 +24,6 @@
 		"node": ">= 18.0.0"
 	},
 	"devDependencies": {
-		"@types/estree": "^0.0.42",
 		"@types/globrex": "^0.1.4",
 		"@types/lodash": "^4.14.116",
 		"@types/mocha": "^10.0.10",
@@ -38,19 +37,12 @@
 	},
 	"dependencies": {
 		"@jridgewell/trace-mapping": "^0.3.25",
-		"@sveltejs/load-config": "^0.1.1",
 		"@vscode/emmet-helper": "2.8.4",
 		"chokidar": "^4.0.1",
-		"estree-walker": "^2.0.1",
-		"fdir": "^6.2.0",
 		"globrex": "^0.1.2",
 		"lodash": "^4.17.21",
 		"prettier": "~3.3.3",
 		"prettier-plugin-django-templates": "^0.0.2",
-		"prettier-plugin-svelte": "^3.5.0",
-		"svelte": "^4.2.19",
-		"svelte2tsx": "~0.7.56",
-		"typescript-auto-import-cache": "^0.3.6",
 		"vscode-css-languageservice": "~6.3.5",
 		"vscode-html-languageservice": "~5.4.0",
 		"vscode-languageserver": "9.0.1",
