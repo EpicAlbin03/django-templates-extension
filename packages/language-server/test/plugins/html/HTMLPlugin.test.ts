@@ -17,7 +17,7 @@ import { FileSystemProvider } from "../../../src/lib/FileSystemProvider"
 
 describe("HTML Plugin", () => {
 	function setup(content: string) {
-		const document = new Document("file:///hello.html", content, /*skipConfigLoading*/ true)
+		const document = new Document("file:///hello.html", content)
 		const docManager = new DocumentManager(() => document)
 		const configManager = new LSConfigManager()
 		const plugin = new HTMLPlugin(docManager, configManager, new FileSystemProvider(), [])
@@ -97,7 +97,7 @@ describe("HTML Plugin", () => {
 	})
 
 	it("provides rename for element", () => {
-		const { plugin, document } = setup("<div class=\"x\"></div>")
+		const { plugin, document } = setup('<div class="x"></div>')
 		const newName = "p"
 
 		const pepareRenameInfo = Range.create(Position.create(0, 1), Position.create(0, 4))

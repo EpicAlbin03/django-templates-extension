@@ -7,7 +7,7 @@
 	"scripts": {
 		"bootstrap": "pnpm build",
 		"build": "tsc -b",
-		"test": "cross-env CI=true pnpm --filter django-vscode test",
+		"test": "cross-env CI=true pnpm test -r",
 		"watch": "tsc -b -watch",
 		"format": "prettier --write .",
 		"lint": "prettier --check ."

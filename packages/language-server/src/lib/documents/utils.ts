@@ -1,4 +1,4 @@
-import { clamp, isInRange, regexLastIndexOf } from "../../utils"
+import { clamp, isInRange } from "../../utils"
 import { Position, Range } from "vscode-languageserver"
 import { Node, HTMLDocument } from "vscode-html-languageservice"
 import * as path from "path"
@@ -62,7 +62,7 @@ function extractTags(
 	const matchedNodes = rootNodes
 		.filter((node) => node.tag === tag)
 		.filter((tag) => {
-			return isNotInsideControlFlowTag(tag) && isNotInsideHtmlTag(tag)
+			return isNotInsideControlFlowTag(tag)
 		})
 	return matchedNodes.map((node) => transformToTagInfo(node, text))
 
@@ -100,7 +100,7 @@ function extractTags(
 			return (end?.index ?? text.length) < (start?.index ?? text.length)
 		})
 	}
-
+}
 
 function transformToTagInfo(matchedNode: Node, text: string): TagInformation {
 	const start = matchedNode.startTagEnd ?? matchedNode.start
