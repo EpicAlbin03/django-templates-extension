@@ -1,18 +1,18 @@
-export const Placeholder = {
+export const ProtectedMarker = {
   startToken: '#~',
   endToken: '~#',
 };
 
-export type PlaceholderKind = 'inline' | 'block' | 'attr';
+export type ProtectedMarkerKind = 'inline' | 'block' | 'attr';
 
 export type DjangoNode =
   | RootNode
   | ExpressionNode
-  | StatementNode
-  | BlockNode
+  | TemplateTagNode
+  | TemplateBlockNode
   | CommentNode
-  | RawNode
-  | IgnoreNode;
+  | RawBlockNode
+  | IgnoreRegionNode;
 
 export interface BaseNode {
   type: string;
@@ -23,7 +23,7 @@ export interface BaseNode {
   index: number;
   length: number;
   nodes: Record<string, DjangoNode>;
-  placeholderKind: PlaceholderKind;
+  protectedMarkerKind: ProtectedMarkerKind;
   inTag?: boolean;
   inAttribute?: boolean;
 }
@@ -36,16 +36,16 @@ export interface ExpressionNode extends BaseNode {
   type: 'expression';
 }
 
-export interface StatementNode extends BaseNode {
-  type: 'statement';
+export interface TemplateTagNode extends BaseNode {
+  type: 'template-tag';
   keyword: string;
   role: 'start' | 'branch' | 'end' | 'standalone';
 }
 
-export interface BlockNode extends BaseNode {
-  type: 'block';
-  start: StatementNode;
-  end: StatementNode;
+export interface TemplateBlockNode extends BaseNode {
+  type: 'template-block';
+  start: TemplateTagNode;
+  end: TemplateTagNode;
   containsNewLines: boolean;
 }
 
@@ -53,14 +53,14 @@ export interface CommentNode extends BaseNode {
   type: 'comment';
 }
 
-export interface RawNode extends BaseNode {
-  type: 'raw';
+export interface RawBlockNode extends BaseNode {
+  type: 'raw-block';
   keyword?: string;
   args?: string;
   body?: string;
   endArgs?: string;
 }
 
-export interface IgnoreNode extends BaseNode {
-  type: 'ignore';
+export interface IgnoreRegionNode extends BaseNode {
+  type: 'ignore-region';
 }

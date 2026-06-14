@@ -6,7 +6,15 @@ import typescript from '@rollup/plugin-typescript';
 export default [
   {
     input: 'src/index.ts',
-    plugins: [resolve(), commonjs(), typescript()],
+    plugins: [
+      resolve(),
+      commonjs(),
+      typescript({
+        compilerOptions: {
+          module: 'esnext',
+        },
+      }),
+    ],
     external: [/^prettier($|\/)/],
     output: {
       file: 'plugin.js',
@@ -22,11 +30,15 @@ export default [
       }),
       resolve(),
       commonjs(),
-      typescript(),
+      typescript({
+        compilerOptions: {
+          module: 'esnext',
+        },
+      }),
     ],
     external: ['prettier/standalone', 'prettier/plugins/html'],
     output: {
-      file: 'browser.js',
+      file: 'browser.mjs',
       format: 'esm',
     },
   },

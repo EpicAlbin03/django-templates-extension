@@ -1,12 +1,12 @@
 {
   "name": "prettier-plugin-django-templates",
   "version": "0.0.2",
-  "description": "Prettier plugin for formatting Django templates",
+  "description": "Prettier plugin for formatting Django HTML templates",
   "main": "plugin.js",
   "files": [
     "plugin.js",
     "plugin.js.map",
-    "browser.js",
+    "browser.mjs",
     "index.d.ts"
   ],
   "types": "./index.d.ts",
@@ -15,7 +15,11 @@
       "types": "./index.d.ts",
       "default": "./plugin.js"
     },
-    "./browser": "./browser.js",
+    "./browser": {
+      "types": "./index.d.ts",
+      "import": "./browser.mjs",
+      "default": "./browser.mjs"
+    },
     "./package.json": "./package.json"
   },
   "scripts": {
@@ -25,6 +29,7 @@
     "lint": "prettier --check .",
     "format": "prettier --write .",
     "test": "ava",
+    "test:package": "node test/package-smoke.mjs",
     "prepare": "pnpm build",
     "prepublishOnly": "pnpm test",
     "changeset:version": "changeset version && git add --all",
@@ -63,9 +68,7 @@
     "prettier": "^3.8.0",
     "rollup": "4.61.1",
     "ts-node": "^10.9.2",
-    "tsimp": "^2.0.12",
     "tslib": "^2.8.1",
-    "tsx": "^4.20.6",
     "typescript": "5.9.3"
   },
   "packageManager": "pnpm@11.5.2+sha512.71c631e382066efc25625d5cf029075de07b61b37f6e27350fbd84b1bda5864c8c1967adc280776b45c30a715c0359a3be08fef42d5bb09e2b99029979692916",

@@ -1,4 +1,4 @@
-// Official block tags from Django builtins plus supported custom block tags.
+// Supported template block tags from Django built-ins plus supported custom tags.
 const START_TAGS = new Set([
   'if',
   'for',
@@ -7,6 +7,8 @@ const START_TAGS = new Set([
   'with',
   'autoescape',
   'ifchanged',
+  'ifequal',
+  'ifnotequal',
   'spaceless',
   'blocktranslate',
   'blocktrans',
@@ -18,6 +20,7 @@ const START_TAGS = new Set([
   'partialdef',
   'verbatim',
   'comment',
+  'thumbnail',
 ]);
 
 const BRANCH_TAGS = new Set(['elif', 'else', 'empty', 'plural']);
@@ -33,9 +36,20 @@ const INLINE_STANDALONE_TAGS = new Set([
   'querystring',
   'static',
   'templatetag',
+  'trans',
   'translate',
   'url',
   'widthratio',
+]);
+
+const BLOCK_STANDALONE_TAGS = new Set([
+  'csrf_token',
+  'debug',
+  'extends',
+  'include',
+  'load',
+  'regroup',
+  'resetcycle',
 ]);
 
 export function isBranchTag(name: string): boolean {
@@ -56,6 +70,10 @@ export function isStartTag(name: string): boolean {
 
 export function isInlineStandaloneTag(name: string): boolean {
   return INLINE_STANDALONE_TAGS.has(name);
+}
+
+export function isBlockStandaloneTag(name: string): boolean {
+  return BLOCK_STANDALONE_TAGS.has(name);
 }
 
 export function getTagRole(name: string): 'start' | 'branch' | 'end' | 'standalone' {
