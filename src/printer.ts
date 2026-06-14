@@ -15,10 +15,11 @@ function replacePlaceholdersInString(
   render: (
     id: string,
     context: { linePrefix: string; lineSuffix: string; hasNewlineBefore: boolean },
-  ) => Doc,
+  ) => { doc: Doc; trimLeadingWhitespace?: boolean; trimFollowingWhitespace?: boolean },
 ): Doc {
   const parts: Doc[] = [];
   let cursor = 0;
+  let trimFollowingWhitespace = false;
 
   while (cursor < currentDoc.length) {
     let matchedId: string | undefined;
@@ -37,18 +38,27 @@ function replacePlaceholdersInString(
       break;
     }
 
-    if (matchedIndex > cursor) {
-      parts.push(currentDoc.slice(cursor, matchedIndex));
-    }
-
     const lineStart = currentDoc.lastIndexOf('\n', matchedIndex - 1) + 1;
     const nextNewline = currentDoc.indexOf('\n', matchedIndex + matchedId.length);
     const lineEnd = nextNewline === -1 ? currentDoc.length : nextNewline;
     const linePrefix = currentDoc.slice(lineStart, matchedIndex);
     const lineSuffix = currentDoc.slice(matchedId.length + matchedIndex, lineEnd);
     const hasNewlineBefore = lineStart > 0;
+    const rendered = render(matchedId, { linePrefix, lineSuffix, hasNewlineBefore });
 
-    parts.push(render(matchedId, { linePrefix, lineSuffix, hasNewlineBefore }));
+    if (matchedIndex > cursor) {
+      const between = currentDoc.slice(cursor, matchedIndex);
+      if (
+        !(
+          ((rendered.trimLeadingWhitespace || trimFollowingWhitespace) && /^\s*$/.test(between))
+        )
+      ) {
+        parts.push(between);
+      }
+    }
+
+    parts.push(rendered.doc);
+    trimFollowingWhitespace = Boolean(rendered.trimFollowingWhitespace);
     cursor = matchedIndex + matchedId.length;
   }
 
@@ -124,6 +134,13 @@ function surroundingBlock(node: DjangoNode): BlockNode | undefined {
   );
 }
 
+function parentBlock(node: DjangoNode): BlockNode | undefined {
+  return Object.values(node.nodes).find(
+    (entry): entry is BlockNode =>
+      entry.type === 'block' && (entry.content.includes(node.id) || entry.end.id === node.id),
+  );
+}
+
 function stripPlaceholderContext(value: string): string {
   return value
     .replace(/<!--DJ\d+-->/g, '')
@@ -142,6 +159,7 @@ function printBlockStandaloneStatement(
   statement: Doc,
   linePrefix: string,
   lineSuffix: string,
+  inlineWithNext = false,
 ): Doc {
   if (isInlineOnlyChildContext(linePrefix, lineSuffix)) {
     return statement;
@@ -150,7 +168,7 @@ function printBlockStandaloneStatement(
   const cleanPrefix = stripPlaceholderContext(linePrefix);
   const cleanSuffix = stripPlaceholderContext(lineSuffix);
   const hasContentBefore = /\S/.test(cleanPrefix);
-  const hasContentAfter = /<!--DJ\d+-->|\S/.test(lineSuffix) || /\S/.test(cleanSuffix);
+  const hasContentAfter = !inlineWithNext && (/<!--DJ\d+-->|\S/.test(lineSuffix) || /\S/.test(cleanSuffix));
   return [
     hasContentBefore ? builders.hardline : '',
     statement,
@@ -196,7 +214,13 @@ function printStatement(node: StatementNode): Doc {
   }
 
   if (node.preNewLines > 1) {
-    return builders.group([builders.trim, builders.hardline, statement]);
+    const block = parentBlock(node);
+    const standaloneNeedsSpacing =
+      node.role === 'standalone' &&
+      (node.placeholderKind !== 'block' || !block || !hasHtmlMarkup(block.content));
+    if (standaloneNeedsSpacing || (node.role === 'end' && block && !/^\s*$/.test(block.content))) {
+      return builders.group([builders.trim, builders.hardline, statement]);
+    }
   }
 
   return statement;
@@ -269,9 +293,19 @@ function buildBlock(
   mapped: Doc,
 ): Doc {
   if (/^\s*$/.test(block.content)) {
+    const newlineCount = (block.content.match(/\n/g) ?? []).length;
+    if (newlineCount <= 1 || block.inTag || block.inAttribute) {
+      return builders.group([
+        path.call(print, 'nodes', block.start.id),
+        builders.softline,
+        path.call(print, 'nodes', block.end.id),
+      ]);
+    }
+
     return builders.group([
       path.call(print, 'nodes', block.start.id),
-      builders.softline,
+      builders.hardline,
+      builders.hardline,
       path.call(print, 'nodes', block.end.id),
     ]);
   }
@@ -314,7 +348,9 @@ export const print: Printer<DjangoNode>['print'] = (path) => {
   }
 };
 
-function isStandaloneBlockLikeNode(node: DjangoNode | undefined): boolean {
+function isStandaloneBlockLikeNode(
+  node: DjangoNode | undefined,
+): node is StatementNode | BlockNode {
   if (!node) {
     return false;
   }
@@ -330,7 +366,7 @@ function getStandaloneLeadingSpacing(
   container: BlockNode | { content: string; nodes: Record<string, DjangoNode> },
   currentNode: DjangoNode,
 ): Doc | undefined {
-  if (!isStandaloneBlockLikeNode(currentNode) || hasHtmlMarkup(container.content)) {
+  if (!isStandaloneBlockLikeNode(currentNode)) {
     return undefined;
   }
 
@@ -340,27 +376,119 @@ function getStandaloneLeadingSpacing(
   }
 
   const before = container.content.slice(0, index);
+
+  if (hasHtmlMarkup(container.content)) {
+    return undefined;
+  }
+
   const previousMatch = before.match(/(<!--DJ\d+-->|DJ\d+X)(?<gap>\s*)$/);
   const previousId = previousMatch?.[1];
   const previousNode = previousId ? container.nodes[previousId] : undefined;
-  const gap = previousMatch?.groups?.gap ?? '';
 
   if (!isStandaloneBlockLikeNode(previousNode)) {
     return undefined;
   }
 
-  const newlineCount = (gap.match(/\n/g) ?? []).length;
-  if (newlineCount > 1) {
+  if (previousNode.type === 'block') {
+    return undefined;
+  }
+
+  if (currentNode.preNewLines > 1) {
     return [builders.hardline, builders.hardline];
   }
 
-  if (newlineCount === 1) {
+  if (currentNode.preNewLines === 1) {
     return builders.hardline;
   }
 
   return previousNode.type === 'statement' && previousNode.keyword === 'extends'
     ? builders.hardline
     : undefined;
+}
+
+function shouldInlineWithFollowingPlaceholder(
+  container: BlockNode | { content: string; nodes: Record<string, DjangoNode> },
+  currentNode: DjangoNode,
+): boolean {
+  if (
+    currentNode.type !== 'statement' ||
+    currentNode.role !== 'standalone' ||
+    currentNode.placeholderKind !== 'block'
+  ) {
+    return false;
+  }
+
+  const index = container.content.indexOf(currentNode.id);
+  if (index === -1) {
+    return false;
+  }
+
+  const after = container.content.slice(index + currentNode.id.length);
+  const match = after.match(/^(?<gap>[ \t]+)(?<next><!--DJ\d+-->|DJ\d+X)/);
+  const nextId = match?.groups?.next;
+  const nextNode = nextId ? container.nodes[nextId] : undefined;
+
+  return (
+    Boolean(match?.groups?.gap) &&
+    nextNode?.type === 'statement' &&
+    nextNode.role === 'standalone' &&
+    nextNode.placeholderKind === 'block'
+  );
+}
+
+function restoreInlinePlaceholderRuns(
+  currentDoc: string,
+  container: BlockNode | { content: string; nodes: Record<string, DjangoNode> },
+): string {
+  const lines = container.content.replace(/\r\n/g, '\n').split('\n');
+  let restored = currentDoc;
+
+  for (const line of lines) {
+    const placeholders = line.match(/<!--DJ\d+-->|DJ\d+X/g) ?? [];
+    if (placeholders.length < 2 || !/[ \t]/.test(line)) {
+      continue;
+    }
+
+    for (let index = 0; index < placeholders.length - 1; index += 1) {
+      const left = placeholders[index].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const right = placeholders[index + 1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      restored = restored.replace(new RegExp(`${left}\\s*\\n\\s*${right}`, 'g'), `${placeholders[index]} ${placeholders[index + 1]}`);
+    }
+  }
+
+  return restored;
+}
+
+function prepareSegmentForHtml(
+  segment: string,
+  ids: string[],
+): {
+  segment: string;
+  beforeReplacements: Array<{ token: string; value: string }>;
+  afterReplacements: Array<{ token: string; value: string }>;
+} {
+  const beforeReplacements: Array<{ token: string; value: string }> = [];
+  const afterReplacements: Array<{ token: string; value: string }> = [];
+  let index = 0;
+
+  let prepared = segment.replace(
+    /((?:<!--DJ\d+-->|DJ\d+X)(?:[ \t]+(?:<!--DJ\d+-->|DJ\d+X))+)/g,
+    (run) => {
+      const token = `DJ_INLINE_RUN_${index += 1}`;
+      beforeReplacements.push({ token, value: run });
+      return token;
+    },
+  );
+
+  prepared = prepared.replace(/(<script\b[^>]*>)([\s\S]*?)(<\/script>)/gi, (match, _openTag, body) => {
+    if (ids.some((id) => body.includes(id)) || /\{[%#{]/.test(body)) {
+      return match;
+    }
+
+    return match;
+  });
+
+  return { segment: prepared, beforeReplacements, afterReplacements };
 }
 
 export const embed: Printer<DjangoNode>['embed'] = () => {
@@ -380,10 +508,11 @@ export const embed: Printer<DjangoNode>['embed'] = () => {
     const mapped = await Promise.all(
       segments.map(async (segment) => {
         const preservedSegment = getPreservedSingleLineHtmlSegment(node, segment);
+        const preparedSegment = prepareSegmentForHtml(segment, ids);
         const doc = node.nodes[segment]
           ? segment
           : (preservedSegment ??
-            (await textToDoc(segment, {
+            (await textToDoc(preparedSegment.segment, {
               ...options,
               parser: 'html',
             })));
@@ -400,15 +529,34 @@ export const embed: Printer<DjangoNode>['embed'] = () => {
             return currentDoc;
           }
 
-          if (!ids.some((id) => currentDoc.includes(id))) {
-            ignoreDoc = false;
-            return currentDoc;
+          for (const replacement of preparedSegment.beforeReplacements) {
+            currentDoc = currentDoc.split(replacement.token).join(replacement.value);
           }
 
-          return replacePlaceholdersInString(currentDoc, ids, (id, context) => {
+          const currentString = currentDoc;
+          if (!ids.some((id) => currentString.includes(id))) {
+            ignoreDoc = false;
+            let plainDoc: Doc = currentDoc;
+            for (const replacement of preparedSegment.afterReplacements) {
+              if (typeof plainDoc === 'string') {
+                plainDoc = plainDoc.split(replacement.token).join(replacement.value);
+              } else {
+                plainDoc = mapDoc(plainDoc, (docPart) =>
+                  typeof docPart === 'string'
+                    ? docPart.split(replacement.token).join(replacement.value)
+                    : docPart,
+                );
+              }
+            }
+            return plainDoc;
+          }
+
+          currentDoc = restoreInlinePlaceholderRuns(currentDoc, node);
+
+          let replacedDoc = replacePlaceholdersInString(currentDoc, ids, (id, context) => {
             const currentNode = node.nodes[id];
             if (ignoreDoc) {
-              return currentNode.originalText;
+              return { doc: currentNode.originalText };
             }
 
             const rendered = path.call(print, 'nodes', id);
@@ -419,15 +567,44 @@ export const embed: Printer<DjangoNode>['embed'] = () => {
               currentNode.role === 'standalone' &&
               currentNode.placeholderKind === 'block'
             ) {
-              return printBlockStandaloneStatement(
-                restored,
-                context.linePrefix,
-                context.lineSuffix,
-              );
+              const inlineWithNext = shouldInlineWithFollowingPlaceholder(node, currentNode);
+              return {
+                doc: [
+                  printBlockStandaloneStatement(
+                    restored,
+                    context.linePrefix,
+                    context.lineSuffix,
+                    inlineWithNext,
+                  ),
+                  inlineWithNext ? ' ' : '',
+                ],
+                trimLeadingWhitespace: Boolean(leadingSpacing),
+                trimFollowingWhitespace: inlineWithNext,
+              };
             }
 
-            return restored;
+            return { doc: restored, trimLeadingWhitespace: Boolean(leadingSpacing) };
           });
+
+          for (const replacement of preparedSegment.afterReplacements) {
+            if (typeof replacedDoc === 'string') {
+              replacedDoc = replacedDoc
+                .split(`${replacement.token};`).join(replacement.value)
+                .split(replacement.token).join(replacement.value);
+            } else {
+              replacedDoc = mapDoc(replacedDoc, (docPart) => {
+                if (typeof docPart !== 'string') {
+                  return docPart;
+                }
+
+                return docPart
+                  .split(`${replacement.token};`).join(replacement.value)
+                  .split(replacement.token).join(replacement.value);
+              });
+            }
+          }
+
+          return replacedDoc;
         });
       }),
     );
