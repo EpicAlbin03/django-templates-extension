@@ -18,34 +18,10 @@
 		},
 		{
 			"type": "node",
-			"request": "launch",
-			"name": "Run 'svelte2tsx/repl/debug.ts' with debugger",
-			"runtimeArgs": ["-r", "ts-node/register"],
-			"args": ["${workspaceFolder}/packages/svelte2tsx/repl/debug.ts"],
-			"env": {
-				"TS_NODE_COMPILER_OPTIONS": "{\"esModuleInterop\":true, \"target\": \"es2018\"}",
-				"TS_NODE_TRANSPILE_ONLY": "true"
-			},
-			"console": "integratedTerminal",
-			"internalConsoleOptions": "neverOpen"
-		},
-		{
-			"type": "node",
 			"request": "attach",
 			"name": "Attach debugger to language server",
 			"port": 6009,
-			"outFiles": [
-				"${workspaceRoot}/packages/language-server/dist/**/*.js",
-				"${workspaceRoot}/packages/svelte2tsx/index.js"
-			],
-			"skipFiles": ["<node_internals>/**"]
-		},
-		{
-			"type": "node",
-			"request": "attach",
-			"name": "Attach debugger to typescript plugin",
-			"port": 5859,
-			"outFiles": ["${workspaceRoot}/packages/typescript-plugin/dist/**/*.js"],
+			"outFiles": ["${workspaceRoot}/packages/language-server/dist/**/*.js"],
 			"skipFiles": ["<node_internals>/**"]
 		}
 	]

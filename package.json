@@ -1,7 +1,7 @@
 {
-	"name": "@svelte/language-tools",
+	"name": "django-templates-extension",
 	"version": "1.0.0",
-	"author": "Svelte Contributors",
+	"author": "django-templates-extension contributors",
 	"license": "MIT",
 	"private": true,
 	"scripts": {

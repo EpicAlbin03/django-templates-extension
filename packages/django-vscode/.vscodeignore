@@ -32,7 +32,5 @@ node_modules/typescript/lib/typingsInstaller.js
 
 # esm builds
 node_modules/prettier/esm
-node_modules/svelte/compiler.mjs
-node_modules/svelte/compiler.mjs.map
 node_modules/vscode-css-languageservice/lib/esm
 node_modules/vscode-html-languageservice/lib/esm

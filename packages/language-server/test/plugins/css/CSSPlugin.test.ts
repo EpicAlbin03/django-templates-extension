@@ -22,7 +22,7 @@ import { FileType, LanguageServiceOptions } from "vscode-css-languageservice"
 
 describe("CSS Plugin", () => {
 	function setup(content: string, lsOptions?: LanguageServiceOptions) {
-		const document = Document.createForTest("file:///hello.svelte", content)
+		const document = Document.createForTest("file:///hello.html", content)
 		const docManager = new DocumentManager(() => document)
 		const pluginManager = new LSConfigManager()
 		const plugin = new CSSPlugin(
@@ -85,17 +85,6 @@ describe("CSS Plugin", () => {
 			assert.deepStrictEqual(plugin.doHover(document, Position.create(0, 13)), null)
 		})
 
-		it("provides hover info inside nested style tag", () => {
-			const { plugin, document } = setup("<svelte:head><style>h1 {}</style></svelte:head>")
-
-			assert.deepStrictEqual(plugin.doHover(document, Position.create(0, 20)), <Hover>{
-				contents: [
-					{ language: "html", value: "<h1>" },
-					"[Selector Specificity](https://developer.mozilla.org/docs/Web/CSS/Specificity): (0, 0, 1)"
-				],
-				range: Range.create(0, 20, 0, 22)
-			})
-		})
 	})
 
 	describe("provides completions", () => {
@@ -126,15 +115,6 @@ describe("CSS Plugin", () => {
 			})
 		})
 
-		it("for :global modifier", async () => {
-			const { plugin, document } = setup("<style>:g</style>")
-
-			const completions = await plugin.getCompletions(document, Position.create(0, 9), {
-				triggerCharacter: ":"
-			} as CompletionContext)
-			const globalCompletion = completions?.items.find((item) => item.label === ":global()")
-			assert.ok(globalCompletion)
-		})
 
 		it("not for stylus", async () => {
 			const { plugin, document } = setup('<style lang="stylus"></style>')
@@ -467,7 +447,7 @@ describe("CSS Plugin", () => {
 								line: 0
 							}
 						},
-						uri: "file:///hello.svelte"
+						uri: "file:///hello.html"
 					},
 					name: "h1"
 				}
