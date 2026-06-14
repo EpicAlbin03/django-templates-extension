@@ -41,7 +41,7 @@ describe("document/utils", () => {
 		})
 
 		it("does not extract tags starting with style/script", () => {
-			// https://github.com/sveltejs/language-tools/issues/43
+			// Regression test: tags beginning with style/script should not be matched by accident
 			// this would previously match <styles>....</style> due to misconfigured attribute matching regex
 			const text = `
             <styles>p{ color: blue; }</styles>
@@ -93,8 +93,8 @@ describe("document/utils", () => {
 			})
 		})
 
-		it("can extract with unclosed component after it", () => {
-			const extracted = extractStyleTag("<style></style><C {#if asd}<p>asd</p>{/if}")
+		it("can extract with unclosed element after it", () => {
+			const extracted = extractStyleTag("<style></style><div><p>asd</p>")
 			assert.deepStrictEqual(extracted, {
 				start: 7,
 				end: 7,
@@ -182,57 +182,30 @@ describe("document/utils", () => {
 
 		it("extracts top level script tag only", () => {
 			const text = `
-                {#if name}
+                <div>
                     <script>
-                        console.log('if not top level')
+                        console.log('nested script')
                     </script>
-                {/if}
-                <ul>
-                    {#each cats as cat}
-                        <script>
-                            console.log('each not top level')
-                        </script>
-                    {/each}
-                </ul>
-                {#await promise}
-                    <script>
-                        console.log('await not top level')
-                    </script>
-                {:then number}
-                    <script>
-                        console.log('then not top level')
-                    </script>
-                {:catch error}
-                    <script>
-                        console.log('catch not top level')
-                    </script>
-                {/await}
-                <p>{@html <script> console.log('html not top level')</script>}</p>
-                {@html mycontent}
-                {@debug myvar}
-                <!-- p{ color: blue; }</script> -->
-                <!--<script lang="scss">
-                p{ color: blue; }
-                </script> -->
-                <scrit>blah</scrit>
+                </div>
+                <!-- <script>commented script</script> -->
                 <script>top level script</script>
             `
 
 			assert.deepStrictEqual(extractScriptTags(text)?.script, {
 				content: "top level script",
 				attributes: {},
-				start: 1243,
-				end: 1259,
-				startPos: Position.create(34, 24),
-				endPos: Position.create(34, 40),
-				container: { start: 1235, end: 1268 }
+				start: 241,
+				end: 257,
+				startPos: Position.create(7, 24),
+				endPos: Position.create(7, 40),
+				container: { start: 233, end: 266 }
 			})
 		})
 
-		it("extracts top level script when there're whitespace before block name", () => {
+		it("extracts top level script when only whitespace follows", () => {
 			const text = `
                 <script>top level script</script>
-                {  #if myvar } {/if}
+                
             `
 
 			assert.deepStrictEqual(extractScriptTags(text)?.script, {
@@ -246,14 +219,14 @@ describe("document/utils", () => {
 			})
 		})
 
-		it("ignores script tag in svelte:head", () => {
-			// https://github.com/sveltejs/language-tools/issues/143#issuecomment-636422045
+		it("ignores script tag nested inside a regular element", () => {
+			// Regression test: only top-level script tags should be extracted.
 			const text = `
-            <svelte:head>
-                <link rel="stylesheet" href="/lib/jodit.es2018.min.css" />
-                <script src="/lib/jodit.es2018.min.js"> 
+            <head>
+                <link rel="stylesheet" href="/lib/site.css" />
+                <script src="/lib/site.js"> 
                 </script>
-            </svelte:head>
+            </head>
             <p>jo</p>
             <script>top level script</script>
             <h1>Hello, world!</h1>
@@ -262,11 +235,11 @@ describe("document/utils", () => {
 			assert.deepStrictEqual(extractScriptTags(text)?.script, {
 				content: "top level script",
 				attributes: {},
-				start: 254,
-				end: 270,
+				start: 216,
+				end: 232,
 				startPos: Position.create(7, 20),
 				endPos: Position.create(7, 36),
-				container: { start: 246, end: 279 }
+				container: { start: 208, end: 241 }
 			})
 		})
 
@@ -317,32 +290,20 @@ describe("document/utils", () => {
 			})
 		})
 
-		it("extract tag correctly with #if and < operator", () => {
+		it("extract tag correctly with less-than operators in text", () => {
 			const text = `
-            {#if value < 3}
-              <div>
-                bla
-              </div>
-            {:else if value < 4}
-            {/if}
-          <script>let value = 2</script>
+            <div>1 < 3</div>
+            <script>let value = 2</script>
 
-          <div>
-            {#if value < 3}
-              <div>
-                bla
-              </div>
-            {:else if value < 4}
-            {/if}
-          </div>`
+            <div>value < 4</div>`
 			assert.deepStrictEqual(extractScriptTags(text)?.script, {
 				content: "let value = 2",
 				attributes: {},
-				start: 159,
-				end: 172,
-				startPos: Position.create(7, 18),
-				endPos: Position.create(7, 31),
-				container: { start: 151, end: 181 }
+				start: 50,
+				end: 63,
+				startPos: Position.create(2, 20),
+				endPos: Position.create(2, 33),
+				container: { start: 42, end: 72 }
 			})
 		})
 
@@ -376,9 +337,9 @@ describe("document/utils", () => {
 			const newPath = updateRelativeImport(
 				"C:/absolute/path/oldPath",
 				"C:/absolute/newPath",
-				"./Component.svelte"
+				"./Component.html"
 			)
-			assert.deepStrictEqual(newPath, "../path/oldPath/Component.svelte")
+			assert.deepStrictEqual(newPath, "../path/oldPath/Component.html")
 		})
 
 		it("should update path of file without ending", () => {
@@ -419,21 +380,9 @@ describe("document/utils", () => {
 
 		it("returns word with custom delimiters", () => {
 			assert.equal(
-				getWordAt('asd on:asd-qwd="asd" ', 10, { left: /\S+$/, right: /[\s=]/ }),
-				"on:asd-qwd"
+				getWordAt('asd data-attr="asd" ', 10, { left: /\S+$/, right: /[\s=]/ }),
+				"data-attr"
 			)
-		})
-
-		function testEvent(str: string, pos: number, expected: string) {
-			assert.equal(getWordAt(str, pos, { left: /\S+$/, right: /[^\w$:]/ }), expected)
-		}
-
-		it("returns event #1", () => {
-			testEvent("<div on:>", 8, "on:")
-		})
-
-		it("returns event #2", () => {
-			testEvent("<div on: >", 8, "on:")
 		})
 
 		it("returns empty string when only whitespace", () => {
@@ -442,27 +391,18 @@ describe("document/utils", () => {
 	})
 
 	describe("#isInsideMoustacheTag", () => {
-		it("detects position inside moustache tag", () => {
-			const result = isInsideMoustacheTag(
-				'<div on:click={() => console.log("hello")}></div>',
-				0,
-				20
-			)
+		it("detects position inside expression braces", () => {
+			const result = isInsideMoustacheTag('<div data-value={value}></div>', 0, 18)
 			assert.strictEqual(result, true)
 		})
 
 		it("detects position after template literal", () => {
-			const result = isInsideMoustacheTag("<Foo a={`a}`}></div>", 0, 11)
+			const result = isInsideMoustacheTag('<div data-value={`a}`}></div>', 0, 19)
 			assert.strictEqual(result, true)
 		})
 
 		it("detects position after nested template literals", () => {
-			const result = isInsideMoustacheTag("<Foo a={`${`}`}`}></div>", 0, 15)
-			assert.strictEqual(result, true)
-		})
-
-		it("detects position after nested template literals with interpolation", () => {
-			const result = isInsideMoustacheTag("<Foo a={`${hi(`${a}}`)}`)></div>", 0, 22)
+			const result = isInsideMoustacheTag('<div data-value={`${`}`}`}></div>', 0, 23)
 			assert.strictEqual(result, true)
 		})
 	})

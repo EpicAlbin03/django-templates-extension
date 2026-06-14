@@ -1,4 +1,3 @@
-packages/language-server/test/**/*.svelte
 packages/language-server/test/**/testfiles/**/*.ts
 packages/django-vscode/syntaxes/*.yaml
 packages/django-vscode/test/*/samples/**/*

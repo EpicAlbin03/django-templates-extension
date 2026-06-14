@@ -200,9 +200,9 @@ describe("CSS Plugin", () => {
 		})
 
 		it("provides completions inside nested style tag", async () => {
-			const { plugin, document } = setup(`<svelte:head><style></style></svelte:head>`)
+			const { plugin, document } = setup(`<div><style></style></div>`)
 
-			const completions = await plugin.getCompletions(document, Position.create(0, 20), {
+			const completions = await plugin.getCompletions(document, Position.create(0, 12), {
 				triggerCharacter: "."
 			} as CompletionContext)
 

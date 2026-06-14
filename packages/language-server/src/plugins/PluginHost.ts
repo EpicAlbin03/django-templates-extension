@@ -240,12 +240,6 @@ export class PluginHost implements LSProvider, OnWatchFileChanges {
 						return false
 					}
 				}
-				if (label.startsWith("on")) {
-					if (htmlCompletions.has("on:" + label.slice(2))) {
-						// onclick -> on:click -> exists in html completions
-						return false
-					}
-				}
 				// adjust sort text so it does appear after html completions
 				item.sortText = "Z" + (item.sortText || "")
 				return true

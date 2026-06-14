@@ -21,9 +21,9 @@ import assert from "assert"
 
 describe("PluginHost", () => {
 	const textDocument: TextDocumentItem = {
-		uri: "file:///hello.svelte",
+		uri: "file:///hello.html",
 		version: 0,
-		languageId: "svelte",
+		languageId: "html",
 		text: "Hello, world!"
 	}
 
@@ -299,35 +299,35 @@ describe("PluginHost", () => {
 					"MyClass",
 					SymbolKind.Class,
 					Range.create(Position.create(0, 0), Position.create(10, 0)),
-					"file:///hello.svelte"
+					"file:///hello.html"
 				),
 				// Method inside class (lines 1-5)
 				SymbolInformation.create(
 					"myMethod",
 					SymbolKind.Method,
 					Range.create(Position.create(1, 0), Position.create(5, 0)),
-					"file:///hello.svelte"
+					"file:///hello.html"
 				),
 				// Variable inside method (lines 2-3)
 				SymbolInformation.create(
 					"localVar",
 					SymbolKind.Variable,
 					Range.create(Position.create(2, 0), Position.create(3, 0)),
-					"file:///hello.svelte"
+					"file:///hello.html"
 				),
 				// Another method in class (lines 6-8)
 				SymbolInformation.create(
 					"anotherMethod",
 					SymbolKind.Method,
 					Range.create(Position.create(6, 0), Position.create(8, 0)),
-					"file:///hello.svelte"
+					"file:///hello.html"
 				),
 				// Root level function (lines 12-15)
 				SymbolInformation.create(
 					"topLevelFunction",
 					SymbolKind.Function,
 					Range.create(Position.create(12, 0), Position.create(15, 0)),
-					"file:///hello.svelte"
+					"file:///hello.html"
 				)
 			]
 
@@ -399,13 +399,13 @@ describe("PluginHost", () => {
 					"outer",
 					SymbolKind.Class,
 					Range.create(Position.create(0, 0), Position.create(10, 0)),
-					"file:///hello.svelte"
+					"file:///hello.html"
 				),
 				SymbolInformation.create(
 					"inner",
 					SymbolKind.Method,
 					Range.create(Position.create(0, 0), Position.create(5, 0)),
-					"file:///hello.svelte"
+					"file:///hello.html"
 				)
 			]
 

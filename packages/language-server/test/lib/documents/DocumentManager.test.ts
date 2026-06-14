@@ -5,9 +5,9 @@ import { DocumentManager, Document } from "../../../src/lib/documents"
 
 describe("Document Manager", () => {
 	const textDocument: TextDocumentItem = {
-		uri: "file:///hello.svelte",
+		uri: "file:///hello.html",
 		version: 0,
-		languageId: "svelte",
+		languageId: "html",
 		text: "Hello, world!"
 	}
 
@@ -43,7 +43,7 @@ describe("Document Manager", () => {
 		manager.openClientDocument(textDocument)
 		manager.updateDocument(textDocument, [
 			{
-				text: "svelte",
+				text: "django",
 				range: Range.create(0, 7, 0, 12),
 				rangeLength: 5
 			},
@@ -54,7 +54,7 @@ describe("Document Manager", () => {
 			}
 		])
 
-		assert.strictEqual(document.getText(), "Greetings, svelte!")
+		assert.strictEqual(document.getText(), "Greetings, django!")
 	})
 
 	it("fails to update if document isn't open", () => {
@@ -65,9 +65,9 @@ describe("Document Manager", () => {
 
 	it("update document in case-insensitive fs with different casing", () => {
 		const textDocument: TextDocumentItem = {
-			uri: "file:///hello2.svelte",
+			uri: "file:///hello2.html",
 			version: 0,
-			languageId: "svelte",
+			languageId: "html",
 			text: "Hello, world!"
 		}
 		const manager = new DocumentManager(createTextDocument, {
@@ -81,7 +81,7 @@ describe("Document Manager", () => {
 		manager.updateDocument(
 			{
 				...textDocument,
-				uri: "file:///Hello2.svelte"
+				uri: "file:///Hello2.html"
 			},
 			[
 				{

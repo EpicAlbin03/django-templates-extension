@@ -40,13 +40,12 @@ function parseAttributes(
 	}
 }
 
-const regexIf = new RegExp("{\\s*#if\\s.*?}", "gms")
-const regexIfEnd = new RegExp("{\\s*/if}", "gms")
-const regexEach = new RegExp("{\\s*#each\\s.*?}", "gms")
-const regexEachEnd = new RegExp("{\\s*/each}", "gms")
-const regexAwait = new RegExp("{\\s*#await\\s.*?}", "gms")
-const regexAwaitEnd = new RegExp("{\\s*/await}", "gms")
-const regexHtml = new RegExp("{\\s*@html\\s.*?", "gms")
+const regexIf = new RegExp("{%\\s*if\\s.*?%}", "gms")
+const regexIfEnd = new RegExp("{%\\s*endif\\s*%}", "gms")
+const regexEach = new RegExp("{%\\s*for\\s.*?%}", "gms")
+const regexEachEnd = new RegExp("{%\\s*endfor\\s*%}", "gms")
+const regexBlock = new RegExp("{%\\s*block\\s.*?%}", "gms")
+const regexBlockEnd = new RegExp("{%\\s*endblock\\s*%}", "gms")
 
 /**
  * Extracts a tag (style or script) from the given text
@@ -68,8 +67,8 @@ function extractTags(
 	return matchedNodes.map((node) => transformToTagInfo(node, text))
 
 	/**
-	 * For every match AFTER the tag do a search for `{/X`.
-	 * If that is BEFORE `{#X`, we are inside a moustache tag.
+	 * For every match AFTER the tag do a search for the corresponding Django end tag.
+	 * If that appears before another start tag, the current HTML node is inside template control flow.
 	 */
 	function isNotInsideControlFlowTag(tag: Node) {
 		const tagIndex = rootNodes.indexOf(tag)
@@ -92,7 +91,7 @@ function extractTags(
 		return ![
 			[regexIf, regexIfEnd],
 			[regexEach, regexEachEnd],
-			[regexAwait, regexAwaitEnd]
+			[regexBlock, regexBlockEnd]
 		].some((pair) => {
 			pair[0].lastIndex = 0
 			pair[1].lastIndex = 0
@@ -102,23 +101,6 @@ function extractTags(
 		})
 	}
 
-	/**
-	 * For every match BEFORE the tag do a search for `{@html`.
-	 * If that is BEFORE `}`, we are inside a moustache tag.
-	 */
-	function isNotInsideHtmlTag(tag: Node) {
-		const nodes = rootNodes.slice(0, rootNodes.indexOf(tag))
-		const rootContentBeforeTag = [{ start: 0, end: 0 }, ...nodes]
-			.map((node, idx) => {
-				return text.substring(node.end, nodes[idx]?.start)
-			})
-			.join("")
-
-		return !(
-			regexLastIndexOf(rootContentBeforeTag, regexHtml) > rootContentBeforeTag.lastIndexOf("}")
-		)
-	}
-}
 
 function transformToTagInfo(matchedNode: Node, text: string): TagInformation {
 	const start = matchedNode.startTagEnd ?? matchedNode.start
