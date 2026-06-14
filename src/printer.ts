@@ -12,7 +12,10 @@ function getPlaceholderIds(node: BlockNode | { nodes: Record<string, DjangoNode>
 function replacePlaceholdersInString(
   currentDoc: string,
   ids: string[],
-  render: (id: string, context: { linePrefix: string; lineSuffix: string }) => Doc,
+  render: (
+    id: string,
+    context: { linePrefix: string; lineSuffix: string; hasNewlineBefore: boolean },
+  ) => Doc,
 ): Doc {
   const parts: Doc[] = [];
   let cursor = 0;
@@ -42,9 +45,10 @@ function replacePlaceholdersInString(
     const nextNewline = currentDoc.indexOf('\n', matchedIndex + matchedId.length);
     const lineEnd = nextNewline === -1 ? currentDoc.length : nextNewline;
     const linePrefix = currentDoc.slice(lineStart, matchedIndex);
-    const lineSuffix = currentDoc.slice(matchedIndex + matchedId.length, lineEnd);
+    const lineSuffix = currentDoc.slice(matchedId.length + matchedIndex, lineEnd);
+    const hasNewlineBefore = lineStart > 0;
 
-    parts.push(render(matchedId, { linePrefix, lineSuffix }));
+    parts.push(render(matchedId, { linePrefix, lineSuffix, hasNewlineBefore }));
     cursor = matchedIndex + matchedId.length;
   }
 
@@ -310,6 +314,55 @@ export const print: Printer<DjangoNode>['print'] = (path) => {
   }
 };
 
+function isStandaloneBlockLikeNode(node: DjangoNode | undefined): boolean {
+  if (!node) {
+    return false;
+  }
+
+  if (node.type === 'statement') {
+    return node.role === 'standalone' && node.placeholderKind === 'block';
+  }
+
+  return node.type === 'block' && node.placeholderKind === 'block';
+}
+
+function getStandaloneLeadingSpacing(
+  container: BlockNode | { content: string; nodes: Record<string, DjangoNode> },
+  currentNode: DjangoNode,
+): Doc | undefined {
+  if (!isStandaloneBlockLikeNode(currentNode) || hasHtmlMarkup(container.content)) {
+    return undefined;
+  }
+
+  const index = container.content.indexOf(currentNode.id);
+  if (index === -1) {
+    return undefined;
+  }
+
+  const before = container.content.slice(0, index);
+  const previousMatch = before.match(/(<!--DJ\d+-->|DJ\d+X)(?<gap>\s*)$/);
+  const previousId = previousMatch?.[1];
+  const previousNode = previousId ? container.nodes[previousId] : undefined;
+  const gap = previousMatch?.groups?.gap ?? '';
+
+  if (!isStandaloneBlockLikeNode(previousNode)) {
+    return undefined;
+  }
+
+  const newlineCount = (gap.match(/\n/g) ?? []).length;
+  if (newlineCount > 1) {
+    return [builders.hardline, builders.hardline];
+  }
+
+  if (newlineCount === 1) {
+    return builders.hardline;
+  }
+
+  return previousNode.type === 'statement' && previousNode.keyword === 'extends'
+    ? builders.hardline
+    : undefined;
+}
+
 export const embed: Printer<DjangoNode>['embed'] = () => {
   return async (
     textToDoc: (text: string, options: Options) => Promise<Doc>,
@@ -359,19 +412,21 @@ export const embed: Printer<DjangoNode>['embed'] = () => {
             }
 
             const rendered = path.call(print, 'nodes', id);
+            const leadingSpacing = getStandaloneLeadingSpacing(node, currentNode);
+            const restored = leadingSpacing ? [builders.trim, leadingSpacing, rendered] : rendered;
             if (
               currentNode.type === 'statement' &&
               currentNode.role === 'standalone' &&
               currentNode.placeholderKind === 'block'
             ) {
               return printBlockStandaloneStatement(
-                rendered,
+                restored,
                 context.linePrefix,
                 context.lineSuffix,
               );
             }
 
-            return rendered;
+            return restored;
           });
         });
       }),
@@ -380,11 +435,7 @@ export const embed: Printer<DjangoNode>['embed'] = () => {
     const joined = joinSegments(node, segments, mapped);
 
     if (node.type === 'block') {
-      const block = buildBlock(path, print, node, joined);
-      if (node.preNewLines > 1) {
-        return builders.group([builders.trim, builders.hardline, block]);
-      }
-      return block;
+      return buildBlock(path, print, node, joined);
     }
 
     return [joined, builders.hardline];
