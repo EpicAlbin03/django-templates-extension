@@ -1,5 +1,12 @@
 import type { Parser } from 'prettier';
-import { getTagRole, isBranchTag, isEndTag, isInlineStandaloneTag, isRawTag } from './tags';
+import {
+  getTagRole,
+  isBlockStandaloneTag,
+  isBranchTag,
+  isEndTag,
+  isInlineStandaloneTag,
+  isRawTag,
+} from './tags';
 import type {
   BlockNode,
   CommentNode,
@@ -385,6 +392,10 @@ function isStandaloneUrlAssignment(tag: TagToken): boolean {
 
 function shouldInlineStandalone(tag: TagToken): boolean {
   if (isStandaloneUrlAssignment(tag) && !tag.inAttribute && !tag.inTag) {
+    return false;
+  }
+
+  if (isBlockStandaloneTag(tag.name) && !tag.inAttribute && !tag.inTag) {
     return false;
   }
 
