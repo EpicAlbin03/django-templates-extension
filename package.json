@@ -1,7 +1,7 @@
 {
   "name": "prettier-plugin-django-templates",
   "version": "0.0.2",
-  "description": "Prettier plugin for formatting Django templates",
+  "description": "Prettier plugin for formatting Django HTML templates",
   "main": "plugin.js",
   "files": [
     "plugin.js",

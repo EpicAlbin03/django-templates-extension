@@ -8,8 +8,8 @@
             <ul>
               {% for item in section.items %}
                 <li>
-                  <span>{{ item.name }}</span
-                  >{% if item.meta %}
+                  <span>{{ item.name }}</span>
+                  {% if item.meta %}
                     <small>{{ item.meta }}</small>
                   {% endif %}
                 </li>

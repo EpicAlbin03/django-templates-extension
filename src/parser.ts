@@ -8,15 +8,15 @@ import {
   isRawTag,
 } from './tags';
 import type {
-  BlockNode,
+  TemplateBlockNode,
   CommentNode,
   DjangoNode,
   ExpressionNode,
-  IgnoreNode,
-  PlaceholderKind,
-  RawNode,
+  IgnoreRegionNode,
+  ProtectedMarkerKind,
+  RawBlockNode,
   RootNode,
-  StatementNode,
+  TemplateTagNode,
 } from './ast';
 
 const NOT_FOUND = -1;
@@ -321,7 +321,7 @@ function countPreNewLines(text: string, to: number): number {
   return segment.split('\n').length - 1;
 }
 
-function createPlaceholder(id: number, kind: PlaceholderKind): string {
+function createProtectedMarker(id: number, kind: ProtectedMarkerKind): string {
   if (kind === 'block') {
     return `<!--DJ${id}-->`;
   }
@@ -367,7 +367,7 @@ function expectedEndNames(startName: string): string[] {
   return candidates;
 }
 
-function matchesEnd(start: StatementNode, endName: string): boolean {
+function matchesEnd(start: TemplateTagNode, endName: string): boolean {
   return expectedEndNames(start.keyword).includes(endName);
 }
 
@@ -378,11 +378,11 @@ const BRANCH_PARENTS: Record<string, string[]> = {
   plural: ['blocktranslate', 'blocktrans'],
 };
 
-function hasMatchingBranchParent(token: TagToken, stack: StatementNode[]): boolean {
+function hasMatchingBranchParent(token: TagToken, stack: TemplateTagNode[]): boolean {
   return BRANCH_PARENTS[token.name]?.includes(stack[stack.length - 1]?.keyword) ?? false;
 }
 
-function actsAsEndTag(token: TagToken, stack: StatementNode[]): boolean {
+function actsAsEndTag(token: TagToken, stack: TemplateTagNode[]): boolean {
   return token.role === 'end' || stack.some((entry) => matchesEnd(entry, token.name));
 }
 
@@ -426,7 +426,7 @@ function followsIgnoredRegionOrHtmlComment(tokens: Token[], index: number): bool
   return false;
 }
 
-function placeholderKindForToken(token: Token, forceBlock = false): PlaceholderKind {
+function protectedMarkerKindForToken(token: Token, forceBlock = false): ProtectedMarkerKind {
   if (token.inTag && !token.inAttribute) {
     return 'attr';
   }
@@ -458,16 +458,16 @@ export const parse: Parser<DjangoNode>['parse'] = (text) => {
     index: 0,
     length: text.length,
     nodes,
-    placeholderKind: 'block',
+    protectedMarkerKind: 'block',
   };
 
   let nextId = 0;
   let delta = 0;
-  const stack: StatementNode[] = [];
+  const stack: TemplateTagNode[] = [];
 
   const createId = (token: Token, forceBlock = false) => {
     while (true) {
-      const id = createPlaceholder(nextId++, placeholderKindForToken(token, forceBlock));
+      const id = createProtectedMarker(nextId++, protectedMarkerKindForToken(token, forceBlock));
       if (!text.includes(id)) {
         return id;
       }
@@ -497,7 +497,7 @@ export const parse: Parser<DjangoNode>['parse'] = (text) => {
         index: currentIndex,
         length: token.raw.length,
         nodes,
-        placeholderKind: placeholderKindForToken(token),
+        protectedMarkerKind: protectedMarkerKindForToken(token),
         inTag: token.inTag,
         inAttribute: token.inAttribute,
       };
@@ -518,7 +518,7 @@ export const parse: Parser<DjangoNode>['parse'] = (text) => {
         index: currentIndex,
         length: token.raw.length,
         nodes,
-        placeholderKind: placeholderKindForToken(token),
+        protectedMarkerKind: protectedMarkerKindForToken(token),
         inTag: token.inTag,
         inAttribute: token.inAttribute,
       };
@@ -530,8 +530,8 @@ export const parse: Parser<DjangoNode>['parse'] = (text) => {
 
     if (token.type === 'IgnoreBlock') {
       const id = createId(token, !token.inTag && !token.inAttribute);
-      const node: IgnoreNode = {
-        type: 'ignore',
+      const node: IgnoreRegionNode = {
+        type: 'ignore-region',
         id,
         content: token.raw,
         originalText: token.raw,
@@ -539,7 +539,7 @@ export const parse: Parser<DjangoNode>['parse'] = (text) => {
         index: currentIndex,
         length: token.raw.length,
         nodes,
-        placeholderKind: placeholderKindForToken(token, !token.inTag && !token.inAttribute),
+        protectedMarkerKind: protectedMarkerKindForToken(token, !token.inTag && !token.inAttribute),
         inTag: token.inTag,
         inAttribute: token.inAttribute,
       };
@@ -551,8 +551,8 @@ export const parse: Parser<DjangoNode>['parse'] = (text) => {
 
     if (token.type === 'RawBlock') {
       const id = createId(token, !token.inTag && !token.inAttribute);
-      const node: RawNode = {
-        type: 'raw',
+      const node: RawBlockNode = {
+        type: 'raw-block',
         id,
         content: token.raw,
         originalText: token.raw,
@@ -560,7 +560,7 @@ export const parse: Parser<DjangoNode>['parse'] = (text) => {
         index: currentIndex,
         length: token.raw.length,
         nodes,
-        placeholderKind: placeholderKindForToken(token, !token.inTag && !token.inAttribute),
+        protectedMarkerKind: protectedMarkerKindForToken(token, !token.inTag && !token.inAttribute),
         inTag: token.inTag,
         inAttribute: token.inAttribute,
         keyword: token.name,
@@ -574,7 +574,7 @@ export const parse: Parser<DjangoNode>['parse'] = (text) => {
       continue;
     }
 
-    const statementBase = {
+    const templateTagBase = {
       id: createId(token),
       content: token.content,
       originalText: normalizeRaw(token),
@@ -584,7 +584,7 @@ export const parse: Parser<DjangoNode>['parse'] = (text) => {
       nodes,
       keyword: token.name,
       role: token.role,
-      placeholderKind: placeholderKindForToken(token),
+      protectedMarkerKind: protectedMarkerKindForToken(token),
       inTag: token.inTag,
       inAttribute: token.inAttribute,
     } as const;
@@ -592,11 +592,11 @@ export const parse: Parser<DjangoNode>['parse'] = (text) => {
     if (token.role === 'branch') {
       if (!hasMatchingBranchParent(token, stack)) {
         throw new Error(
-          `No opening statement found for branch statement "${statementBase.originalText}".`,
+          `No opening template tag found for branch template tag "${templateTagBase.originalText}".`,
         );
       }
 
-      const node: StatementNode = { type: 'statement', ...statementBase };
+      const node: TemplateTagNode = { type: 'template-tag', ...templateTagBase };
       nodes[node.id] = node;
       root.content = replaceAt(root.content, node.id, currentIndex, token.raw.length);
       delta += node.id.length - token.raw.length;
@@ -604,7 +604,7 @@ export const parse: Parser<DjangoNode>['parse'] = (text) => {
     }
 
     if (actsAsEndTag(token, stack)) {
-      const endNode: StatementNode = { type: 'statement', ...statementBase };
+      const endNode: TemplateTagNode = { type: 'template-tag', ...templateTagBase };
       nodes[endNode.id] = endNode;
 
       let matchIndex = NOT_FOUND;
@@ -617,18 +617,18 @@ export const parse: Parser<DjangoNode>['parse'] = (text) => {
 
       if (matchIndex === NOT_FOUND) {
         throw new Error(
-          `No opening statement found for closing statement "${endNode.originalText}".`,
+          `No opening template tag found for closing template tag "${endNode.originalText}".`,
         );
       }
 
       const startNode = stack.splice(matchIndex, 1)[0];
       const blockText = root.content.slice(startNode.index, currentIndex + token.raw.length);
-      const blockId = createPlaceholder(
+      const blockId = createProtectedMarker(
         nextId++,
-        placeholderKindForToken(token, !startNode.inTag && !startNode.inAttribute),
+        protectedMarkerKindForToken(token, !startNode.inTag && !startNode.inAttribute),
       );
-      const blockNode: BlockNode = {
-        type: 'block',
+      const blockNode: TemplateBlockNode = {
+        type: 'template-block',
         id: blockId,
         content: blockText.slice(startNode.length, blockText.length - token.raw.length),
         originalText: blockText,
@@ -636,7 +636,7 @@ export const parse: Parser<DjangoNode>['parse'] = (text) => {
         index: startNode.index,
         length: blockText.length,
         nodes,
-        placeholderKind: startNode.inTag || startNode.inAttribute ? 'inline' : 'block',
+        protectedMarkerKind: startNode.inTag || startNode.inAttribute ? 'inline' : 'block',
         start: startNode,
         end: endNode,
         containsNewLines: /\n/.test(blockText),
@@ -651,12 +651,12 @@ export const parse: Parser<DjangoNode>['parse'] = (text) => {
 
     if (token.role === 'end') {
       throw new Error(
-        `No opening statement found for closing statement "${statementBase.originalText}".`,
+        `No opening template tag found for closing template tag "${templateTagBase.originalText}".`,
       );
     }
 
     if (token.role === 'standalone' && !isBranchTag(token.name) && !isEndTag(token.name)) {
-      const node: StatementNode = { type: 'statement', ...statementBase };
+      const node: TemplateTagNode = { type: 'template-tag', ...templateTagBase };
       nodes[node.id] = node;
 
       if (!shouldInlineStandalone(token) && hasMatchingEnd(tokens, tokenIndex, token.name)) {
@@ -669,7 +669,7 @@ export const parse: Parser<DjangoNode>['parse'] = (text) => {
       continue;
     }
 
-    const node: StatementNode = { type: 'statement', ...statementBase };
+    const node: TemplateTagNode = { type: 'template-tag', ...templateTagBase };
     nodes[node.id] = node;
     stack.push(node);
   }

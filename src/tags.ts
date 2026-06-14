@@ -1,4 +1,4 @@
-// Official block tags from Django builtins plus supported custom block tags.
+// Supported template block tags from Django built-ins plus supported custom tags.
 const START_TAGS = new Set([
   'if',
   'for',

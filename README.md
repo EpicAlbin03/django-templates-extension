@@ -1,6 +1,6 @@
 # Prettier Plugin Django Templates
 
-Format Django templates with Prettier.
+Format Django HTML templates with Prettier.
 
 ## Install
 
@@ -18,7 +18,7 @@ Add the plugin to your Prettier config:
 }
 ```
 
-The plugin provides the `django-html` parser for Django templates in `.html` files. In most setups, adding the plugin is enough. If you need to force the parser for specific files, use a Prettier override:
+The plugin provides the `django-html` parser for Django HTML templates in `.html` files. In most setups, adding the plugin is enough. If you need to force the parser for specific files, use a Prettier override:
 
 ```json
 {
@@ -36,7 +36,7 @@ The plugin provides the `django-html` parser for Django templates in `.html` fil
 
 ## Ignore sections
 
-Using range ignores is the best way to tell prettier to ignore part of files. Most of the time this is necessary for Django tags inside script or style tags:
+Using ignore regions is the best way to tell Prettier to leave part of a Django HTML template unchanged. Most of the time this is necessary for template tags inside embedded content such as `<script>` or `<style>` elements:
 
 ```html
 <!-- prettier-ignore-start -->
@@ -52,7 +52,7 @@ Using range ignores is the best way to tell prettier to ignore part of files. Mo
 <!-- prettier-ignore-end -->
 ```
 
-Or using Django comments:
+Or using template comments:
 
 ```html
 {# prettier-ignore-start #}
