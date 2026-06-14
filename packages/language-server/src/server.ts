@@ -16,7 +16,7 @@ import {
 import { Document, DocumentManager } from "./lib/documents"
 import { Logger } from "./logger"
 import { LSConfigManager } from "./ls-config"
-import { CSSPlugin, HTMLPlugin, PluginHost } from "./plugins"
+import { CSSPlugin, DjangoPlugin, HTMLPlugin, PluginHost } from "./plugins"
 import { createLanguageServices } from "./plugins/css/service"
 import { FileSystemProvider } from "./lib/FileSystemProvider"
 import { setIsTrusted } from "./importPackage"
@@ -127,6 +127,7 @@ export function startServer(options?: LSOptions) {
 				})
 			)
 		)
+		pluginHost.register(new DjangoPlugin(configManager))
 
 		if (evt.capabilities.textDocument?.diagnostic) {
 			const refreshDiagnostics = evt.capabilities.workspace?.diagnostics?.refreshSupport
@@ -183,6 +184,7 @@ export function startServer(options?: LSOptions) {
 					]
 				},
 				colorProvider: true,
+				documentFormattingProvider: true,
 				documentSymbolProvider: true,
 				renameProvider: evt.capabilities.textDocument?.rename?.prepareSupport
 					? { prepareProvider: true }
@@ -227,6 +229,7 @@ export function startServer(options?: LSOptions) {
 	connection.onCompletion((evt, cancellationToken) =>
 		pluginHost.getCompletions(evt.textDocument, evt.position, evt.context, cancellationToken)
 	)
+	connection.onDocumentFormatting((evt) => pluginHost.formatDocument(evt.textDocument, evt.options))
 	connection.onDocumentColor((evt) => pluginHost.getDocumentColors(evt.textDocument))
 	connection.onColorPresentation((evt) =>
 		pluginHost.getColorPresentations(evt.textDocument, evt.range, evt.color)

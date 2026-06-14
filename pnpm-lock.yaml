@@ -51,6 +51,9 @@ importers:
       prettier:
         specifier: ~3.3.3
         version: 3.3.3
+      prettier-plugin-django-templates:
+        specifier: ^0.0.2
+        version: 0.0.2(prettier@3.3.3)
       prettier-plugin-svelte:
         specifier: ^3.5.0
         version: 3.5.0(prettier@3.3.3)(svelte@4.2.20)
@@ -1009,6 +1012,12 @@ packages:
   postcss@8.5.6:
     resolution: {integrity: sha512-3Ybi1tAuwAP9s0r1UQ2J4n5Y0G05bJkpUIO0/bI9MhwmD70S5aTWbXGBwxHrelT+XM1k6dM0pk+SwNkpTRN7Pg==}
     engines: {node: ^10 || ^12 || >=14}
+
+  prettier-plugin-django-templates@0.0.2:
+    resolution: {integrity: sha512-8Z79a0BZGC7/cimiMr2vA0PxFk4UFQjJBCE6VgyBCgdmOI3oaKaEg7J1ZGwDi96RZ8Iq/2q0dc/8Vmja6hgHMQ==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      prettier: ^3.0.0
 
   prettier-plugin-svelte@3.5.0:
     resolution: {integrity: sha512-2lLO/7EupnjO/95t+XZesXs8Bf3nYLIDfCo270h5QWbj/vjLqmrQ1LiRk9LPggxSDsnVYfehamZNf+rgQYApZg==}
@@ -2070,6 +2079,10 @@ snapshots:
       nanoid: 3.3.11
       picocolors: 1.1.1
       source-map-js: 1.2.1
+
+  prettier-plugin-django-templates@0.0.2(prettier@3.3.3):
+    dependencies:
+      prettier: 3.3.3
 
   prettier-plugin-svelte@3.5.0(prettier@3.3.3)(svelte@4.2.20):
     dependencies:
