@@ -1,7 +1,7 @@
 {
-	"name": "svelte-language-server",
+	"name": "django-template-language-server",
 	"version": "0.18.2",
-	"description": "A language server for Svelte",
+	"description": "A language server for Django templates in HTML files",
 	"main": "dist/src/index.js",
 	"typings": "dist/src/index",
 	"exports": {
@@ -16,25 +16,10 @@
 		"watch": "tsc -w"
 	},
 	"bin": {
-		"svelteserver": "bin/server.js"
+		"djangotemplateserver": "bin/server.js"
 	},
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/sveltejs/language-tools.git"
-	},
-	"keywords": [
-		"svelte",
-		"vscode",
-		"atom",
-		"editor",
-		"language-server"
-	],
-	"author": "The Svelte Community",
+	"keywords": ["django", "html", "vscode", "language-server"],
 	"license": "MIT",
-	"bugs": {
-		"url": "https://github.com/sveltejs/language-tools/issues"
-	},
-	"homepage": "https://github.com/sveltejs/language-tools#readme",
 	"engines": {
 		"node": ">= 18.0.0"
 	},

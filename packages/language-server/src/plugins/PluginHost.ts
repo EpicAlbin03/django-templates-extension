@@ -87,8 +87,9 @@ export class PluginHost implements LSProvider, OnWatchFileChanges {
 		const document = this.getDocument(textDocument.uri)
 
 		if (this.canSkipDiagnostics(document)) {
-			// Don't return diagnostics for files inside node_modules. These are considered read-only (cannot be changed)
-			// and in case of svelte-check they would pollute/skew the output
+			// Don't return diagnostics for files inside node_modules.
+			// These files are effectively read-only from the user's perspective and
+			// reporting diagnostics from dependencies would add a lot of noise.
 			return []
 		}
 
@@ -483,10 +484,11 @@ export class PluginHost implements LSProvider, OnWatchFileChanges {
 				"high"
 			)
 		).flat()
-		// Sort Svelte actions below other actions as they are often less relevant
+		// Keep Django-specific actions below generic editor/language-service actions
+		// because they are usually more specialized and less commonly needed first.
 		actions.sort((a, b) => {
-			const aPrio = a.title.startsWith("(svelte)") ? 1 : 0
-			const bPrio = b.title.startsWith("(svelte)") ? 1 : 0
+			const aPrio = a.title.startsWith("(django)") ? 1 : 0
+			const bPrio = b.title.startsWith("(django)") ? 1 : 0
 			return aPrio - bPrio
 		})
 		return actions

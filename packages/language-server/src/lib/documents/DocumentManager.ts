@@ -12,7 +12,7 @@ import { FileMap, FileSet } from "./fileCollection"
 export type DocumentEvent = "documentOpen" | "documentChange" | "documentClose"
 
 /**
- * Manages svelte documents
+ * Manages open documents.
  */
 export class DocumentManager {
 	private emitter = new EventEmitter()

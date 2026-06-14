@@ -336,7 +336,7 @@ export function updateRelativeImport(oldPath: string, newPath: string, relativeI
 }
 
 /**
- * Returns the node if offset is inside a component's starttag
+ * Returns the node if offset is inside a component-like start tag.
  */
 export function getNodeIfIsInComponentStartTag(
 	html: HTMLDocument,
@@ -346,7 +346,7 @@ export function getNodeIfIsInComponentStartTag(
 	const node = html.findNodeAt(offset)
 	if (
 		!!node.tag &&
-		(node.tag[0] === node.tag[0].toUpperCase() || (document.isSvelte5 && node.tag.includes("."))) &&
+		node.tag[0] === node.tag[0].toUpperCase() &&
 		(!node.startTagEnd || offset < node.startTagEnd)
 	) {
 		return node

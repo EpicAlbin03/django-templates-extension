@@ -70,8 +70,8 @@ export function normalizeUri(uri: string): string {
 }
 
 /**
- * Given a path like foo/bar or foo/bar.svelte , returns its last path
- * (bar or bar.svelte in this example).
+ * Given a path like foo/bar or foo/bar.html, returns its last path
+ * (bar or bar.html in this example).
  */
 export function getLastPartOfPath(path: string): string {
 	const lastSlash = path.lastIndexOf("/")
@@ -281,13 +281,8 @@ export function getIndent(text: string) {
 }
 
 /**
- *
- * The html language service is case insensitive, and would provide
- * hover/ completion info for Svelte components like `Option` which have
- * the same name like a html tag.
- *
- * Also, svelte directives like action and event modifier only work
- * with element not component
+ * The HTML language service is case insensitive and may confuse
+ * component-like tags such as `Option` with builtin HTML tags.
  */
 export function possiblyComponent(node: Node): boolean
 export function possiblyComponent(tagName: string): boolean

@@ -42,30 +42,6 @@ const defaultLSConfig: LSConfig = {
 		tagComplete: { enable: true },
 		documentSymbols: { enable: true },
 		linkedEditing: { enable: true }
-	},
-	svelte: {
-		enable: true,
-		compilerWarnings: {},
-		diagnostics: { enable: true },
-		rename: { enable: true },
-		format: {
-			enable: true,
-			config: {
-				svelteSortOrder: "options-scripts-markup-styles",
-				svelteStrictMode: false,
-				svelteAllowShorthand: true,
-				svelteBracketNewLine: true,
-				svelteIndentScriptAndStyle: true,
-				printWidth: 80,
-				singleQuote: false
-			}
-		},
-		completions: { enable: true },
-		hover: { enable: true },
-		codeActions: { enable: true },
-		selectionRange: { enable: true },
-		runesLegacyModeCodeLens: { enable: true },
-		defaultScriptLanguage: "none"
 	}
 }
 
@@ -77,7 +53,6 @@ export interface LSConfig {
 	typescript: LSTypescriptConfig
 	css: LSCSSConfig
 	html: LSHTMLConfig
-	svelte: LSSvelteConfig
 }
 
 export interface LSTypescriptConfig {
@@ -156,45 +131,6 @@ export interface LSHTMLConfig {
 	linkedEditing: {
 		enable: boolean
 	}
-}
-
-export type CompilerWarningsSettings = Record<string, "ignore" | "error">
-
-export interface LSSvelteConfig {
-	enable: boolean
-	compilerWarnings: CompilerWarningsSettings
-	diagnostics: {
-		enable: boolean
-	}
-	format: {
-		enable: boolean
-		config: {
-			svelteSortOrder: string
-			svelteStrictMode: boolean
-			svelteAllowShorthand: boolean
-			svelteBracketNewLine: boolean
-			svelteIndentScriptAndStyle: boolean
-			printWidth: number
-			singleQuote: boolean
-		}
-	}
-	rename: {
-		enable: boolean
-	}
-	completions: {
-		enable: boolean
-	}
-	hover: {
-		enable: boolean
-	}
-	codeActions: {
-		enable: boolean
-	}
-	selectionRange: {
-		enable: boolean
-	}
-	runesLegacyModeCodeLens: { enable: boolean }
-	defaultScriptLanguage: "none" | "ts"
 }
 
 /**
@@ -318,11 +254,9 @@ export interface HTMLConfig {
 	customData?: string[]
 }
 
-type DeepPartial<T> = T extends CompilerWarningsSettings
-	? T
-	: {
-			[P in keyof T]?: DeepPartial<T[P]>
-		}
+type DeepPartial<T> = {
+	[P in keyof T]?: DeepPartial<T[P]>
+}
 
 export class LSConfigManager {
 	private config: LSConfig = defaultLSConfig
@@ -364,18 +298,12 @@ export class LSConfigManager {
 		// But since those configs come from the client they might be out of synch with the valid config:
 		// We might at some point in the future forget to synch config settings in all packages after updating the config.
 		this.config = merge({}, defaultLSConfig, this.config, config)
-		// Merge will keep arrays/objects if the new one is empty/has less entries,
-		// therefore we need some extra checks if there are new settings
-		if (config?.svelte?.compilerWarnings) {
-			this.config.svelte.compilerWarnings = config.svelte.compilerWarnings
-		}
-
 		this.notifyListeners()
 	}
 
 	/**
 	 * Whether or not specified config is enabled
-	 * @param key a string which is a path. Example: 'svelte.diagnostics.enable'.
+	 * @param key a string which is a path. Example: 'html.hover.enable'.
 	 */
 	enabled(key: string): boolean {
 		return !!this.get(key)
@@ -383,7 +311,7 @@ export class LSConfigManager {
 
 	/**
 	 * Get specific config
-	 * @param key a string which is a path. Example: 'svelte.diagnostics.enable'.
+	 * @param key a string which is a path. Example: 'html.hover.enable'.
 	 */
 	get<T>(key: string): T {
 		return get(this.config, key)
@@ -432,9 +360,7 @@ export class LSConfigManager {
 	/**
 	 * Returns a merged Prettier config following these rules:
 	 * - If `prettierFromFileConfig` exists, that one is returned
-	 * - Else the Svelte extension's Prettier config is used as a starting point,
-	 *   and overridden by a possible Prettier config from the Prettier extension,
-	 *   or, if that doesn't exist, a possible fallback override.
+	 * - Else the editor Prettier config is used, optionally overridden by a fallback.
 	 */
 	getMergedPrettierConfig(
 		prettierFromFileConfig: any,
@@ -443,8 +369,7 @@ export class LSConfigManager {
 		return (
 			returnObjectIfHasKeys(prettierFromFileConfig) ||
 			merge(
-				{}, // merge into empty obj to not manipulate own config
-				this.get("svelte.format.config"),
+				{}, // merge into an empty object so we don't mutate our stored config
 				returnObjectIfHasKeys(this.getPrettierConfig()) || overridesWhenNoPrettierConfig || {}
 			)
 		)
@@ -711,7 +636,7 @@ export class LSConfigManager {
 			...tsFormatCodeOptions,
 
 			newLineCharacter: documentUseLf ? "\n" : ts.sys.newLine,
-			baseIndentSize: prettierConfig.svelteIndentScriptAndStyle === false ? 0 : indentSize,
+			baseIndentSize: indentSize,
 			indentSize,
 			convertTabsToSpaces: !prettierConfig.useTabs,
 			semicolons: useSemicolons ? ts.SemicolonPreference.Insert : ts.SemicolonPreference.Remove,

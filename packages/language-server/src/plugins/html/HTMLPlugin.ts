@@ -32,7 +32,6 @@ import {
 	getNodeIfIsInComponentStartTag
 } from "../../lib/documents"
 import { LSConfigManager, LSHTMLConfig } from "../../ls-config"
-import { svelteHtmlDataProvider } from "./dataProvider"
 import {
 	HoverProvider,
 	CompletionsProvider,
@@ -43,7 +42,6 @@ import {
 } from "../interfaces"
 import { isInsideMoustacheTag, toRange } from "../../lib/documents/utils"
 import { isNotNullOrUndefined, possiblyComponent } from "../../utils"
-import { importPrettier } from "../../importPackage"
 import path from "path"
 import { Logger } from "../../logger"
 import { indentBasedFoldingRangeForTag } from "../../lib/foldingRange/indentFolding"
@@ -53,7 +51,6 @@ import { getFoldingRanges } from "./getFoldingRanges"
 
 // https://github.com/microsoft/vscode/blob/c6f507deeb99925e713271b1048f21dbaab4bd54/extensions/html/language-configuration.json#L34
 const wordPattern = /(-?\d*\.\d\w*)|([^`~!@$^&*()=+[{\]}\|;:'",.<>\/\s]+)/g
-const attributeValuePlaceHolder = '="$1"'
 
 export class HTMLPlugin
 	implements
@@ -186,67 +183,11 @@ export class HTMLPlugin
 		}
 
 		const results = this.isInComponentTag(html, document, position)
-			? // Only allow emmet inside component element tags.
-				// Other attributes/events would be false positives.
-				CompletionList.create([])
+			? // Only allow Emmet inside component-like start tags.
+			  // Regular HTML attribute completions there would usually be false positives.
+			  CompletionList.create([])
 			: this.lang.doComplete(document, position, html)
 		const items = this.toCompletionItems(results.items)
-		const filePath = document.getFilePath()
-
-		const prettierConfig =
-			filePath &&
-			items.some((item) => item.label.startsWith("on:") || item.label.startsWith("bind:"))
-				? this.configManager.getMergedPrettierConfig(
-						await importPrettier(filePath).resolveConfig(
-							filePath,
-							this.configManager.getPrettierConfigLoadingOptions()
-						)
-					)
-				: null
-
-		const svelteStrictMode = prettierConfig?.svelteStrictMode
-		const startQuote = svelteStrictMode ? '"{' : "{"
-		const endQuote = svelteStrictMode ? '}"' : "}"
-
-		items.forEach((item) => {
-			if (item.label.endsWith(":")) {
-				item.kind = CompletionItemKind.Keyword
-
-				if (item.textEdit) {
-					item.textEdit.newText = item.textEdit.newText.replace(attributeValuePlaceHolder, "")
-				}
-			}
-
-			if (!item.textEdit) {
-				return
-			}
-
-			if (item.label.startsWith("on")) {
-				const isLegacyDirective = item.label.startsWith("on:")
-				const modifierTabStop = isLegacyDirective ? "$2" : ""
-				item.textEdit = {
-					...item.textEdit,
-					newText: item.textEdit.newText.replace(
-						attributeValuePlaceHolder,
-						`${modifierTabStop}=${startQuote}$1${endQuote}`
-					)
-				}
-				// In Svelte 5, people should use `onclick` instead of `on:click`
-				if (isLegacyDirective && document.isSvelte5) {
-					item.sortText = "z" + (item.sortText ?? item.label)
-				}
-			}
-
-			if (item.label.startsWith("bind:")) {
-				item.textEdit = {
-					...item.textEdit,
-					newText: item.textEdit.newText.replace(
-						attributeValuePlaceHolder,
-						`=${startQuote}$1${endQuote}`
-					)
-				}
-			}
-		})
 
 		return CompletionList.create(
 			[...items, ...this.getLangCompletions(items), ...emmetResults.items],
@@ -395,7 +336,8 @@ export class HTMLPlugin
 			return null
 		}
 
-		// Note that `.` is excluded from the word pattern. This is intentional to support property access in Svelte component tags.
+		// Note that `.` is excluded from the word pattern.
+		// This avoids over-expanding attribute/property names during linked editing.
 		return {
 			ranges,
 			wordPattern:
@@ -474,7 +416,7 @@ export class HTMLPlugin
 				})
 				.filter(isNotNullOrUndefined) ?? []
 
-		return [svelteHtmlDataProvider].concat(providers)
+		return providers
 	}
 
 	private featureEnabled(feature: keyof LSHTMLConfig) {

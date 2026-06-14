@@ -6,6 +6,10 @@ Django templates in this project continue to use VS Code's built-in `html` docum
 
 It uses the `sveltejs-language-tools` repository as a starting point to build off of, and borrows django-specific code from `django-template-extension` and `vscode-django-support`.
 
+## Rules
+
+- NEVER remove comments
+
 ## Vendored Repositories
 
 This project vendors external repositories under @repos/

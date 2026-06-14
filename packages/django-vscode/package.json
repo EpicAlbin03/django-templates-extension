@@ -18,7 +18,7 @@
     "vscode": "^1.82.0"
   },
   "activationEvents": [
-    "onLanguage:svelte",
+    "onLanguage:html",
     "onCommand:django.restartLanguageServer"
   ],
   "capabilities": {
@@ -66,45 +66,21 @@
         }
       }
     },
-    "languages": [
-      {
-        "id": "svelte",
-        "aliases": ["Django Templates", "django"],
-        "extensions": [".svelte"],
-        "configuration": "./language-configuration.json"
-      },
-      {
-        "id": "svelte-start-tag",
-        "configuration": "./language-configuration-start-tag.json"
-      }
-    ],
     "grammars": [
       {
-        "language": "svelte",
-        "scopeName": "source.svelte",
-        "path": "./syntaxes/svelte.tmLanguage.json",
-        "embeddedLanguages": {
-          "text.html.basic": "html",
-          "meta.tag.start.svelte": "svelte-start-tag",
-          "punctuation.definition.tag.begin.svelte": "svelte",
-          "source.css": "css",
-          "source.js": "javascript",
-          "source.ts": "typescript"
-        },
-        "unbalancedBracketScopes": [
-          "keyword.operator.relational",
-          "storage.type.function.arrow",
-          "keyword.operator.bitwise.shift",
-          "meta.brace.angle",
-          "punctuation.definition.tag"
-        ],
-        "tokenTypes": {
-          "punctuation.definition.template-expression": "other",
-          "entity.name.type.instance.jsdoc": "other",
-          "entity.name.function.tagged-template": "other",
-          "meta.import string.quoted": "other",
-          "variable.other.jsdoc": "other"
-        }
+        "scopeName": "source.django.injection",
+        "path": "./syntaxes/django-injection.tmLanguage.json",
+        "injectTo": [
+          "text.html.basic",
+          "text.html.derivative",
+          "source.js",
+          "source.js.jsx",
+          "source.ts",
+          "source.tsx",
+          "source.css",
+          "text.xml",
+          "text.xml.xsl"
+        ]
       }
     ],
     "commands": [
@@ -115,8 +91,12 @@
     ],
     "snippets": [
       {
-        "language": "svelte",
-        "path": "./snippets/svelte.json"
+        "language": "html",
+        "path": "./snippets/tags.json"
+      },
+      {
+        "language": "html",
+        "path": "./snippets/filters.json"
       }
     ]
   },
@@ -125,7 +105,7 @@
     "@types/vscode": "^1.67"
   },
   "dependencies": {
-    "svelte-language-server": "workspace:*",
+    "django-template-language-server": "workspace:*",
     "typescript": "^6.0.3",
     "vscode-languageclient": "^9.0.1"
   }

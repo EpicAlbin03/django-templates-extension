@@ -6,11 +6,10 @@ import {
 	ICSSDataProvider,
 	LanguageServiceOptions
 } from "vscode-css-languageservice"
-import { pseudoClass } from "./features/svelte-selectors"
 
 const customDataProvider: ICSSDataProvider = {
 	providePseudoClasses() {
-		return pseudoClass
+		return []
 	},
 	provideProperties() {
 		return [

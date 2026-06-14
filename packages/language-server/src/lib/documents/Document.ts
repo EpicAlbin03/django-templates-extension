@@ -2,106 +2,45 @@ import { urlToPath } from "../../utils"
 import { WritableDocument } from "./DocumentBase"
 import { extractScriptTags, extractStyleTag, extractTemplateTag, TagInformation } from "./utils"
 import { parseHtml } from "./parseHtml"
-import { SvelteConfig, configLoader } from "./configLoader"
 import { HTMLDocument } from "vscode-html-languageservice"
 import { Range } from "vscode-languageserver"
-import { importSvelte } from "../../importPackage"
 
 /**
- * Represents a text document contains a svelte component.
+ * Represents an HTML document that may contain Django template syntax.
  */
 export class Document extends WritableDocument {
-	languageId = "svelte"
+	languageId = "html"
 	scriptInfo: TagInformation | null = null
 	moduleScriptInfo: TagInformation | null = null
 	styleInfo: TagInformation | null = null
 	templateInfo: TagInformation | null = null
-	configPromise: Promise<SvelteConfig | undefined>
-	config?: SvelteConfig
 	html!: HTMLDocument
 	openedByClient = false
 	/**
-	 * Compute and cache directly because of performance reasons
-	 * and it will be called anyway.
+	 * Compute and cache directly for performance because it is queried often.
 	 */
 	private path = urlToPath(this.url)
 
-	private _compiler: typeof import("svelte/compiler") | undefined
-	get compiler() {
-		return this.getCompiler()
-	}
-
-	private svelteVersion: [number, number] | undefined
-	public get isSvelte5() {
-		return this.getSvelteVersion()[0] > 4
-	}
-
-	constructor(
-		public url: string,
-		public content: string,
-		skipConfigLoading = false
-	) {
+	constructor(public url: string, public content: string) {
 		super()
-		this.configPromise = skipConfigLoading
-			? Promise.resolve(undefined)
-			: configLoader.awaitConfig(this.getFilePath() || "")
-
 		this.updateDocInfo()
 	}
 
 	static createForTest(url: string, content: string) {
-		return new Document(url, content, /*skipConfigLoading*/ true)
-	}
-
-	private getCompiler() {
-		if (!this._compiler) {
-			this._compiler = importSvelte(this.getFilePath() || "")
-		}
-		return this._compiler
+		return new Document(url, content)
 	}
 
 	private updateDocInfo() {
 		this.html = parseHtml(this.content)
-		const update = (config: SvelteConfig | undefined) => {
-			const scriptTags = extractScriptTags(this.content, this.html)
-			this.config = config
-			this.scriptInfo = this.addDefaultLanguage(config, scriptTags?.script || null, "script")
-			this.moduleScriptInfo = this.addDefaultLanguage(
-				config,
-				scriptTags?.moduleScript || null,
-				"script"
-			)
-			this.styleInfo = this.addDefaultLanguage(
-				config,
-				extractStyleTag(this.content, this.html),
-				"style"
-			)
-			this.templateInfo = this.addDefaultLanguage(
-				config,
-				extractTemplateTag(this.content, this.html),
-				"markup"
-			)
-		}
-
-		const config = configLoader.getConfig(this.getFilePath() || "")
-		if (config && !config.loadConfigError) {
-			update(config)
-		} else {
-			update(undefined)
-			this.configPromise.then((c) => update(c))
-		}
-	}
-
-	getSvelteVersion() {
-		if (!this.svelteVersion) {
-			const [major, minor] = this.compiler.VERSION.split(".")
-			this.svelteVersion = [Number(major), Number(minor)]
-		}
-		return this.svelteVersion
+		const scriptTags = extractScriptTags(this.content, this.html)
+		this.scriptInfo = scriptTags?.script || null
+		this.moduleScriptInfo = scriptTags?.moduleScript || null
+		this.styleInfo = extractStyleTag(this.content, this.html)
+		this.templateInfo = extractTemplateTag(this.content, this.html)
 	}
 
 	/**
-	 * Get text content
+	 * Get text content.
 	 */
 	getText(range?: Range): string {
 		if (range) {
@@ -111,7 +50,7 @@ export class Document extends WritableDocument {
 	}
 
 	/**
-	 * Set text content and increase the document version
+	 * Set text content and increase the document version.
 	 */
 	setText(text: string) {
 		this.content = text
@@ -121,22 +60,22 @@ export class Document extends WritableDocument {
 	}
 
 	/**
-	 * Returns the file path if the url scheme is file
+	 * Returns the file path if the URL scheme is `file`.
 	 */
 	getFilePath(): string | null {
 		return this.path
 	}
 
 	/**
-	 * Get URL file path.
+	 * Get the document URL.
 	 */
 	getURL() {
 		return this.url
 	}
 
 	/**
-	 * Returns the language associated to script, style or template.
-	 * Returns an empty string if there's nothing set.
+	 * Returns the language associated with script, style, or template.
+	 * Returns an empty string if nothing is set.
 	 */
 	getLanguageAttribute(tag: "script" | "style" | "template"): string {
 		const attrs =
@@ -150,7 +89,7 @@ export class Document extends WritableDocument {
 	}
 
 	/**
-	 * Returns true if there's `lang="X"` on script or style or template.
+	 * Returns true if there is a `lang="X"` on script, style, or template.
 	 */
 	hasLanguageAttribute(): boolean {
 		return (
@@ -158,28 +97,5 @@ export class Document extends WritableDocument {
 			!!this.getLanguageAttribute("style") ||
 			!!this.getLanguageAttribute("template")
 		)
-	}
-
-	/**
-	 * @deprecated This no longer exists in svelte-preprocess v5, we leave it in in case someone is using this with v4
-	 */
-	private addDefaultLanguage(
-		config: SvelteConfig | undefined,
-		tagInfo: TagInformation | null,
-		tag: "style" | "script" | "markup"
-	): TagInformation | null {
-		if (!tagInfo || !config) {
-			return tagInfo
-		}
-
-		const defaultLang = Array.isArray(config.preprocess)
-			? config.preprocess.find((group) => group.defaultLanguages?.[tag])?.defaultLanguages?.[tag]
-			: config.preprocess?.defaultLanguages?.[tag]
-
-		if (!tagInfo.attributes.lang && !tagInfo.attributes.type && defaultLang) {
-			tagInfo.attributes.lang = defaultLang
-		}
-
-		return tagInfo
 	}
 }

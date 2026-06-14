@@ -27,9 +27,9 @@ const doubleQuoteCode = '"'.charCodeAt(0)
  * adopted from https://github.com/microsoft/vscode-html-languageservice/blob/10daf45dc16b4f4228987cf7cddf3a7dbbdc7570/src/parser/htmlParser.ts
  * differences:
  *
- * 1. parse expression tag in Whitespace state
- * 2. parse attribute with interpolation in AttributeValue state
- * 3. detect svelte blocks/tags in Content state
+ * 1. parse expression tags in Whitespace state
+ * 2. parse attributes with interpolation in AttributeValue state
+ * 3. tolerate template expressions in Content state
  */
 export function parseHtml(text: string): HTMLDocument {
 	let scanner = createScanner(text, undefined, undefined, true)

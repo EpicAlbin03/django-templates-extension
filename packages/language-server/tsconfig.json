@@ -15,5 +15,7 @@
 		"rootDir": ".",
 		"forceConsistentCasingInFileNames": true,
 		"types": ["mocha", "node"]
-	}
+	},
+	"include": ["src/**/*.ts"],
+	"exclude": ["dist", "node_modules", "test"]
 }
