@@ -1,0 +1,26 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+var module = (function() {
+	// HIDDEN [\0rolldown/runtime.js]
+	//#region mod.js
+	var default_exports = /* @__PURE__ */ __exportAll({
+		add: () => add,
+		subtract: () => subtract
+	});
+	function add(a, b) {
+		return a + b;
+	}
+	function subtract(a, b) {
+		return a - b;
+	}
+	//#endregion
+	return default_exports;
+})();
+
+```

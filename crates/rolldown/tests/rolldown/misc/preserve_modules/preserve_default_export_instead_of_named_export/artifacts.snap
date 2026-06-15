@@ -1,0 +1,37 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## class.js
+
+```js
+//#region class.js
+var class_default = class {};
+//#endregion
+export { class_default as default };
+
+```
+
+## function.js
+
+```js
+//#region function.js
+function func() {
+	console.log("function");
+}
+//#endregion
+export { func as default };
+
+```
+
+## main.js
+
+```js
+import class_default from "./class.js";
+import func from "./function.js";
+//#region main.js
+console.log(class_default, 42, func);
+//#endregion
+
+```

@@ -1,0 +1,20 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "entry",
+        "import": "entry.js"
+      }
+    ],
+    "inject": [
+      {
+        "from": "./shims.js",
+        "imported": "process",
+        "type": "named"
+      }
+    ],
+    "format": "iife",
+    "platform": "node"
+  },
+  "expectExecuted": false
+}

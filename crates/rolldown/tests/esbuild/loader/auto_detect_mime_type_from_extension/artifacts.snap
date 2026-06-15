@@ -1,0 +1,16 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region entry.js
+console.log((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = "data:image/svg+xml;base64,YQBigGP/ZA==";
+})))());
+//#endregion
+
+```

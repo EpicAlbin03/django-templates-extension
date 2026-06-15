@@ -1,0 +1,8 @@
+{
+  "config": {
+    "resolve": {
+      "alias": [["this-is-only-used-for-testing", ["./react.js"]]]
+    }
+  },
+  "expectExecuted": false
+}

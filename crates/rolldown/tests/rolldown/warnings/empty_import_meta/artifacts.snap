@@ -1,0 +1,223 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## EMPTY_IMPORT_META
+
+```text
+[EMPTY_IMPORT_META] `import.meta` may not be a valid syntax with the `cjs` output format.
+   ╭─[ main.js:1:13 ]
+   │
+ 1 │ console.log(import.meta.hello);
+   │             ─────┬─────  
+   │                  ╰─────── This `import.meta` will be replaced with an empty object (`{}`) automatically. If this is desired, you can suppress this warning by adding `transform.define: { 'import.meta': {} }`. If `import.meta` needs to be kept as-is, you need to set the output format to `esm`.
+───╯
+
+```
+
+## EMPTY_IMPORT_META
+
+```text
+[EMPTY_IMPORT_META] `import.meta` may not be a valid syntax with the `cjs` output format.
+   ╭─[ main.js:5:13 ]
+   │
+ 5 │ console.log(import.meta);
+   │             ─────┬─────  
+   │                  ╰─────── This `import.meta` will be replaced with an empty object (`{}`) automatically. If this is desired, you can suppress this warning by adding `transform.define: { 'import.meta': {} }`. If `import.meta` needs to be kept as-is, you need to set the output format to `esm`.
+───╯
+
+```
+
+# Assets
+
+## main.js
+
+```js
+//#region main.js
+console.log({}.hello);
+console.log(__dirname);
+console.log(__filename);
+console.log(require("url").pathToFileURL(__filename).href);
+console.log({});
+//#endregion
+
+```
+
+# Variant: [format: Iife]
+
+## warnings
+
+### EMPTY_IMPORT_META
+
+```text
+[EMPTY_IMPORT_META] `import.meta` may not be a valid syntax with the `iife` output format.
+   ╭─[ main.js:1:13 ]
+   │
+ 1 │ console.log(import.meta.hello);
+   │             ─────┬─────  
+   │                  ╰─────── This `import.meta` will be replaced with an empty object (`{}`) automatically. If this is desired, you can suppress this warning by adding `transform.define: { 'import.meta': {} }`. If `import.meta` needs to be kept as-is, you need to set the output format to `esm`.
+───╯
+
+```
+
+### EMPTY_IMPORT_META
+
+```text
+[EMPTY_IMPORT_META] `import.meta` may not be a valid syntax with the `iife` output format.
+   ╭─[ main.js:2:13 ]
+   │
+ 2 │ console.log(import.meta.dirname);
+   │             ─────┬─────  
+   │                  ╰─────── This `import.meta` will be replaced with an empty object (`{}`) automatically. If this is desired, you can suppress this warning by adding `transform.define: { 'import.meta': {} }`. If `import.meta` needs to be kept as-is, you need to set the output format to `esm`.
+───╯
+
+```
+
+### EMPTY_IMPORT_META
+
+```text
+[EMPTY_IMPORT_META] `import.meta` may not be a valid syntax with the `iife` output format.
+   ╭─[ main.js:3:13 ]
+   │
+ 3 │ console.log(import.meta.filename);
+   │             ─────┬─────  
+   │                  ╰─────── This `import.meta` will be replaced with an empty object (`{}`) automatically. If this is desired, you can suppress this warning by adding `transform.define: { 'import.meta': {} }`. If `import.meta` needs to be kept as-is, you need to set the output format to `esm`.
+───╯
+
+```
+
+### EMPTY_IMPORT_META
+
+```text
+[EMPTY_IMPORT_META] `import.meta` may not be a valid syntax with the `iife` output format.
+   ╭─[ main.js:4:13 ]
+   │
+ 4 │ console.log(import.meta.url);
+   │             ─────┬─────  
+   │                  ╰─────── This `import.meta` will be replaced with an empty object (`{}`) automatically. If this is desired, you can suppress this warning by adding `transform.define: { 'import.meta': {} }`. If `import.meta` needs to be kept as-is, you need to set the output format to `esm`.
+   │ 
+   │ Help: If you want to polyfill `import.meta.url` like Rollup does, check out the Document: https://rolldown.rs/in-depth/non-esm-output-formats#well-known-import-meta-properties
+───╯
+
+```
+
+### EMPTY_IMPORT_META
+
+```text
+[EMPTY_IMPORT_META] `import.meta` may not be a valid syntax with the `iife` output format.
+   ╭─[ main.js:5:13 ]
+   │
+ 5 │ console.log(import.meta);
+   │             ─────┬─────  
+   │                  ╰─────── This `import.meta` will be replaced with an empty object (`{}`) automatically. If this is desired, you can suppress this warning by adding `transform.define: { 'import.meta': {} }`. If `import.meta` needs to be kept as-is, you need to set the output format to `esm`.
+───╯
+
+```
+
+## Assets
+
+### main.js
+
+```js
+(function() {
+	//#region main.js
+	console.log({}.hello);
+	console.log({}.dirname);
+	console.log({}.filename);
+	console.log({}.url);
+	console.log({});
+	//#endregion
+})();
+
+```
+
+# Variant: [format: Umd]
+
+## warnings
+
+### EMPTY_IMPORT_META
+
+```text
+[EMPTY_IMPORT_META] `import.meta` may not be a valid syntax with the `umd` output format.
+   ╭─[ main.js:1:13 ]
+   │
+ 1 │ console.log(import.meta.hello);
+   │             ─────┬─────  
+   │                  ╰─────── This `import.meta` will be replaced with an empty object (`{}`) automatically. If this is desired, you can suppress this warning by adding `transform.define: { 'import.meta': {} }`. If `import.meta` needs to be kept as-is, you need to set the output format to `esm`.
+───╯
+
+```
+
+### EMPTY_IMPORT_META
+
+```text
+[EMPTY_IMPORT_META] `import.meta` may not be a valid syntax with the `umd` output format.
+   ╭─[ main.js:2:13 ]
+   │
+ 2 │ console.log(import.meta.dirname);
+   │             ─────┬─────  
+   │                  ╰─────── This `import.meta` will be replaced with an empty object (`{}`) automatically. If this is desired, you can suppress this warning by adding `transform.define: { 'import.meta': {} }`. If `import.meta` needs to be kept as-is, you need to set the output format to `esm`.
+───╯
+
+```
+
+### EMPTY_IMPORT_META
+
+```text
+[EMPTY_IMPORT_META] `import.meta` may not be a valid syntax with the `umd` output format.
+   ╭─[ main.js:3:13 ]
+   │
+ 3 │ console.log(import.meta.filename);
+   │             ─────┬─────  
+   │                  ╰─────── This `import.meta` will be replaced with an empty object (`{}`) automatically. If this is desired, you can suppress this warning by adding `transform.define: { 'import.meta': {} }`. If `import.meta` needs to be kept as-is, you need to set the output format to `esm`.
+───╯
+
+```
+
+### EMPTY_IMPORT_META
+
+```text
+[EMPTY_IMPORT_META] `import.meta` may not be a valid syntax with the `umd` output format.
+   ╭─[ main.js:4:13 ]
+   │
+ 4 │ console.log(import.meta.url);
+   │             ─────┬─────  
+   │                  ╰─────── This `import.meta` will be replaced with an empty object (`{}`) automatically. If this is desired, you can suppress this warning by adding `transform.define: { 'import.meta': {} }`. If `import.meta` needs to be kept as-is, you need to set the output format to `esm`.
+   │ 
+   │ Help: If you want to polyfill `import.meta.url` like Rollup does, check out the Document: https://rolldown.rs/in-depth/non-esm-output-formats#well-known-import-meta-properties
+───╯
+
+```
+
+### EMPTY_IMPORT_META
+
+```text
+[EMPTY_IMPORT_META] `import.meta` may not be a valid syntax with the `umd` output format.
+   ╭─[ main.js:5:13 ]
+   │
+ 5 │ console.log(import.meta);
+   │             ─────┬─────  
+   │                  ╰─────── This `import.meta` will be replaced with an empty object (`{}`) automatically. If this is desired, you can suppress this warning by adding `transform.define: { 'import.meta': {} }`. If `import.meta` needs to be kept as-is, you need to set the output format to `esm`.
+───╯
+
+```
+
+## Assets
+
+### main.js
+
+```js
+(function(factory) {
+	typeof define === "function" && define.amd ? define([], factory) : factory();
+})(function() {
+	//#region main.js
+	console.log({}.hello);
+	console.log({}.dirname);
+	console.log({}.filename);
+	console.log({}.url);
+	console.log({});
+	//#endregion
+});
+
+```

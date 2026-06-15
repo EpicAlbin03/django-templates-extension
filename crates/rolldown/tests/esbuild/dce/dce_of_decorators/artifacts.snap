@@ -1,0 +1,34 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## keep-these.js
+
+```js
+//#region decorator.js
+const fn = () => {
+	console.log("side effect");
+};
+(@fn class {});
+(class {
+	@fn field;
+});
+(class {
+	@fn method() {}
+});
+(class {
+	@fn accessor accessor;
+});
+(class {
+	@fn static field;
+});
+(class {
+	@fn static method() {}
+});
+(class {
+	@fn static accessor accessor;
+});
+//#endregion
+
+```

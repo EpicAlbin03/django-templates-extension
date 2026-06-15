@@ -1,0 +1,43 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+//#region enums.ts
+let a_keep = /* @__PURE__ */ function(a_keep) {
+	a_keep[a_keep["x"] = false] = "x";
+	return a_keep;
+}({});
+let b_keep = /* @__PURE__ */ function(b_keep) {
+	b_keep[b_keep["x"] = foo] = "x";
+	return b_keep;
+}({});
+let c_keep = /* @__PURE__ */ function(c_keep) {
+	c_keep[c_keep["x"] = 3] = "x";
+	return c_keep;
+}({});
+let d_keep = /* @__PURE__ */ function(d_keep) {
+	d_keep[d_keep["x"] = 4] = "x";
+	return d_keep;
+}({});
+let e_keep = {};
+//#endregion
+//#region entry.ts
+console.log([
+	1,
+	2,
+	""
+]);
+console.log([
+	a_keep.x,
+	b_keep.x,
+	c_keep,
+	d_keep.y,
+	e_keep.x
+]);
+//#endregion
+
+```

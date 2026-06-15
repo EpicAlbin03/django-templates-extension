@@ -1,0 +1,184 @@
+use std::sync::Arc;
+
+use arcstr::ArcStr;
+use futures::future::join_all;
+use oxc_index::{IndexVec, index_vec};
+use rolldown_common::{
+  ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleDefFormat, ModuleId, ModuleType,
+  NormalizedBundlerOptions, RUNTIME_MODULE_KEY, RawImportRecord, ResolvedId,
+};
+use rolldown_error::{
+  BuildDiagnostic, BuildResult, DiagnosableArcstr, DiagnosticOptions, EventKind,
+};
+use rolldown_fs::FileSystem;
+use rolldown_plugin::{__inner::resolve_id_check_external, PluginDriver, SharedPluginDriver};
+use rolldown_resolver::{ResolveError, Resolver};
+use rolldown_utils::ecmascript::{self};
+use rustc_hash::FxHashMap;
+
+use crate::{SharedOptions, SharedResolver};
+
+#[tracing::instrument(skip_all, fields(CONTEXT_hook_resolve_id_trigger = "automatic"))]
+pub async fn resolve_id<Fs: FileSystem>(
+  bundle_options: &NormalizedBundlerOptions,
+  resolver: &Resolver<Fs>,
+  plugin_driver: &PluginDriver,
+  importer: &str,
+  specifier: &str,
+  kind: ImportKind,
+) -> anyhow::Result<Result<ResolvedId, ResolveError>> {
+  // Check runtime module
+  if specifier == RUNTIME_MODULE_KEY {
+    return Ok(Ok(ResolvedId {
+      id: ModuleId::new(specifier),
+      module_def_format: ModuleDefFormat::EsmMjs,
+      ..Default::default()
+    }));
+  }
+
+  resolve_id_check_external(
+    resolver,
+    plugin_driver,
+    specifier,
+    Some(importer),
+    false,
+    kind,
+    None,
+    Arc::default(),
+    false,
+    bundle_options,
+  )
+  .await
+}
+
+#[expect(clippy::too_many_arguments)]
+pub async fn resolve_dependencies<Fs: FileSystem>(
+  self_resolved_id: &ResolvedId,
+  options: &SharedOptions,
+  resolver: &SharedResolver<Fs>,
+  plugin_driver: &SharedPluginDriver,
+  dependencies: &IndexVec<ImportRecordIdx, RawImportRecord>,
+  source: ArcStr,
+  warnings: &mut Vec<BuildDiagnostic>,
+  module_type: &ModuleType,
+) -> BuildResult<IndexVec<ImportRecordIdx, ResolvedId>> {
+  // NOTE: this dedupes the identical (specifier, kind) resolve calls
+  let dedup_map: FxHashMap<(&str, ImportKind), ImportRecordIdx> = dependencies
+    .iter_enumerated()
+    .map(|(idx, item)| ((item.module_request.as_str(), item.kind), idx))
+    .collect();
+
+  let jobs = dedup_map.values().map(|&idx| async move {
+    let item = &dependencies[idx];
+    let importer = &self_resolved_id.id;
+    let specifier = &item.module_request;
+    resolve_id(options, resolver, plugin_driver, importer, specifier, item.kind)
+      .await
+      .map(|id| (idx, id))
+  });
+  let mut sparse_results: IndexVec<ImportRecordIdx, Option<Result<ResolvedId, ResolveError>>> =
+    index_vec![None; dependencies.len()];
+  for result in join_all(jobs).await {
+    let (idx, resolved) = result?;
+    sparse_results[idx] = Some(resolved);
+  }
+  let resolved_results = dependencies.iter().map(|dep| {
+    let repr_idx = dedup_map[&(dep.module_request.as_str(), dep.kind)];
+    sparse_results[repr_idx].as_ref().expect("dedup representative should be resolved")
+  });
+
+  // FIXME: if the import records came from css view, but source from ecma view,
+  // the span will not matched.
+  let is_css_module = matches!(module_type, ModuleType::Css);
+  let mut ret = IndexVec::with_capacity(dependencies.len());
+  let mut build_errors = vec![];
+  for (dep, resolved_id) in dependencies.iter().zip(resolved_results) {
+    match resolved_id {
+      Ok(info) => {
+        ret.push(info.clone());
+      }
+      Err(e) => {
+        let specifier = &dep.module_request;
+        match e {
+          ResolveError::NotFound(..) => {
+            // NOTE: IN_TRY_CATCH_BLOCK meta if it is a `require` import
+            // record
+            if !dep.meta.contains(ImportRecordMeta::InTryCatchBlock) {
+              // https://github.com/rollup/rollup/blob/49b57c2b30d55178a7316f23cc9ccc457e1a2ee7/src/ModuleLoader.ts#L643-L646
+              if ecmascript::is_path_like_specifier(specifier) {
+                // Unlike rollup, we also emit errors for absolute path
+                build_errors.push(BuildDiagnostic::resolve_error(
+                  source.clone(),
+                  self_resolved_id.id.as_arc_str().clone(),
+                  if dep.is_unspanned() || is_css_module {
+                    DiagnosableArcstr::String(specifier.as_str().into())
+                  } else {
+                    DiagnosableArcstr::Span(dep.state.span)
+                  },
+                  "Module not found.".into(),
+                  EventKind::UnresolvedImport,
+                  None,
+                ));
+              } else {
+                let help = matches!(options.platform, rolldown_common::Platform::Neutral).then(|| {
+                  r#"The "main" field here was ignored. Main fields must be configured explicitly when using the "neutral" platform."#.to_string()
+                });
+                warnings.push(
+                  BuildDiagnostic::resolve_error(
+                    source.clone(),
+                    self_resolved_id.id.as_arc_str().clone(),
+                    if dep.is_unspanned() || is_css_module {
+                      DiagnosableArcstr::String(specifier.as_str().into())
+                    } else {
+                      DiagnosableArcstr::Span(dep.state.span)
+                    },
+                    "Module not found, treating it as an external dependency".into(),
+                    EventKind::UnresolvedImport,
+                    help,
+                  )
+                  .with_severity_warning(),
+                );
+              }
+            }
+            ret.push(ResolvedId {
+              id: ModuleId::new(specifier.as_str()),
+              external: true.into(),
+              ..Default::default()
+            });
+          }
+          ResolveError::MatchedAliasNotFound(..) => {
+            build_errors.push(BuildDiagnostic::resolve_error(
+                source.clone(),
+                self_resolved_id.id.as_arc_str().clone(),
+                if dep.is_unspanned() || is_css_module {
+                  DiagnosableArcstr::String(specifier.as_str().into())
+                } else {
+                  DiagnosableArcstr::Span(dep.state.span)
+                },
+                format!("Matched alias not found for '{specifier}'"),
+                    EventKind::ResolveError,
+                Some("Maybe you expected `resolve.alias` to call other plugins resolveId hook? see the docs https://rolldown.rs/reference/InputOptions.resolve#alias for more details".to_string()),
+              ));
+          }
+          e => {
+            let diagnostic_opts = DiagnosticOptions { cwd: options.cwd.clone() };
+            build_errors.push(BuildDiagnostic::resolve_error(
+              source.clone(),
+              self_resolved_id.id.as_arc_str().clone(),
+              if dep.is_unspanned() || is_css_module {
+                DiagnosableArcstr::String(specifier.as_str().into())
+              } else {
+                DiagnosableArcstr::Span(dep.state.span)
+              },
+              rolldown_error::resolve_error_to_message(e, &diagnostic_opts),
+              EventKind::ResolveError,
+              None,
+            ));
+          }
+        }
+      }
+    }
+  }
+
+  if build_errors.is_empty() { Ok(ret) } else { Err(build_errors.into()) }
+}

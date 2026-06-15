@@ -1,0 +1,8 @@
+{
+  "config": {
+    "input": [{ "import": "main.js" }],
+    "codeSplitting": false,
+    "preserveModules": true
+  },
+  "expectError": true
+}

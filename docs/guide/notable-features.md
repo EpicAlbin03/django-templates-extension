@@ -1,0 +1,86 @@
+# Notable Features
+
+This page documents some notable features in Rolldown that do not have built-in equivalents in Rollup.
+
+## Platform presets
+
+- Configurable via the [`platform`](/reference/InputOptions.platform) option.
+- Default: `'node'` for `cjs` output, `'browser'` otherwise
+- Possible values: `browser | node | neutral`
+
+Similar to [esbuild's `platform` option](https://esbuild.github.io/api/#platform), this option provides some sensible defaults regarding module resolution and how to handle `process.env.NODE_ENV`.
+
+**Notable differences from esbuild:**
+
+- The default output format is always `esm` regardless of platform.
+
+:::tip
+Rolldown does not polyfill Node built-ins when targeting the browser. You can opt-in to it with [rolldown-plugin-node-polyfills](https://github.com/rolldown/rolldown-plugin-node-polyfills).
+:::
+
+## Built-in transforms
+
+Rolldown supports the following transforms out of the box, powered by [Oxc](https://oxc.rs/docs/guide/usage/transformer).
+The transform is configurable via the [`transform`](/reference/InputOptions.transform) option.
+The following transforms are supported:
+
+- TypeScript
+  - Sets configurations based on the `tsconfig.json` when the [`tsconfig`](/reference/InputOptions.tsconfig) option is provided.
+  - Supported legacy decorators and decorator metadata.
+- JSX
+- Syntax lowering
+  - Automatically transforms modern syntax to be compatible with your defined target.
+  - Supports [down to ES2015](https://oxc.rs/docs/guide/usage/transformer/lowering#transformations).
+
+## CJS support
+
+Rolldown supports mixed ESM / CJS module graphs out of the box, without the need for `@rollup/plugin-commonjs`. It largely follows esbuild's semantics and [passes all esbuild ESM / CJS interop tests](https://github.com/evanw/bundler-esm-cjs-tests).
+
+See [Bundling CJS](/in-depth/bundling-cjs) for more details.
+
+## Module resolution
+
+- Configurable via the [`resolve`](/reference/InputOptions.resolve) option
+- Powered by [oxc-resolver](https://github.com/oxc-project/oxc-resolver), aligned with webpack's [enhanced-resolve](https://github.com/webpack/enhanced-resolve)
+
+Rolldown resolves modules based on TypeScript and Node.js' behavior by default, without the need for `@rollup/plugin-node-resolve`.
+
+When top-level [`tsconfig`](/reference/InputOptions.tsconfig) option is provided, Rolldown will respect `compilerOptions.paths` in the specified `tsconfig.json`.
+
+## Define
+
+- Configurable via the [`transform.define`](/reference/InputOptions.transform#define) option.
+
+This feature provides a way to replace global identifiers with constant expressions. Aligns with the respective options in [Vite](https://vite.dev/config/shared-options.html#define) and [esbuild](https://esbuild.github.io/api/#define).
+
+::: tip `@rollup/plugin-replace` behaves differently
+
+Note it behaves differently from [`@rollup/plugin-replace`](https://github.com/rollup/plugins/tree/master/packages/replace) as the replacement is AST-based, so the value to be replaced must be a valid identifier or member expression. Use the built-in [`replacePlugin`](/builtin-plugins/replace) for that purpose.
+
+:::
+
+## Inject
+
+- Configurable via the [`transform.inject`](/reference/InputOptions.transform#inject) option.
+
+This feature provides a way to shim global variables with a specific value exported from a module. This feature is equivalent of [`@rollup/plugin-inject`](https://github.com/rollup/plugins/tree/master/packages/inject) and conceptually similar to [esbuild's `inject` option](https://esbuild.github.io/api/#inject).
+
+## Manual Code Splitting
+
+- Configurable via [`output.codeSplitting`](/reference/OutputOptions.codeSplitting) option.
+
+Rolldown allows controlling the chunking behavior granularly, similar to webpack's [`optimization.splitChunks`](https://webpack.js.org/plugins/split-chunks-plugin/#optimizationsplitchunks) feature.
+
+See [Manual Code Splitting](/in-depth/manual-code-splitting) for more details.
+
+## Module types
+
+- ⚠️ Experimental
+
+This is conceptually similar to [esbuild's `loader` option](https://esbuild.github.io/api/#loader), allowing users to globally associate file extensions to built-in module types via the [`moduleTypes`](/reference/InputOptions.moduleTypes) option, or specify module type of a specific module in plugin hooks. It is discussed in more details [here](/in-depth/module-types).
+
+## Minification
+
+- Configurable via the [`output.minify`](/reference/OutputOptions.minify) option.
+
+The minification is powered by [Oxc Minifier](https://oxc.rs/docs/guide/usage/minifier). See its documentation for more details.

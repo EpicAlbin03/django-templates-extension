@@ -1,0 +1,13 @@
+{
+  "config": {
+    "strictExecutionOrder": true,
+    "manualCodeSplitting": {
+      "groups": [
+        {
+          "test": "foo\\.js",
+          "name": "vendor"
+        }
+      ]
+    }
+  }
+}

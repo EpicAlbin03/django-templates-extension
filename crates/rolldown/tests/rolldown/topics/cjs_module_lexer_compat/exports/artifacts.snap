@@ -1,0 +1,24 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+Object.defineProperties(exports, {
+	__esModule: { value: true },
+	[Symbol.toStringTag]: { value: "Module" }
+});
+//#region main.js
+const a = "a";
+const b = "b";
+const devil = "devil";
+var main_default = "default";
+//#endregion
+exports.a = a;
+exports.b = b;
+exports.default = main_default;
+exports["😈"] = devil;
+
+```

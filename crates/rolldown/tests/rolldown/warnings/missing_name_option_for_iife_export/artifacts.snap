@@ -1,0 +1,23 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## MISSING_NAME_OPTION_FOR_IIFE_EXPORT
+
+```text
+[MISSING_NAME_OPTION_FOR_IIFE_EXPORT] If you do not supply "output.name", you may not be able to access the exports of an IIFE bundle.
+
+```
+
+# Assets
+
+## main.js
+
+```js
+(function() {
+	//#endregion
+	return 1;
+})();
+
+```

@@ -1,0 +1,28 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+(class A {
+	static {}
+	static {
+		this.thisField++;
+		A.classField++;
+		super.superField = super.superField + 1;
+		super.superField++;
+	}
+});
+(class {
+	static {}
+	static {
+		this.thisField++;
+		super.superField = super.superField + 1;
+		super.superField++;
+	}
+});
+//#endregion
+
+```

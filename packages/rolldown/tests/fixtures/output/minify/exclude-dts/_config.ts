@@ -1,0 +1,37 @@
+import * as path from 'node:path';
+import { defineTest } from 'rolldown-tests';
+import { expect } from 'vitest';
+
+export default defineTest({
+  sequential: true,
+  config: {
+    output: {
+      minify: true,
+    },
+    plugins: [
+      {
+        name: 'test-plugin',
+        buildStart() {
+          this.emitFile({
+            type: 'chunk',
+            id: 'main.js',
+            fileName: 'main.d.ts',
+          });
+        },
+      },
+    ],
+  },
+  afterTest: async (output) => {
+    for (const o of output.output) {
+      if (o.type !== 'chunk') {
+        await expect(o.source).toMatchFileSnapshot(
+          path.resolve(import.meta.dirname, 'snap', `${o.fileName}.snap`),
+        );
+      } else {
+        await expect(o.code).toMatchFileSnapshot(
+          path.resolve(import.meta.dirname, 'snap', `${o.fileName}.snap`),
+        );
+      }
+    }
+  },
+});

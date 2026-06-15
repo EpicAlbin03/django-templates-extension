@@ -1,0 +1,65 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] lib.js is dynamically imported by entry.js but also statically imported by entry.js, dynamic import will not move module into another chunk.
+
+```
+
+# Assets
+
+## entry.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+//#region lib.js
+var lib_exports = /* @__PURE__ */ __exportAll({ a: () => 123 });
+var init_lib = __esmMin((() => {}));
+//#endregion
+__esmMin((() => {
+	init_lib();
+	Promise.resolve().then(() => (init_lib(), lib_exports)).then((mod) => {
+		assert.strictEqual(mod.a, 123);
+		assert.strictEqual(123, 123);
+	});
+}))();
+
+```
+
+# Variant: [format: Cjs]
+
+## warnings
+
+### INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] lib.js is dynamically imported by entry.js but also statically imported by entry.js, dynamic import will not move module into another chunk.
+
+```
+
+## Assets
+
+### entry.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+let node_assert = require("node:assert");
+node_assert = __toESM(node_assert);
+//#region lib.js
+var lib_exports = /* @__PURE__ */ __exportAll({ a: () => 123 });
+var init_lib = __esmMin((() => {}));
+//#endregion
+__esmMin((() => {
+	init_lib();
+	Promise.resolve().then(() => (init_lib(), lib_exports)).then((mod) => {
+		node_assert.default.strictEqual(mod.a, 123);
+		node_assert.default.strictEqual(123, 123);
+	});
+}))();
+
+```

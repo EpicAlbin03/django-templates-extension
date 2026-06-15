@@ -1,0 +1,10 @@
+{
+  "config": {
+    "minify": "dceOnly"
+  },
+  "configVariants": [
+    {
+      "minify": false
+    }
+  ]
+}

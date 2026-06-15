@@ -1,0 +1,60 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## keep-these.js
+
+```js
+//#region decorator.ts
+const fn = () => {
+	console.log("side effect");
+};
+//#endregion
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+//#region keep-these.ts
+let Class = class Class {};
+Class = __decorate([fn], Class);
+var Field = class {};
+__decorate([fn], Field.prototype, "field", void 0);
+var Method = class {
+	method() {}
+};
+__decorate([fn], Method.prototype, "method", null);
+var Accessor = class {
+	#_accessor_accessor_storage;
+	get accessor() {
+		return this.#_accessor_accessor_storage;
+	}
+	set accessor(value) {
+		this.#_accessor_accessor_storage = value;
+	}
+};
+__decorate([fn], Accessor.prototype, "accessor", null);
+var Parameter = class {
+	foo(bar) {}
+};
+__decorate([__decorateParam(0, fn)], Parameter.prototype, "foo", null);
+var StaticField = class {};
+__decorate([fn], StaticField, "field", void 0);
+var StaticMethod = class {
+	static method() {}
+};
+__decorate([fn], StaticMethod, "method", null);
+__decorate([fn], class StaticAccessor {
+	static #_accessor_accessor_storage;
+	static get accessor() {
+		return StaticAccessor.#_accessor_accessor_storage;
+	}
+	static set accessor(value) {
+		StaticAccessor.#_accessor_accessor_storage = value;
+	}
+}, "accessor", null);
+var StaticParameter = class {
+	static foo(bar) {}
+};
+__decorate([__decorateParam(0, fn)], StaticParameter, "foo", null);
+//#endregion
+
+```

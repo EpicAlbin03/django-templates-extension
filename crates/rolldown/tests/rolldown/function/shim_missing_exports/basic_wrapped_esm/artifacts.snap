@@ -1,0 +1,21 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+var __esmMin = (fn, res) => () => (fn && (res = fn(fn = 0)), res);
+var missing;
+var init_foo = __esmMin((() => {
+	missing = void 0;
+}));
+//#endregion
+//#region main.js
+init_foo();
+init_foo();
+//#endregion
+export { missing };
+
+```

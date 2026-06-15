@@ -1,0 +1,28 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+//#region entry.ts
+inlined = [
+	obj["abc"],
+	obj["xyz"],
+	obj?.["abc"],
+	obj?.["xyz"],
+	obj?.prop["abc"],
+	obj?.prop["xyz"]
+];
+notInlined = [
+	obj["a b c"],
+	obj["x y z"],
+	obj?.["a b c"],
+	obj?.["x y z"],
+	obj?.prop["a b c"],
+	obj?.prop["x y z"]
+];
+//#endregion
+
+```

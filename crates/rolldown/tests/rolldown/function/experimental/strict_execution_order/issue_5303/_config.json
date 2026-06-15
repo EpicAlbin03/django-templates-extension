@@ -1,0 +1,16 @@
+{
+  "config": {
+    "strictExecutionOrder": true,
+    "experimental": {
+      "onDemandWrapping": true
+    },
+    "manualCodeSplitting": {
+      "groups": [
+        {
+          "name": "test",
+          "test": "foo(?:_\\w+)?\\.js"
+        }
+      ]
+    }
+  }
+}

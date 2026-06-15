@@ -1,0 +1,18 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+(function(node_path) {
+	// HIDDEN [\0rolldown/runtime.js]
+	node_path = __toESM(node_path);
+	//#region main.js
+	console.log(node_path.default);
+	console.log({});
+	//#endregion
+})(path);
+
+```

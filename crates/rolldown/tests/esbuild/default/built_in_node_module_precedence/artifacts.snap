@@ -1,0 +1,30 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region node_modules/fs/abc.js
+var require_abc = /* @__PURE__ */ __commonJSMin((() => {
+	console.log("include this");
+}));
+//#endregion
+//#region node_modules/fs/index.js
+var require_fs = /* @__PURE__ */ __commonJSMin((() => {
+	console.log("include this too");
+}));
+//#endregion
+//#region entry.js
+console.log([
+	require("fs"),
+	require("fs/promises"),
+	require("node:foo"),
+	require_abc(),
+	require_fs()
+]);
+//#endregion
+
+```

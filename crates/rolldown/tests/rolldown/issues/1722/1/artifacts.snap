@@ -1,0 +1,28 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## foo.js
+
+```js
+import { main, t as import_sub } from "./main.js";
+var sub = import_sub.sub;
+export { main, sub };
+
+```
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region main.js
+var import_sub = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports.sub = "sub";
+})))();
+const main = "main";
+//#endregion
+var sub = import_sub.sub;
+export { main, sub, import_sub as t };
+
+```

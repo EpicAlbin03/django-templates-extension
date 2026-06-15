@@ -1,0 +1,12 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "entry",
+        "import": "entry.js"
+      }
+    ],
+    "tsconfig": "./tsconfig.json"
+  },
+  "expectExecuted": false
+}

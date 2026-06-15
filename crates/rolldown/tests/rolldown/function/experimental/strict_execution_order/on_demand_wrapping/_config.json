@@ -1,0 +1,19 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      },
+      {
+        "name": "dynamic",
+        "import": "./dynamic.js"
+      }
+    ],
+    "strictExecutionOrder": true,
+    "experimental": {
+      "onDemandWrapping": true
+    }
+  },
+  "expectExecuted": false
+}

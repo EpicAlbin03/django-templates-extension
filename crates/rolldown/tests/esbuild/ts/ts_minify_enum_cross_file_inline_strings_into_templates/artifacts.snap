@@ -1,0 +1,18 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+//#region entry.ts
+console.log(`
+	SameFile.STR = str 1
+	SameFile.NUM = 123
+	CrossFile.STR = str 2
+	CrossFile.NUM = 321
+`);
+//#endregion
+
+```

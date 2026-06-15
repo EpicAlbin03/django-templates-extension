@@ -1,0 +1,7 @@
+{
+  "visualizeSourcemap": true,
+  "config": {
+    "external": ["assert"],
+    "treeshake": false
+  }
+}

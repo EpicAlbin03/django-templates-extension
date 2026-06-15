@@ -1,0 +1,34 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+//#region entry.ts
+var e_num = /* @__PURE__ */ function(e_num) {
+	e_num[e_num["x"] = 123] = "x";
+	return e_num;
+}(e_num || {});
+var e_str = /* @__PURE__ */ function(e_str) {
+	e_str["x"] = "abc";
+	return e_str;
+}(e_str || {});
+inlined = [
+	123,
+	123,
+	"abc",
+	"abc"
+];
+not_inlined = [
+	123,
+	123,
+	e_num,
+	"abc",
+	"abc",
+	e_str
+];
+//#endregion
+
+```

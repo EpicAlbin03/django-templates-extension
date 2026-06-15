@@ -1,0 +1,30 @@
+[package]
+name = "rolldown_resolver"
+version = "1.1.1"
+publish = true
+description = "rolldown_resolver"
+readme = "../../README.md"
+
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+repository.workspace = true
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+doctest = false
+test = false
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+arcstr = { workspace = true }
+dashmap = { workspace = true }
+itertools = { workspace = true }
+oxc_resolver = { workspace = true }
+rolldown_common = { workspace = true }
+rolldown_fs = { workspace = true, features = ["os"] }
+rolldown_utils = { workspace = true }
+sugar_path = { workspace = true }

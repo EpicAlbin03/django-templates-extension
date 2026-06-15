@@ -1,0 +1,69 @@
+use rolldown_error::BuildResult;
+use rolldown_sourcemap::{SourceJoiner, SourceMapSource, adjust_sourcemap_dst_lines};
+use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
+
+use crate::type_alias::IndexInstantiatedChunks;
+use crate::utils::shebang::find_shebang_end;
+
+use super::GenerateStage;
+
+impl GenerateStage<'_> {
+  #[tracing::instrument(level = "debug", skip_all)]
+  pub fn post_banner_footer(chunks: &mut IndexInstantiatedChunks) -> BuildResult<()> {
+    chunks.par_iter_mut().try_for_each(|chunk| -> anyhow::Result<()> {
+      if !matches!(chunk.kind, rolldown_common::InstantiationKind::Ecma(_)) {
+        // Only process Ecma chunks
+        return Ok(());
+      }
+      if chunk.post_banner.is_none() && chunk.post_footer.is_none() {
+        // Nothing to do
+        return Ok(());
+      }
+
+      let (content, map) = {
+        let content = chunk.content.try_as_inner_str()?;
+
+        // Extract shebang if exists
+        let (shebang_end, has_shebang) = find_shebang_end(content);
+
+        let mut source_joiner = SourceJoiner::default();
+
+        // Add shebang first if it exists
+        if has_shebang {
+          source_joiner.append_source(content[..shebang_end].trim_end()); // Trim to avoid extra newlines
+        }
+
+        // Then add post_banner
+        if let Some(post_banner) = &chunk.post_banner {
+          source_joiner.append_source(post_banner.as_str());
+        }
+
+        let rest_content = &content[shebang_end..];
+        // Add the rest of the content
+        if let Some(source_map) = chunk.map.take() {
+          // When a shebang is present, the sourcemap was generated for the full content
+          // (with the shebang at line 0), but `rest_content` starts after the shebang.
+          // Subtract the shebang line count from all generated line numbers so that the
+          // sourcemap is correctly anchored to `rest_content`.
+          let adjusted_map =
+            if has_shebang { adjust_sourcemap_dst_lines(source_map, 1) } else { source_map };
+          source_joiner.append_source(SourceMapSource::new(rest_content.to_string(), adjusted_map));
+        } else {
+          source_joiner.append_source(rest_content);
+        }
+
+        if let Some(post_footer) = &chunk.post_footer {
+          source_joiner.append_source(post_footer.as_str());
+        }
+
+        source_joiner.join()
+      };
+      chunk.content = content.into();
+      chunk.map = map;
+
+      Ok(())
+    })?;
+
+    Ok(())
+  }
+}

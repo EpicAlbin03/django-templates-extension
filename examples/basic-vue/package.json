@@ -1,0 +1,14 @@
+{
+  "name": "@example/vue",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "rolldown --config ./rolldown.config.js"
+  },
+  "dependencies": {
+    "vue": "catalog:"
+  },
+  "devDependencies": {
+    "rolldown": "workspace:*"
+  }
+}

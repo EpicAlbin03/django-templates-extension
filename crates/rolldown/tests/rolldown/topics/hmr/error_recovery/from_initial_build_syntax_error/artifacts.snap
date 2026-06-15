@@ -1,0 +1,32 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## PARSE_ERROR
+
+```text
+[PARSE_ERROR] Expected a semicolon or an implicit semicolon after a statement, but found none
+   ╭─[ main.js:1:8 ]
+   │
+ 1 │ invalid syntax
+   │        │ 
+   │        ╰─ 
+   │ 
+   │ Help: Try inserting a semicolon here
+───╯
+
+```
+
+# HMR Step 0
+
+## Build Output
+
+### Assets
+
+#### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+
+```

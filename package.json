@@ -1,0 +1,37 @@
+{
+  "name": "monorepo",
+  "private": true,
+  "description": "Rollup in Rust",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "prepare": "vp config",
+    "lint-knip": "knip",
+    "lint-publint": "pnpm run -r --aggregate-output publint",
+    "build": "echo \"Use just build\"",
+    "build:release": "echo \"Use just build native release\"",
+    "test": "echo \"Use just test-node\"",
+    "ci:build-release-binding": "pnpm --filter rolldown run build-binding:release",
+    "docs": "pnpm --filter rolldown-docs run dev",
+    "docs:build": "pnpm --filter rolldown-docs run generate && pnpm --filter rolldown-docs run build",
+    "docs:void": "pnpm --filter rolldown-docs run generate && pnpm --filter rolldown-docs run void deploy",
+    "docs:preview": "pnpm --filter rolldown-docs run preview"
+  },
+  "devDependencies": {
+    "@oxc-node/core": "catalog:",
+    "@oxc-project/runtime": "catalog:",
+    "@types/node": "catalog:",
+    "cjs-module-lexer": "^2.1.0",
+    "knip": "^6.13.1",
+    "playwright-chromium": "^1.60.0",
+    "publint": "^0.3.21",
+    "remove-unused-vars": "^0.0.12",
+    "rolldown": "workspace:*",
+    "typescript": "catalog:",
+    "vite-plus": "^0.1.24"
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "packageManager": "pnpm@11.4.0"
+}

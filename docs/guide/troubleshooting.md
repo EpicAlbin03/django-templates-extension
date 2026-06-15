@@ -1,0 +1,202 @@
+# Troubleshooting
+
+## Performance
+
+Performance is a primary goal for Rolldown. However, build performance isn't solely determined by Rolldown itself. It's also significantly affected by the environment it runs in and the plugins used.
+
+While we continuously strive to improve Rolldown to minimize these external factors, there are inherent limitations and areas where optimizations are still ongoing. This guide provides insights into potential bottlenecks and how you can mitigate them.
+
+### Environment
+
+The operating system and its configuration can impact build times, particularly file system operations.
+
+#### Windows
+
+File system access on Windows is generally slower compared to other operating systems like macOS or Linux. Especially, antivirus software can make this much worse. But even without interference from antivirus programs, baseline file system performance tends to be slower. It is 3 times slower than macOS and 10 times slower than Linux. This becomes a bottleneck when most of the transforms are done without a plugin.
+
+To improve performance on Windows, consider using alternative file system environments:
+
+1. [**Dev Drive**](https://learn.microsoft.com/en-us/windows/dev-drive/): A newer Windows feature designed for developer workloads, using the Resilient File System (ReFS). Using a Dev Drive can lead to a **2x to 3x speedup** compared to the standard Windows NTFS file system for file system operations.
+2. [**Windows Subsystem for Linux (WSL)**](https://learn.microsoft.com/en-us/windows/wsl/): WSL lets Linux environment to run on Windows easily, which offers significantly better file system performance. Placing your project files and running the build process within WSL can result in speedups of around **10x** compared to the standard Windows NTFS file system for file system operations.
+
+:::details Benchmark Reference
+
+The benchmark script used is described in this blog post ([How fast can you open 1000 files?](https://lemire.me/blog/2025/03/01/how-fast-can-you-open-1000-files/)).
+
+The results were:
+
+|    File System / Threads |     1 |     2 |     4 |     8 |    16 |
+| -----------------------: | ----: | ----: | ----: | ----: | ----: |
+|             Windows NTFS | 286ms | 153ms |  85ms | 106ms | 110ms |
+| Windows Dev Drive (ReFS) | 124ms |  67ms |  35ms |  48ms |  55ms |
+|               WSL (ext4) |  24ms |  13ms | 7.8ms | 9.0ms |  13ms |
+
+The benchmark was ran on the following environment:
+
+- OS: Windows 11 Pro 23H2 22631.5189
+- CPU: AMD Ryzen 9 5900X
+- Memory: DDR4-3600 32GB
+- SSD: Western Digital Black SN850X 1TB
+
+:::
+
+<!-- Maybe write about macOS as well? -->
+
+### Plugins
+
+Plugins extend Rolldown's functionality, but can also introduce performance overhead.
+
+#### Plugin Hook Filters
+
+Rolldown provides a feature called **Plugin Hook Filters**. This allows you to specify precisely which modules a plugin hook should process, reducing the communication overhead between JavaScript and Rust. For detailed information on how filters work internally, refer to the [Hook Filters](/apis/plugin-api/hook-filters) page.
+
+If you are a plugin user and the plugin you use does not have hook filters specified, you can apply them by using the `withFilter` utility function exported by Rolldown.
+
+```js
+import yaml from '@rollup/plugin-yaml';
+import { defineConfig } from 'rolldown';
+import { withFilter } from 'rolldown/filter';
+
+export default defineConfig({
+  plugins: [
+    // Run the transform hook of the `yaml` plugin only for modules which end in `.yaml`
+    withFilter(
+      yaml({
+        /*...*/
+      }),
+      { transform: { id: /\.yaml$/ } },
+    ),
+  ],
+});
+```
+
+#### Leverage Built-in Features
+
+Rolldown includes several built-in features designed for efficiency. Where possible, prefer using these native capabilities over external Rollup plugins that perform similar tasks. Relying on built-in functionality often means the processing happens entirely within Rust, allowing to process in parallel.
+
+Check the [Rolldown Features](/guide/notable-features) page for capabilities that does not exist in Rollup.
+
+For example, the following common Rollup plugins may be replaced with Rolldown's built-in features:
+
+- `@rollup/plugin-alias`: [`resolve.alias`](/reference/InputOptions.resolve#alias) option
+- `@rollup/plugin-commonjs`: supported out of the box
+- `@rollup/plugin-inject`: [`inject`](/guide/notable-features#inject) option
+- `@rollup/plugin-replace`: [`replacePlugin`](/builtin-plugins/replace)
+- `@rollup/plugin-node-resolve`: supported out of the box
+- `@rollup/plugin-json`: supported out of the box
+- `@rollup/plugin-swc`, `@rollup/plugin-babel`, `@rollup/plugin-sucrase`: supported out of the box via Oxc (complex configurations might still require the plugin)
+- `@rollup/plugin-terser`: `output.minify` option
+
+<!--
+experimental plugins (do we want to document these?)
+
+- `@rollup/plugin-dynamic-import-vars`: `import { viteDynamicImportVarsPlugin } from 'rolldown/experimental'`
+
+-->
+
+## Avoiding Direct `eval`
+
+The `eval()` function evaluates a string of JavaScript code. `eval()` calls have two modes: direct eval and indirect eval. Direct eval refers to the case where the global `eval` function is called directly. Differently from indirect eval, direct eval allows the passed string to access the local scope variables of the caller.
+
+Direct eval is problematic when bundling the code for many reasons:
+
+- Rolldown applies an optimization called "scope hoisting" that puts multiple files into a single scope. However, this means code evaluated by direct `eval` can read and write variables in a different file in the bundle! This is a correctness issue because the evaluated code may try to access a global variable but may accidentally access a private variable with the same name from another file instead. **It can potentially even be a security issue** if a private variable in another file has sensitive data.
+- Rolldown may rename some variables in the bundle to avoid name collisions. While this is not a problem when not using direct eval, it is a problem for direct eval because the code evaluated by direct eval may try to reference the renamed variables by the original name.
+- Minifiers avoid mangling variable names that may be referenced from the direct eval code for correctness. There are also other optimizations prevented by direct eval. This means the output code would not be reduced efficiently.
+
+Luckily, it is usually easy to avoid using direct eval. There are two commonly-used alternatives that avoid all of the drawbacks mentioned above:
+
+- `(0, eval)('x')`
+
+  This is most common way to use indirect eval. There are also other ways to trigger indirect eval. For example, `var eval2 = eval; eval2('x')` and `[eval][0]('x')` and `window.eval('x')` are all indirect eval calls. When you use indirect eval, the code is evaluated in the global scope instead of in the inline scope of the caller.
+
+- `new Function('x')`
+
+  This constructs a new function object at run-time. It is as if you wrote `function() { x }` in the global scope except that `x` can be an arbitrary string of code. This form is sometimes convenient because you can add arguments to the function, and use those arguments to expose variables to the evaluated code. For example, `(new Function('env', 'x'))(someEnv)` is as if you wrote `(function(env) { x })(someEnv)`. This is often a sufficient alternative for direct `eval` when the evaluated code needs to access local variables because you can pass the local variables in as arguments.
+
+## Avoid relying on `this` in exported functions
+
+In JavaScript, `this` is a special variable that is bound to a different value normally depending on how the function is called. For example, when the function is called as a method on an object, the `this` variable is bound to the object.
+
+```js
+const obj = {
+  method() {
+    console.log(this); // `this` is `obj` here
+  },
+};
+obj.method();
+```
+
+Similar to this, when a function is exported from a module and is called via a module namespace object, based on the ECMAScript spec, the `this` variable is bound to the module namespace object.
+
+```js
+// imported.js
+export function method() {
+  console.log(this); // `this` is the module namespace object of `imported.js` here
+}
+
+// main.js
+import * as namespace from './imported.js';
+namespace.method();
+```
+
+However, **Rolldown does not necessarily preserve the value of `this`** for this case. For this reason, it is recommended to avoid relying on `this` in exported functions. That said, this behavior is common across most bundlers and would not be a problem in practice.
+
+The reason for this behavior is because preserving the value of `this` limits the possibilities of tree-shaking. For example, if the `this` variable needs to be bound to the module namespace object, all the exports in that module cannot be tree-shaken even if they are not used through the `import`s.
+
+::: tip A similar issue when outputting your code as CJS
+
+Similar to the issue described above, Rolldown does not necessarily preserve the value of `this` of exported functions when outputting your code as CJS. In this case, `this` that should be `undefined` may be bound to the `module.exports` object instead.
+
+:::
+
+## Avoid relying on Temporal Dead Zone (TDZ) errors
+
+In ECMAScript, `let`, `const`, and `class` declarations create a binding that exists from the start of its scope but is uninitialized until the declaration itself is evaluated. Reading the binding during this window, even via `typeof`, throws a `ReferenceError`. This window is known as the "Temporal Dead Zone (TDZ)".
+
+```js
+typeof x; // ReferenceError: Cannot access 'x' before initialization
+let x = 1;
+```
+
+However, **Rolldown does not necessarily preserve TDZ semantics**, for a mix of correctness and performance reasons. Code that relies on a TDZ access throwing may behave differently in the bundled output, and should be avoided.
+
+For example, Rolldown always rewrites a module top-level `class X {}` to `var X = class {}` so that the binding can be hoisted alongside other top-level declarations. As a result, the binding is observable as `undefined` (rather than throwing) before the declaration is reached. Setting [`output.topLevelVar`](/reference/OutputOptions.topLevelVar) to `true` extends the same rewriting to top-level `let` and `const`.
+
+```js
+// In ESM, this throws ReferenceError.
+// In Rolldown's bundled output, `typeof X` evaluates to `"undefined"`.
+console.log(typeof X);
+class X {}
+```
+
+As another example, Rolldown may inline exported `const` values at their use sites, even across an import cycle. When the cycle causes the constant to be read before its declaration runs, ESM would throw, but Rolldown returns the inlined value instead.
+
+::: code-group
+
+```js [entry.js]
+import './constants.js';
+```
+
+```js [constants.js]
+export const foo = 123;
+export function bar() {
+  return foo;
+}
+import './cycle.js';
+```
+
+```js [cycle.js]
+import { bar } from './constants.js';
+// In ESM, `bar()` throws ReferenceError because `foo` is in TDZ.
+// In Rolldown's bundled output, `bar()` returns `123`.
+console.log(bar());
+```
+
+:::
+
+## Warning: "Sourcemap is likely to be incorrect"
+
+You'll see this warning if you generate a sourcemap with your bundle ([`sourcemap: true`](/reference/OutputOptions.sourcemap) or `sourcemap: 'inline'`) but you're using one or more plugins that transformed code without generating a sourcemap for the transformation.
+
+Usually, a plugin will only omit the sourcemap if it (the plugin, not the bundle) was configured with `sourcemap: false` - so all you need to do is change that. If the plugin doesn't generate a sourcemap, consider raising an issue with the plugin author.

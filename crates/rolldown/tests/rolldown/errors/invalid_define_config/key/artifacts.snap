@@ -1,0 +1,11 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## INVALID_DEFINE_CONFIG
+
+```text
+[INVALID_DEFINE_CONFIG] The define key `6` is not an identifier.
+
+```

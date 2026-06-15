@@ -1,0 +1,20 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry2_js.js
+
+```js
+import "./entry_js.js";
+
+```
+
+## entry_js.js
+
+```js
+//#region entry.js
+globalThis.sideEffectExecuted = true;
+//#endregion
+
+```

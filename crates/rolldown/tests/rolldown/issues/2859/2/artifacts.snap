@@ -1,0 +1,68 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "assert";
+//#region main.js
+const foo = "foo";
+let bar = "";
+bar = "bar";
+var main_default = "default";
+import("./main.js").then((exports) => assert.deepStrictEqual({ ...exports }, {
+	foo: "foo",
+	bar: "bar",
+	default: "default"
+}));
+//#endregion
+export { bar, main_default as default, foo };
+
+```
+
+# Variant: [format: Cjs]
+
+## warnings
+
+### MIXED_EXPORTS
+
+```text
+[MIXED_EXPORTS] Entry module "main.js" is using named (including "bar", "default", "foo") and default exports together. Consumers of your bundle will have to use `chunk.default` to access the default export, which may not be what you want. Use `output.exports: "named"` to disable this warning.
+
+```
+
+## Assets
+
+### main.js
+
+```js
+Object.defineProperties(exports, {
+	__esModule: { value: true },
+	[Symbol.toStringTag]: { value: "Module" }
+});
+// HIDDEN [\0rolldown/runtime.js]
+let assert = require("assert");
+assert = __toESM(assert);
+//#region main.js
+const foo = "foo";
+let bar = "";
+bar = "bar";
+var main_default = "default";
+Promise.resolve().then(() => require("./main.js")).then((exports) => assert.default.deepStrictEqual({ ...exports }, {
+	foo: "foo",
+	bar: "bar",
+	default: "default"
+}));
+//#endregion
+Object.defineProperty(exports, "bar", {
+	enumerable: true,
+	get: function() {
+		return bar;
+	}
+});
+exports.default = main_default;
+exports.foo = foo;
+
+```

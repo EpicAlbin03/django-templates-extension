@@ -1,0 +1,15 @@
+{
+  "config": {
+    "format": "esm",
+    "platform": "node",
+    "manualCodeSplitting": {
+      "groups": [
+        {
+          "name": "rolldown",
+          "test": "\\0rolldown/runtime\\.js",
+          "priority": 100
+        }
+      ]
+    }
+  }
+}

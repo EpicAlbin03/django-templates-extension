@@ -1,0 +1,39 @@
+mod ast_scanner;
+mod bundle;
+mod bundler;
+mod bundler_builder;
+mod chunk_graph;
+mod ecmascript;
+mod hmr;
+mod module_finalizers;
+mod module_loader;
+mod stages;
+mod type_alias;
+mod types;
+mod utils;
+use std::sync::Arc;
+
+use rolldown_resolver::Resolver;
+
+pub(crate) type SharedResolver<Fs> = Arc<Resolver<Fs>>;
+pub(crate) type SharedOptions = SharedNormalizedBundlerOptions;
+
+pub use crate::{
+  bundle::{
+    bundle::Bundle,
+    bundle_factory::{BundleFactory, BundleFactoryOptions},
+    bundle_handle::BundleHandle,
+  },
+  bundler::Bundler,
+  bundler_builder::BundlerBuilder,
+  types::{bundle_output::BundleOutput, bundler_config::BundlerConfig},
+};
+
+pub use rolldown_common::bundler_options::*;
+
+pub use rolldown_resolver::ResolveOptions;
+
+pub use rolldown_plugin as plugin;
+
+#[cfg(feature = "testing")]
+pub use crate::utils::determine_minify_internal_exports_default;

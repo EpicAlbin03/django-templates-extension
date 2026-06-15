@@ -1,0 +1,17 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "entries/entry",
+        "import": "entries/entry.js"
+      }
+    ],
+    "moduleTypes": {
+      ".css": "css",
+      ".png": "asset"
+    },
+    "assetFilenames": "[name]-[hash].[ext]"
+  },
+  "expectExecuted": false,
+  "snapshotBytes": true
+}

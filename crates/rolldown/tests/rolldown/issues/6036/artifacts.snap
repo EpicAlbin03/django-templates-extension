@@ -1,0 +1,22 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region component/hello.tsx
+var Import_react = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = {};
+})))());
+function Hello() {
+	return <Import_react.default.Fragment>
+      <h1>Hello</h1>
+    </Import_react.default.Fragment>;
+}
+//#endregion
+export { Hello };
+
+```
