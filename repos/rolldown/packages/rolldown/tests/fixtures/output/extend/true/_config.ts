@@ -1,0 +1,24 @@
+import { defineTest } from 'rolldown-tests';
+import { expect } from 'vitest';
+
+export default defineTest({
+  sequential: true,
+  config: {
+    output: {
+      exports: 'named',
+      format: 'iife',
+      name: 'module',
+      extend: true,
+    },
+  },
+  afterTest: (output) => {
+    expect(output.output[0].code).toMatchInlineSnapshot(`
+      "(function(exports) {
+      	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+      	//#endregion
+      	exports.main = "main";
+      })(this.module = this.module || {});
+      "
+    `);
+  },
+});

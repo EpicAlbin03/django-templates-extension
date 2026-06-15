@@ -1,0 +1,43 @@
+# https://github.com/crate-ci/typos
+# cargo install typos-cli
+# typos
+
+[files]
+extend-exclude = [
+  "*.snap",
+  "*.svg",
+  "*.json",
+  "/CHANGELOG-*.md",
+  "/CHANGELOG.md",
+  "/packages/rollup-tests/test",
+  "/crates/rolldown/tests/esbuild/splitting/ignore-test.md",
+  "/packages/rolldown/tests/magic-string/**.test.ts",
+  "/packages/rollup-tests/src/ignored-by-unsupported-features.md",
+  "/packages/rollup-tests/src/ignored-passed-snapshot-different-tests.js",
+  "/packages/rollup-tests/src/ignored-tests.js",
+  "/packages/vite-tests/repo",
+  "/rollup",
+  "/test262",
+  "crates/rolldown/tests/esbuild/**/*",
+  "packages/rolldown/src/binding.cjs",
+  "packages/rolldown/src/binding.js",
+  "packages/rolldown/tests/fixtures/",
+  "packages/rolldown/tests/stability/",
+  "scripts/src/esbuild-tests/snap-diff/**/*.{txt,md}",
+  "**/NUL",
+]
+
+# ref: typos ignore comments https://github.com/crate-ci/typos/pull/1342/changes
+[default]
+extend-ignore-re = [
+  "(#|//)\\s*spellchecker:ignore-next-line\\r?\\n.*",
+  "(?s)(#|//)\\s*spellchecker:off.*?\\n\\s*(#|//)\\s*spellchecker:on",
+]
+
+[default.extend-words]
+splitted = "splitted"
+styl = "styl"
+
+[default.extend-identifiers]
+IIFEs = "IIFEs"
+PnP = "PnP"

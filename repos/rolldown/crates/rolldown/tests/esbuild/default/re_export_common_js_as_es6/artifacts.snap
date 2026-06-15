@@ -1,0 +1,15 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+var bar = (/* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.bar = 123;
+})))().bar;
+export { bar };
+
+```

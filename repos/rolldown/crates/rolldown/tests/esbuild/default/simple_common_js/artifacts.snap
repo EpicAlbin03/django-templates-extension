@@ -1,0 +1,20 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+import * as assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+//#region entry.js
+const fn = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = function() {
+		return 123;
+	};
+})))();
+assert.equal(fn(), 123);
+//#endregion
+
+```

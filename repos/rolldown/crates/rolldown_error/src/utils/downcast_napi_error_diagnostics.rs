@@ -1,0 +1,17 @@
+use crate::BuildDiagnostic;
+
+pub fn downcast_napi_error_diagnostics(err: anyhow::Error) -> anyhow::Result<BuildDiagnostic> {
+  // First try to downcast to BuildDiagnostic itself
+  if err.is::<BuildDiagnostic>() {
+    return err.downcast::<BuildDiagnostic>();
+  }
+
+  #[cfg(feature = "napi")]
+  {
+    err.downcast::<napi::Error>().map(BuildDiagnostic::napi_error)
+  }
+  #[cfg(not(feature = "napi"))]
+  {
+    Err(err)
+  }
+}

@@ -1,0 +1,106 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## const-entry.js
+
+```js
+//#region const-entry.js
+console.log([
+	6,
+	-6,
+	-7,
+	false,
+	"number"
+], [
+	9,
+	-3,
+	18,
+	3 / 6,
+	3 % 6,
+	3 ** 6
+], [
+	true,
+	false,
+	true,
+	false,
+	false,
+	true,
+	false,
+	true
+], [
+	12,
+	3,
+	3
+], [
+	2,
+	7,
+	5
+], [
+	6,
+	3,
+	3,
+	"y",
+	"n"
+]);
+//#endregion
+
+```
+
+## enum-entry.js
+
+```js
+//#region enum-entry.ts
+console.log([
+	6,
+	-6,
+	-7,
+	false,
+	"number"
+], [
+	9,
+	-3,
+	18,
+	3 / 6,
+	3 % 6,
+	3 ** 6
+], [
+	true,
+	false,
+	true,
+	false,
+	false,
+	true,
+	false,
+	true
+], [
+	12,
+	3,
+	3
+], [
+	2,
+	7,
+	5
+], [
+	6,
+	3,
+	3,
+	"y",
+	"n"
+]);
+//#endregion
+
+```
+
+## nested-entry.js
+
+```js
+//#region nested-entry.ts
+console.log({
+	"should be 4": 4,
+	"should be 32": 32
+});
+//#endregion
+
+```

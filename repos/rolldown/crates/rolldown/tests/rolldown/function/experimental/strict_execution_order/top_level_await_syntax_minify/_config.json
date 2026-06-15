@@ -1,0 +1,13 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ],
+    "strictExecutionOrder": true,
+    "minify": true
+  },
+  "expectExecuted": false
+}

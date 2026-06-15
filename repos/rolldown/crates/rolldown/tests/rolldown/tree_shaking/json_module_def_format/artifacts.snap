@@ -1,0 +1,17 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region main.js
+const a = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = { "a": 1 };
+})))();
+console.log(`a: `, a);
+//#endregion
+
+```

@@ -1,0 +1,415 @@
+use std::ops::{Deref, DerefMut};
+
+use oxc::semantic::{ScopeId, Scoping, SymbolId};
+use oxc_index::IndexVec;
+use oxc_str::CompactStr;
+use rolldown_std_utils::OptionExt;
+use rustc_hash::FxHashMap;
+
+use crate::{AstScopes, ChunkIdx, ModuleIdx, SymbolRef};
+
+use super::namespace_alias::NamespaceAlias;
+
+#[derive(Debug, Clone, Default)]
+pub struct SymbolRefDataClassic {
+  /// For case `import {a} from 'foo.cjs';console.log(a)`, the symbol `a` reference to `module.exports.a` of `foo.cjs`.
+  /// So we will transform the code into `console.log(foo_ns.a)`. `foo_ns` is the namespace symbol of `foo.cjs and `a` is the property name.
+  /// We use `namespace_alias` to represent this situation. If `namespace_alias` is not `None`, then this symbol must be rewritten to a property access.
+  pub namespace_alias: Option<NamespaceAlias>,
+  /// The symbol that this symbol is linked to.
+  pub link: Option<SymbolRef>,
+  /// The chunk that this symbol is defined in.
+  pub chunk_idx: Option<ChunkIdx>,
+}
+
+bitflags::bitflags! {
+  #[derive(Debug, Default, Clone, Copy)]
+  pub struct SymbolRefFlags: u8 {
+    const IsNotReassigned = 1;
+    /// The function is side-effect-free solely because of a `@__NO_SIDE_EFFECTS__` annotation,
+    /// NOT because its body is empty. Such functions may still use their arguments, so
+    /// dynamic imports inside callback arguments should not be treated as unreachable.
+    const PureAnnotationOnly = 1 << 1;
+    const MustStartWithCapitalLetterForJSX = 1 << 2;
+    /// If the SymbolRef points to a side-effects-free function
+    const SideEffectsFreeFunction = 1 << 3;
+    /// This symbol (a CJS default/namespace import) has a member expression write where the
+    /// specific property cannot be statically determined (e.g. `cjs[name] = value`) or
+    /// where the write goes through the namespace default (e.g. `ns.default.a = value`).
+    /// All CJS exports of the target module should not be inlined as constants.
+    const HasComputedMemberWrite = 1 << 4;
+    /// A "facade symbol" is a synthetic symbol created by the bundler that does
+    /// not correspond to any identifier written by the user in the original source.
+    ///
+    /// The bundler creates these to represent module-level concepts that need a
+    /// symbol for linking and code generation, but have no declaration in the AST.
+    ///
+    /// Examples:
+    /// - `namespace_object_ref`: represents a module's namespace object
+    ///   (e.g. when you write `import * as ns from './foo'`, `ns` refers to
+    ///   foo's namespace object — the bundler creates a facade symbol in foo's
+    ///   scope to represent that namespace)
+    /// - `default_export_ref`: represents a module's default export binding
+    ///   when no explicit name exists (e.g. `export default 42` has no declared
+    ///   identifier, so the bundler creates one)
+    const IsFacade = 1 << 5;
+    /// Root identifier of a JSX member expression (e.g. `obj` in `<obj.Foo>`).
+    /// Unlike `MustStartWithCapitalLetterForJSX`, this only triggers uppercasing
+    /// for facade (generated) symbols — user-defined names are left unchanged
+    /// because `<obj.Foo>` is already a valid component reference in JSX.
+    const UsedAsJSXMemberExprRoot = 1 << 6;
+  }
+}
+
+#[derive(Debug)]
+pub struct SymbolRefDbForModule {
+  owner_idx: ModuleIdx,
+  root_scope_id: ScopeId,
+  pub ast_scopes: AstScopes,
+  // Only some symbols would be cared about, so we use a hashmap to store the flags.
+  pub flags: FxHashMap<SymbolId, SymbolRefFlags>,
+  pub classic_data: IndexVec<SymbolId, SymbolRefDataClassic>,
+  #[cfg(debug_assertions)]
+  create_reason: FxHashMap<SymbolRef, String>,
+}
+
+impl Default for SymbolRefDbForModule {
+  fn default() -> Self {
+    Self {
+      owner_idx: ModuleIdx::new(0),
+      root_scope_id: ScopeId::new(0),
+      ast_scopes: AstScopes::new(Scoping::default()),
+      flags: FxHashMap::default(),
+      classic_data: IndexVec::default(),
+      #[cfg(debug_assertions)]
+      create_reason: FxHashMap::default(),
+    }
+  }
+}
+
+impl SymbolRefDbForModule {
+  pub fn new(scoping: Scoping, owner_idx: ModuleIdx, top_level_scope_id: ScopeId) -> Self {
+    Self {
+      owner_idx,
+      root_scope_id: top_level_scope_id,
+      classic_data: IndexVec::from_vec(vec![
+        SymbolRefDataClassic::default();
+        scoping.symbols_len()
+      ]),
+      ast_scopes: AstScopes::new(scoping),
+      flags: FxHashMap::default(),
+      #[cfg(debug_assertions)]
+      create_reason: FxHashMap::default(),
+    }
+  }
+
+  /// The `facade` means the symbol is actually not exist in the AST.
+  #[cfg_attr(debug_assertions, track_caller)]
+  pub fn create_facade_root_symbol_ref(&mut self, name: &str) -> SymbolRef {
+    let symbol_id = self.ast_scopes.create_facade_root_symbol_ref(name);
+    self.classic_data.push(SymbolRefDataClassic::default());
+    self.flags.entry(symbol_id).or_default().insert(SymbolRefFlags::IsFacade);
+
+    let ret = SymbolRef::from((self.owner_idx, symbol_id));
+    #[cfg(debug_assertions)]
+    {
+      let location = std::panic::Location::caller();
+      self.create_reason.insert(
+        ret,
+        format!(
+          "create facade root symbol ref for {:?} -> {}.\nlocation: {}",
+          self.owner_idx, name, location
+        ),
+      );
+    }
+    ret
+  }
+
+  /// Check if a symbol is a facade symbol (synthetic, not present in the original AST).
+  #[inline]
+  pub fn is_facade_symbol(&self, symbol_id: SymbolId) -> bool {
+    self.flags.get(&symbol_id).is_some_and(|f| f.contains(SymbolRefFlags::IsFacade))
+  }
+
+  /// Merge immutable fields (Scoping) from a build's DB into this cache DB.
+  /// Also extends `classic_data` and preserves `IsFacade` flags for facade symbols
+  /// that were created during the linking phase.
+  pub fn merge_from_build(&mut self, build_db: SymbolRefDbForModule) {
+    // Extend classic_data for any symbols added during linking (e.g., facade symbols)
+    let new_len = build_db.ast_scopes.total_symbol_count();
+    let current_len = self.classic_data.len();
+    for _ in current_len..new_len {
+      self.classic_data.push(SymbolRefDataClassic::default());
+    }
+
+    // Preserve IsFacade flags for facade symbols added during linking
+    for (symbol_id, flags) in &build_db.flags {
+      if flags.contains(SymbolRefFlags::IsFacade) {
+        self.flags.entry(*symbol_id).or_default().insert(SymbolRefFlags::IsFacade);
+      }
+    }
+
+    let scoping = build_db.ast_scopes.into_scoping();
+    self.ast_scopes.set_scoping(scoping);
+  }
+
+  pub fn get_classic_data(&self, symbol_id: SymbolId) -> &SymbolRefDataClassic {
+    &self.classic_data[symbol_id]
+  }
+
+  pub fn get_classic_data_mut(&mut self, symbol_id: SymbolId) -> &mut SymbolRefDataClassic {
+    &mut self.classic_data[symbol_id]
+  }
+}
+
+impl Deref for SymbolRefDbForModule {
+  type Target = AstScopes;
+
+  fn deref(&self) -> &Self::Target {
+    &self.ast_scopes
+  }
+}
+
+impl DerefMut for SymbolRefDbForModule {
+  fn deref_mut(&mut self) -> &mut Self::Target {
+    &mut self.ast_scopes
+  }
+}
+
+// Information about symbols for all modules
+#[derive(Debug, Default)]
+pub struct SymbolRefDb {
+  /// Fast-path optimization: set to `true` when any module has JSX preserve enabled.
+  /// This avoids checking per-symbol flags in `link()` when no modules use JSX preserve.
+  has_module_preserve_jsx: bool,
+  inner: IndexVec<ModuleIdx, Option<SymbolRefDbForModule>>,
+}
+
+impl SymbolRefDb {
+  pub fn new() -> Self {
+    Self { inner: IndexVec::default(), has_module_preserve_jsx: false }
+  }
+
+  #[must_use]
+  pub fn with_inner(mut self, inner: IndexVec<ModuleIdx, Option<SymbolRefDbForModule>>) -> Self {
+    self.inner = inner;
+    self
+  }
+
+  /// The `facade` means the symbol does not actually exist in the original AST.
+  ///
+  /// # Panics
+  /// - If the module does not exist in the symbol database.
+  #[inline]
+  pub fn is_facade_symbol(&self, refer: SymbolRef) -> bool {
+    let local_db = self.inner[refer.owner].unpack_ref();
+    local_db.is_facade_symbol(refer.symbol)
+  }
+
+  /// Clone the symbol ref DB for caching, using an empty Scoping to avoid
+  /// expensive cloning. After each build, `merge_from_build` restores the
+  /// authoritative Scoping and extends `classic_data` for facade symbols.
+  #[must_use]
+  pub fn clone_without_scoping(&self) -> SymbolRefDb {
+    let mut vec = IndexVec::with_capacity(self.inner.len());
+    for inner in &self.inner {
+      vec.push(inner.as_ref().map(|inner| SymbolRefDbForModule {
+        owner_idx: inner.owner_idx,
+        root_scope_id: inner.root_scope_id,
+        ast_scopes: AstScopes::new(Scoping::default()),
+        flags: inner.flags.clone(),
+        classic_data: inner.classic_data.clone(),
+        #[cfg(debug_assertions)]
+        create_reason: inner.create_reason.clone(),
+      }));
+    }
+    Self { inner: vec, has_module_preserve_jsx: self.has_module_preserve_jsx }
+  }
+}
+
+impl std::ops::Index<ModuleIdx> for SymbolRefDb {
+  type Output = Option<SymbolRefDbForModule>;
+
+  fn index(&self, index: ModuleIdx) -> &Self::Output {
+    self.inner.index(index)
+  }
+}
+
+impl std::ops::IndexMut<ModuleIdx> for SymbolRefDb {
+  fn index_mut(&mut self, index: ModuleIdx) -> &mut Self::Output {
+    self.inner.index_mut(index)
+  }
+}
+
+impl SymbolRefDb {
+  fn ensure_exact_capacity(&mut self, module_idx: ModuleIdx) {
+    let new_len = module_idx.index() + 1;
+    if self.inner.len() < new_len {
+      self.inner.resize_with(new_len, || None);
+    }
+  }
+
+  pub fn into_inner(self) -> IndexVec<ModuleIdx, Option<SymbolRefDbForModule>> {
+    self.inner
+  }
+
+  pub fn inner(&self) -> &IndexVec<ModuleIdx, Option<SymbolRefDbForModule>> {
+    &self.inner
+  }
+
+  pub fn store_local_db(&mut self, module_idx: ModuleIdx, local_db: SymbolRefDbForModule) {
+    self.ensure_exact_capacity(module_idx);
+
+    self.inner[module_idx] = Some(local_db);
+  }
+
+  /// Returns whether any module uses JSX preserve mode.
+  #[inline]
+  pub fn has_module_preserve_jsx(&self) -> bool {
+    self.has_module_preserve_jsx
+  }
+
+  /// Mark that at least one module uses JSX preserve mode.
+  /// This is used as a fast-path optimization in `link()`.
+  #[inline]
+  pub fn set_has_module_preserve_jsx(&mut self) {
+    self.has_module_preserve_jsx = true;
+  }
+
+  pub fn create_facade_root_symbol_ref(&mut self, owner: ModuleIdx, name: &str) -> SymbolRef {
+    self.ensure_exact_capacity(owner);
+    self.inner[owner].unpack_ref_mut().create_facade_root_symbol_ref(name)
+  }
+
+  /// Make `base` point to `target`
+  pub fn link(&mut self, base: SymbolRef, target: SymbolRef) {
+    let base_root = self.find_mut(base);
+    let target_root = self.find_mut(target);
+    if base_root == target_root {
+      // already linked
+      return;
+    }
+    self.get_mut(base_root).link = Some(target_root);
+    if self.has_module_preserve_jsx {
+      let jsx_mask =
+        SymbolRefFlags::MustStartWithCapitalLetterForJSX | SymbolRefFlags::UsedAsJSXMemberExprRoot;
+      if let Some(jsx_flags) =
+        base_root.flags(self).map(|f| *f & jsx_mask).filter(|f| !f.is_empty())
+      {
+        *target_root.flags_mut(self) |= jsx_flags;
+      }
+    }
+  }
+
+  pub fn canonical_name_for<'name>(
+    &self,
+    refer: SymbolRef,
+    canonical_names: &'name FxHashMap<SymbolRef, CompactStr>,
+  ) -> Option<&'name CompactStr> {
+    let canonical_ref = self.canonical_ref_for(refer);
+    canonical_names.get(&canonical_ref)
+  }
+
+  /// Get the canonical name for a symbol, falling back to the original name if not renamed.
+  /// This is more efficient than storing original names in canonical_names map.
+  pub fn canonical_name_for_or_original<'a>(
+    &'a self,
+    refer: SymbolRef,
+    canonical_names: &'a FxHashMap<SymbolRef, CompactStr>,
+  ) -> &'a str {
+    let canonical_ref = self.canonical_ref_for(refer);
+    canonical_names.get(&canonical_ref).map_or_else(|| canonical_ref.name(self), CompactStr::as_str)
+  }
+
+  pub fn get(&self, refer: SymbolRef) -> &SymbolRefDataClassic {
+    self.inner[refer.owner].unpack_ref().get_classic_data(refer.symbol)
+  }
+
+  pub fn get_mut(&mut self, refer: SymbolRef) -> &mut SymbolRefDataClassic {
+    self.inner[refer.owner].unpack_ref_mut().get_classic_data_mut(refer.symbol)
+  }
+
+  /// https://en.wikipedia.org/wiki/Disjoint-set_data_structure
+  /// See Path halving
+  pub fn find_mut(&mut self, target: SymbolRef) -> SymbolRef {
+    let mut canonical = target;
+    while let Some(parent) = self.get_mut(canonical).link {
+      let parent_link = self.get_mut(parent).link;
+      if let Some(grand_parent) = parent_link {
+        self.get_mut(canonical).link = Some(grand_parent);
+      }
+      canonical = parent;
+    }
+
+    canonical
+  }
+
+  // Used for the situation where rust require `&self`
+  pub fn canonical_ref_for(&self, target: SymbolRef) -> SymbolRef {
+    let mut canonical = target;
+    while let Some(founded) = self.get(canonical).link {
+      debug_assert!(founded != target);
+      canonical = founded;
+    }
+    canonical
+  }
+
+  /// Resolves a symbol reference to its canonical form, following namespace aliases.
+  pub fn canonical_ref_resolving_namespace(&self, symbol_ref: SymbolRef) -> SymbolRef {
+    let canonical_ref = self.canonical_ref_for(symbol_ref);
+    if let Some(namespace_alias) = &self.get(canonical_ref).namespace_alias {
+      namespace_alias.namespace_ref
+    } else {
+      canonical_ref
+    }
+  }
+
+  pub fn is_declared_in_root_scope(&self, refer: SymbolRef) -> bool {
+    let local_db = self.inner[refer.owner].unpack_ref();
+    local_db.ast_scopes.symbol_scope_id(refer.symbol) == local_db.root_scope_id
+  }
+
+  #[cfg(debug_assertions)]
+  /// If it is not a facade symbol, `No create reason found` will be returned.
+  pub fn get_create_reason(&self, symbol_ref: &SymbolRef) -> &str {
+    self
+      .local_db(symbol_ref.owner)
+      .create_reason
+      .get(symbol_ref)
+      .map_or("No create reason found", |reason| reason.as_str())
+  }
+}
+
+pub trait GetLocalDb {
+  fn local_db(&self, owner: ModuleIdx) -> &SymbolRefDbForModule;
+}
+
+pub trait GetLocalDbMut {
+  fn local_db_mut(&mut self, owner: ModuleIdx) -> &mut SymbolRefDbForModule;
+}
+
+impl GetLocalDb for SymbolRefDb {
+  fn local_db(&self, owner: ModuleIdx) -> &SymbolRefDbForModule {
+    self.inner[owner].unpack_ref()
+  }
+}
+
+impl GetLocalDbMut for SymbolRefDb {
+  fn local_db_mut(&mut self, owner: ModuleIdx) -> &mut SymbolRefDbForModule {
+    self.inner[owner].unpack_ref_mut()
+  }
+}
+
+impl GetLocalDb for SymbolRefDbForModule {
+  fn local_db(&self, owner: ModuleIdx) -> &SymbolRefDbForModule {
+    debug_assert!(self.owner_idx == owner);
+    self
+  }
+}
+
+impl GetLocalDbMut for SymbolRefDbForModule {
+  fn local_db_mut(&mut self, owner: ModuleIdx) -> &mut SymbolRefDbForModule {
+    debug_assert!(self.owner_idx == owner);
+    self
+  }
+}

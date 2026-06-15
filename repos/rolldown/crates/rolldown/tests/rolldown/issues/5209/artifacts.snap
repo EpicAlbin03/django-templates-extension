@@ -1,0 +1,22 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+//#region main.js
+var import_cjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.default = function() {
+		return 123;
+	};
+	exports.__esModule = true;
+})))());
+var accepts = typeof import_cjs.default === "function" ? import_cjs.default : import_cjs.default.default;
+assert.strictEqual(accepts(), 123);
+//#endregion
+
+```

@@ -1,0 +1,20 @@
+name: 'Automate Jobs'
+
+permissions: {}
+
+on:
+  issues:
+    types: [assigned]
+
+jobs:
+  remove-needs-triage-when-assigned:
+    if: github.event.action == 'assigned'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: gh issue edit "$ISSUE_NUMBER" --remove-label needs-triage

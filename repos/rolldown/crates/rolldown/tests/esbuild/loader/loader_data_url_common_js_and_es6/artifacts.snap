@@ -1,0 +1,20 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region y.txt
+var y_default = "data:text/plain;charset=utf-8,y";
+//#endregion
+//#region entry.js
+const x_url = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = "data:text/plain;charset=utf-8,x";
+})))();
+console.log(x_url, y_default);
+//#endregion
+
+```

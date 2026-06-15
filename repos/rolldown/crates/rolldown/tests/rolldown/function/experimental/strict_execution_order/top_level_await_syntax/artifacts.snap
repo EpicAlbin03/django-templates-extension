@@ -1,0 +1,15 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+await __esmMin((async () => {
+	await init_foo();
+	console.log(123);
+}))();
+
+```

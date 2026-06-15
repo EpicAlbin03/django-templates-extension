@@ -1,0 +1,568 @@
+use std::path::PathBuf;
+
+use arcstr::ArcStr;
+use futures::future::try_join_all;
+use oxc_index::IndexVec;
+use render_chunk_to_assets::set_emitted_chunk_preliminary_filenames;
+use rolldown_common::{
+  ChunkIdx, ChunkKind, InstantiationKind, OutputExports, PackageJson, PathsOutputOption,
+};
+use rolldown_devtools::{action, trace_action, trace_action_enabled};
+use rolldown_error::{BuildDiagnostic, BuildResult};
+use rolldown_plugin::SharedPluginDriver;
+use rolldown_std_utils::{
+  PathBufExt as _, PathExt as _, representative_file_name_for_preserve_modules,
+  strip_path_prefix_to_slash,
+};
+use rolldown_utils::{
+  dashmap::FxDashMap,
+  hash_placeholder::HashPlaceholderGenerator,
+  indexmap::FxIndexSet,
+  rayon::{IntoParallelRefMutIterator as _, ParallelIterator as _},
+};
+use rustc_hash::FxHashMap;
+use sugar_path::SugarPath as _;
+use tracing::debug_span;
+
+const COMMON_JS_EXTENSIONS: &[&str] = &["js", "jsx", "mjs", "cjs", "ts", "tsx", "mts", "cts"];
+
+#[derive(Debug)]
+struct PreGeneratedChunkName {
+  /// The representative name used for symbol deconflicting and chunk binding references.
+  representative_chunk_name: ArcStr,
+  /// The full chunk name including directory structure relative to `preserveModulesRoot`.
+  /// This appears in `PreRenderedChunk.name` and hooks like `entryFileNames`.
+  chunk_name: ArcStr,
+  /// The base filename for generating preliminary filenames.
+  /// Absolute path without extension, used as input to filename templates.
+  chunk_filename: ArcStr,
+}
+
+type DevtoolsPackageInfoEntry = (action::PackageInfo, FxIndexSet<String>, FxIndexSet<u32>);
+
+fn is_devtools_source_importer(module_id: &str, cwd: &str, cwd_slash: &str) -> bool {
+  fn is_path_inside(path: &str, parent: &str) -> bool {
+    let parent = parent.trim_end_matches(['/', '\\']);
+    path == parent
+      || path
+        .strip_prefix(parent)
+        .is_some_and(|rest| rest.starts_with('/') || rest.starts_with('\\'))
+  }
+
+  let is_inside_cwd = is_path_inside(module_id, cwd) || is_path_inside(module_id, cwd_slash);
+  let is_node_module =
+    module_id.contains("/node_modules/") || module_id.contains("\\node_modules\\");
+
+  is_inside_cwd && !is_node_module
+}
+
+fn ensure_devtools_package_info<'a>(
+  package_infos: &'a mut FxHashMap<String, DevtoolsPackageInfoEntry>,
+  package_json: &PackageJson,
+) -> Option<&'a mut DevtoolsPackageInfoEntry> {
+  let package_root = package_json.realpath().parent()?.to_slash_lossy().into_owned();
+  let package_json_path = package_json.realpath().to_slash_lossy().into_owned();
+
+  Some(package_infos.entry(package_root.clone()).or_insert_with(|| {
+    (
+      action::PackageInfo {
+        package_id: package_root.clone(),
+        name: package_json.name().map(str::to_string),
+        version: package_json.version().map(str::to_string),
+        package_json_path,
+        package_root,
+        is_used: false,
+        dependency_type: "transitive",
+        size: 0,
+        modules: Vec::new(),
+        chunk_ids: Vec::new(),
+      },
+      FxIndexSet::default(),
+      FxIndexSet::default(),
+    )
+  }))
+}
+
+use crate::{
+  BundleOutput, SharedOptions,
+  chunk_graph::ChunkGraph,
+  stages::link_stage::LinkStageOutput,
+  type_alias::IndexEcmaAst,
+  types::generator::GenerateContext,
+  utils::chunk::{
+    deconflict_chunk_symbols::deconflict_chunk_symbols,
+    determine_export_mode::determine_export_mode, generate_pre_rendered_chunk,
+    render_chunk_exports::get_chunk_export_names,
+    validate_options_for_multi_chunk_output::validate_options_for_multi_chunk_output,
+  },
+};
+
+mod chunk_ext;
+mod chunk_optimizer;
+mod code_splitting;
+mod compute_cross_chunk_links;
+mod compute_wrapped_esm_init_metadata;
+mod detect_ineffective_dynamic_imports;
+mod dynamic_already_loaded;
+mod finalize_modules;
+mod manual_code_splitting;
+mod minify_chunks;
+mod on_demand_wrapping;
+mod post_banner_footer;
+mod render_chunk_to_assets;
+
+pub struct GenerateStage<'a> {
+  link_output: &'a mut LinkStageOutput,
+  /// Per-module AST table threaded by value from `LinkStage::link()`. Moved out
+  /// of `self` into `render_chunk_to_assets` so it falls out of scope (and is
+  /// dropped) at the consumer's exit, before post-codegen stages run.
+  ast_table: IndexEcmaAst,
+  options: &'a SharedOptions,
+  plugin_driver: &'a SharedPluginDriver,
+  /// Pre-resolved paths for external modules. When the user provides a JS function for the
+  /// `paths` option, it is resolved asynchronously here before entering sync rendering code,
+  /// avoiding the need for `invoke_sync` which can cause deadlocks.
+  resolved_paths: Option<PathsOutputOption>,
+}
+
+impl<'a> GenerateStage<'a> {
+  pub fn new(
+    link_output: &'a mut LinkStageOutput,
+    ast_table: IndexEcmaAst,
+    options: &'a SharedOptions,
+    plugin_driver: &'a SharedPluginDriver,
+  ) -> Self {
+    Self { link_output, ast_table, options, plugin_driver, resolved_paths: None }
+  }
+
+  #[tracing::instrument(level = "debug", skip_all)]
+  pub async fn generate(&mut self) -> BuildResult<BundleOutput> {
+    self.plugin_driver.render_start(self.options).await?;
+    let mut chunk_graph = self.generate_chunks().await?;
+
+    // Count only live chunks. Chunks merged away during chunk optimization (e.g.
+    // the standalone runtime chunk folded back into its host) stay in
+    // `chunk_table` as tombstones but are skipped at render time, so they must
+    // not count toward the multi-chunk check that gates single-file output.
+    let live_chunk_count = chunk_graph
+      .chunk_table
+      .len()
+      .saturating_sub(chunk_graph.post_chunk_optimization_operations.len());
+    if live_chunk_count > 1 {
+      validate_options_for_multi_chunk_output(self.options)?;
+    }
+
+    self.finalized_module_namespace_ref_usage();
+
+    self.compute_cross_chunk_links(&mut chunk_graph);
+
+    self.ensure_lazy_module_initialization_order(&mut chunk_graph);
+
+    self.on_demand_wrapping(&mut chunk_graph);
+
+    self.merge_cjs_namespace(&mut chunk_graph);
+
+    // See meta/design/devtools.md for devtools action lifecycle.
+    self.trace_action_chunks_infos(&chunk_graph);
+
+    let mut warnings = vec![];
+    self.compute_chunk_output_exports(&mut chunk_graph, &mut warnings)?;
+    if !warnings.is_empty() {
+      self.link_output.warnings.extend(warnings);
+    }
+
+    let index_chunk_id_to_name =
+      self.generate_chunk_name_and_preliminary_filenames(&mut chunk_graph).await?;
+    set_emitted_chunk_preliminary_filenames(&self.plugin_driver.file_emitter, &chunk_graph);
+
+    debug_span!("deconflict_chunk_symbols").in_scope(|| {
+      chunk_graph.chunk_table.par_iter_mut().for_each(|chunk| {
+        deconflict_chunk_symbols(
+          chunk,
+          self.link_output,
+          self.options.format,
+          &index_chunk_id_to_name,
+        );
+      });
+    });
+
+    // Pre-resolve paths for external modules to avoid sync JS callbacks during rendering.
+    // This eliminates the need for `invoke_sync` which can cause deadlocks (see #7280).
+    if let Some(paths) = &self.options.paths {
+      let ids = self
+        .link_output
+        .module_table
+        .modules
+        .iter()
+        .filter_map(|m| m.as_external().map(|e| e.id.as_str()));
+      self.resolved_paths = Some(paths.resolve_all(ids).await);
+    }
+
+    let mut ast_table = std::mem::take(&mut self.ast_table);
+    self.compute_wrapped_esm_init_metadata(&ast_table, &chunk_graph);
+    self.finalize_modules(&mut chunk_graph, &mut ast_table);
+    self.detect_ineffective_dynamic_imports(&chunk_graph);
+    self.render_chunk_to_assets(&chunk_graph, ast_table).await
+  }
+
+  /// Notices:
+  /// - Should generate filenames that are stable cross builds and os.
+  #[tracing::instrument(level = "debug", skip_all)]
+  async fn generate_chunk_name_and_preliminary_filenames(
+    &self,
+    chunk_graph: &mut ChunkGraph,
+  ) -> BuildResult<FxHashMap<ChunkIdx, ArcStr>> {
+    let modules = &self.link_output.module_table.modules;
+
+    let mut index_chunk_id_to_representative_name = FxHashMap::default();
+
+    let index_pre_generated_names_futures = chunk_graph.chunk_table.iter().map(|chunk| {
+      let sanitize_filename = self.options.sanitize_filename.clone();
+      let preserve_modules_root = self.options.preserve_modules_root.clone();
+      let input_base = chunk.input_base.clone();
+      let virtual_dirname = self.options.virtual_dirname.clone();
+      async move {
+        if let Some(name) = &chunk.name {
+          let name = sanitize_filename.call(name).await?;
+          return anyhow::Ok(PreGeneratedChunkName {
+            representative_chunk_name: name.clone(),
+            chunk_name: name.clone(),
+            chunk_filename: name,
+          });
+        }
+        match chunk.kind {
+          ChunkKind::EntryPoint { module: entry_module_id, meta, .. } => {
+            let module = &modules[entry_module_id];
+            let generated = if self.options.preserve_modules {
+              let module_id = module.id().as_str();
+              let (representative_chunk_name, absolute_chunk_file_name, ext) =
+                representative_file_name_for_preserve_modules(module_id.as_path());
+
+              let sanitized_absolute_filename =
+                sanitize_filename.call(absolute_chunk_file_name.as_str()).await?;
+
+              // Apply the same logic as get_preserve_modules_chunk_name to include directory structure
+              let chunk_name = {
+                let p = PathBuf::from(sanitized_absolute_filename.as_str());
+                let relative_path = if p.is_absolute() {
+                  if let Some(ref preserve_modules_root) = preserve_modules_root {
+                    // See meta/design/module-id.md: output paths may normalize separators even
+                    // when module ids keep native separators.
+                    if let Some(relative_path) = strip_path_prefix_to_slash(
+                      absolute_chunk_file_name.as_path(),
+                      preserve_modules_root.as_path(),
+                    ) {
+                      relative_path
+                    } else {
+                      p.relative(input_base.as_str()).to_slash_lossy().into_owned()
+                    }
+                  } else {
+                    p.relative(input_base.as_str()).to_slash_lossy().into_owned()
+                  }
+                } else {
+                  PathBuf::from(virtual_dirname.as_str()).join(p).to_slash_lossy().into_owned()
+                };
+                // `p` may be an absolute or relative path without extension, depending on the module path.
+                // Now we need to add the extension back when generating the relative chunk name.
+                // skip some common extension https://github.com/rollup/rollup/pull/4565/files
+                match ext.as_deref() {
+                  Some(e) if COMMON_JS_EXTENSIONS.contains(&e) => relative_path,
+                  Some(e) if !e.is_empty() => format!("{relative_path}.{e}"),
+                  _ => relative_path,
+                }
+              };
+
+              let sanitized_representative_chunk_name =
+                sanitize_filename.call(&representative_chunk_name).await?;
+              PreGeneratedChunkName {
+                representative_chunk_name: sanitized_representative_chunk_name,
+                chunk_name: chunk_name.into(),
+                chunk_filename: sanitized_absolute_filename,
+              }
+            } else if meta.contains(rolldown_common::ChunkMeta::UserDefinedEntry) {
+              // try extract meaningful input name from path
+              if let Some(file_stem) =
+                module.id().as_str().as_path().file_stem().and_then(|f| f.to_str())
+              {
+                let name = sanitize_filename.call(file_stem).await?;
+                PreGeneratedChunkName {
+                  chunk_name: name.clone(),
+                  representative_chunk_name: name.clone(),
+                  chunk_filename: name,
+                }
+              } else {
+                let name = arcstr::literal!("input");
+                PreGeneratedChunkName {
+                  representative_chunk_name: name.clone(),
+                  chunk_name: name.clone(),
+                  chunk_filename: name,
+                }
+              }
+            } else {
+              let chunk_name = sanitize_filename
+                .call(&module.id().as_str().as_path().representative_file_name())
+                .await?;
+
+              PreGeneratedChunkName {
+                representative_chunk_name: chunk_name.clone(),
+                chunk_name: chunk_name.clone(),
+                chunk_filename: chunk_name,
+              }
+            };
+            Ok(generated)
+          }
+          ChunkKind::Common => {
+            // - rollup use the first entered/last executed module as the `[name]` of common chunks.
+            // - esbuild always use 'chunk' as the `[name]`. However we try to make the name more meaningful here.
+            if let Some(module_id) =
+              chunk.modules.iter().rev().find(|each| **each != self.link_output.runtime.id())
+            {
+              let module = &modules[*module_id];
+              let module_id = module.id().as_str();
+              let name = module_id.as_path().representative_file_name();
+              let sanitized_filename = sanitize_filename.call(&name).await?;
+              Ok(PreGeneratedChunkName {
+                representative_chunk_name: sanitized_filename.clone(),
+                chunk_name: sanitized_filename.clone(),
+                chunk_filename: sanitized_filename,
+              })
+            } else {
+              let name = arcstr::literal!("chunk");
+              Ok(PreGeneratedChunkName {
+                representative_chunk_name: name.clone(),
+                chunk_name: name.clone(),
+                chunk_filename: name,
+              })
+            }
+          }
+        }
+      }
+    });
+
+    let mut index_pre_generated_names: IndexVec<ChunkIdx, PreGeneratedChunkName> =
+      try_join_all(index_pre_generated_names_futures).await?.into();
+
+    let mut hash_placeholder_generator = HashPlaceholderGenerator::default();
+
+    let used_name_counts = FxDashMap::default();
+
+    for chunk_id in &chunk_graph.sorted_chunk_idx_vec {
+      let chunk = &mut chunk_graph.chunk_table[*chunk_id];
+      if chunk.preliminary_filename.is_some() {
+        // Already generated
+        continue;
+      }
+
+      let pre_generated_chunk_name = &mut index_pre_generated_names[*chunk_id];
+      // Notice we didn't used deconflict name here, chunk names are allowed to be duplicated.
+      index_chunk_id_to_representative_name
+        .insert(*chunk_id, pre_generated_chunk_name.representative_chunk_name.clone());
+      let pre_rendered_chunk =
+        generate_pre_rendered_chunk(chunk, &pre_generated_chunk_name.chunk_name, self.link_output);
+
+      let preliminary_filename = chunk
+        .generate_preliminary_filename(
+          self.options,
+          &pre_rendered_chunk,
+          &pre_generated_chunk_name.chunk_filename,
+          &mut hash_placeholder_generator,
+          &used_name_counts,
+        )
+        .await?;
+
+      // Defer chunk name assignment to make sure at this point only entry chunk have a name
+      // if user provided one.
+      chunk.name = Some(pre_generated_chunk_name.chunk_name.clone());
+
+      chunk.pre_rendered_chunk = Some(pre_rendered_chunk);
+
+      chunk.absolute_preliminary_filename = Some(
+        preliminary_filename
+          .absolutize_with(self.options.cwd.join(&self.options.out_dir))
+          .into_owned()
+          .expect_into_string(),
+      );
+      chunk.preliminary_filename = Some(preliminary_filename);
+    }
+    Ok(index_chunk_id_to_representative_name)
+  }
+
+  fn compute_chunk_output_exports(
+    &self,
+    chunk_graph: &mut ChunkGraph,
+    warnings: &mut Vec<BuildDiagnostic>,
+  ) -> BuildResult<()> {
+    // Collect all the chunk data we need first
+    let mut chunk_export_data = Vec::new();
+    for (chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
+      if let Some(entry_module) = chunk.user_defined_entry_module(&self.link_output.module_table) {
+        let export_names = get_chunk_export_names(chunk, self.link_output);
+        chunk_export_data.push((chunk_idx, entry_module, export_names));
+      }
+    }
+
+    // Now compute the export modes for each chunk
+    for (chunk_idx, entry_module, export_names) in chunk_export_data {
+      let export_mode = determine_export_mode(
+        warnings,
+        &GenerateContext {
+          chunk: &chunk_graph.chunk_table[chunk_idx],
+          options: self.options,
+          link_output: self.link_output,
+          chunk_graph,
+          plugin_driver: self.plugin_driver,
+          module_id_to_codegen_ret: Vec::new(),
+          render_export_items_index_vec: &IndexVec::default(),
+          chunk_idx,
+          resolved_paths: self.resolved_paths.as_ref(),
+        },
+        entry_module,
+        &export_names,
+      )?;
+      chunk_graph.chunk_table[chunk_idx].output_exports = export_mode;
+    }
+
+    // Set common chunks to Named
+    for chunk in chunk_graph.chunk_table.iter_mut() {
+      if chunk.user_defined_entry_module(&self.link_output.module_table).is_none() {
+        chunk.output_exports = OutputExports::Named;
+      }
+    }
+
+    Ok(())
+  }
+
+  fn trace_action_chunks_infos(&self, chunk_graph: &ChunkGraph) {
+    if trace_action_enabled!() {
+      let mut chunk_infos = Vec::new();
+      for (idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
+        let mut imports = chunk
+          .imports_from_other_chunks
+          .iter()
+          .map(|(importee_idx, _imports)| action::ChunkImport {
+            chunk_id: importee_idx.raw(),
+            kind: "import-statement",
+          })
+          .collect::<Vec<_>>();
+
+        imports.extend(chunk.cross_chunk_dynamic_imports.iter().map(|importee_idx| {
+          action::ChunkImport { chunk_id: importee_idx.raw(), kind: "dynamic-import" }
+        }));
+
+        chunk_infos.push(action::Chunk {
+          is_user_defined_entry: chunk.is_user_defined_entry(),
+          is_async_entry: chunk.is_async_entry(),
+          entry_module: chunk
+            .entry_module_idx()
+            .map(|idx| self.link_output.module_table[idx].id().to_string()),
+          modules: chunk
+            .modules
+            .iter()
+            .map(|idx| self.link_output.module_table[*idx].id().to_string())
+            .collect(),
+          reason: chunk.chunk_reason_type.as_static_str(),
+          advanced_chunk_group_id: chunk.chunk_reason_type.group_index(),
+          chunk_id: idx.raw(),
+          name: chunk.name.as_ref().map(ArcStr::to_string),
+          imports,
+        });
+      }
+      trace_action!(action::ChunkGraphReady { action: "ChunkGraphReady", chunks: chunk_infos });
+    }
+  }
+
+  fn trace_action_package_graph_ready(
+    &self,
+    chunk_graph: &ChunkGraph,
+    instantiated_chunks: &crate::type_alias::IndexInstantiatedChunks,
+  ) {
+    if trace_action_enabled!() {
+      let mut package_infos: FxHashMap<String, DevtoolsPackageInfoEntry> = FxHashMap::default();
+      let mut module_id_to_package_id: FxHashMap<String, String> = FxHashMap::default();
+      let cwd = self.options.cwd.to_string_lossy();
+      let cwd_slash = self.options.cwd.to_slash_lossy();
+
+      for module in self.link_output.module_table.modules.iter().filter_map(|m| m.as_normal()) {
+        let Some(package_json) = module.originative_resolved_id.package_json.as_ref() else {
+          continue;
+        };
+
+        let Some((package_info, _, _)) =
+          ensure_devtools_package_info(&mut package_infos, package_json)
+        else {
+          continue;
+        };
+
+        if module.importers_idx.iter().any(|importer_idx| {
+          let importer_id = self.link_output.module_table[*importer_idx].id().as_str();
+          is_devtools_source_importer(importer_id, cwd.as_ref(), cwd_slash.as_ref())
+        }) {
+          package_info.dependency_type = "direct";
+        }
+      }
+
+      for (chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
+        for module_idx in &chunk.modules {
+          let Some(module) = self.link_output.module_table[*module_idx].as_normal() else {
+            continue;
+          };
+          let Some(package_json) = module.originative_resolved_id.package_json.as_ref() else {
+            continue;
+          };
+          let Some((package_info, modules, chunk_ids)) =
+            ensure_devtools_package_info(&mut package_infos, package_json)
+          else {
+            continue;
+          };
+
+          package_info.is_used = true;
+
+          let module_id = module.id.to_string();
+          module_id_to_package_id.insert(module_id.clone(), package_info.package_id.clone());
+          if modules.insert(module_id.clone()) {
+            package_info.modules.push(module_id);
+          }
+          if chunk_ids.insert(chunk_idx.raw()) {
+            package_info.chunk_ids.push(chunk_idx.raw());
+          }
+        }
+      }
+
+      for chunk in instantiated_chunks {
+        let InstantiationKind::Ecma(ecma_meta) = &chunk.kind else {
+          continue;
+        };
+
+        for (module_id, rendered_module) in ecma_meta
+          .rendered_chunk
+          .modules
+          .keys
+          .iter()
+          .zip(ecma_meta.rendered_chunk.modules.values.iter())
+        {
+          let Some(package_id) = module_id_to_package_id.get(module_id.as_str()) else {
+            continue;
+          };
+          let Some((package_info, _, _)) = package_infos.get_mut(package_id) else {
+            continue;
+          };
+
+          let rendered_length =
+            u32::try_from(rendered_module.rendered_length()).unwrap_or(u32::MAX);
+          package_info.size = package_info.size.saturating_add(rendered_length);
+        }
+      }
+
+      let mut packages = package_infos.into_values().map(|(info, _, _)| info).collect::<Vec<_>>();
+      packages.sort_unstable_by(|a, b| {
+        a.name
+          .cmp(&b.name)
+          .then_with(|| a.version.cmp(&b.version))
+          .then_with(|| a.package_root.cmp(&b.package_root))
+          .then_with(|| a.package_id.cmp(&b.package_id))
+      });
+
+      trace_action!(action::PackageGraphReady { action: "PackageGraphReady", packages });
+    }
+  }
+}

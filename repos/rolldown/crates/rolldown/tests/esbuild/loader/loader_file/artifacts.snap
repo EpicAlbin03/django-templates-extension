@@ -1,0 +1,18 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## assets/test-CmpSc5Ku.svg
+
+## entry.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region entry.js
+console.log((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = "./assets/test-CmpSc5Ku.svg";
+})))());
+//#endregion
+
+```

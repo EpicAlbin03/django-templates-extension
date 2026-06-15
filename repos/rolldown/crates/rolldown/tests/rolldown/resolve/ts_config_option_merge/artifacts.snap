@@ -1,0 +1,31 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import { jsx } from "preact/jsx-runtime";
+//#region src/util.ts
+function add(a, b) {
+	return a + b;
+}
+//#endregion
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+//#region main.tsx
+function first() {
+	return function(...args) {};
+}
+var Foo = class {
+	method(test) {
+		return test;
+	}
+};
+__decorate([first(), __decorateParam(0, first())], Foo.prototype, "method", null);
+console.log(/* @__PURE__ */ jsx(Div, {}));
+console.log(`add(1, 2): `, add(1, 2));
+//#endregion
+
+```

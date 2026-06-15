@@ -1,0 +1,307 @@
+use std::{
+  borrow::Cow,
+  path::{Path, PathBuf},
+};
+
+use crate::{
+  ChunkIdx, ChunkKind, FilenameTemplate, ImportRecordIdx, ModuleIdx, ModuleTable, NamedImport,
+  NormalModule, NormalizedBundlerOptions, OutputExports, PreserveEntrySignatures,
+  RenderedConcatenatedModuleParts, RollupPreRenderedChunk, RuntimeHelper, SymbolRef,
+  chunk::types::{
+    chunk_debug_info::ChunkDebugInfo, chunk_reason_type::ChunkReasonType, module_group::ModuleGroup,
+  },
+};
+pub mod chunk_table;
+pub mod types;
+
+use arcstr::ArcStr;
+use oxc_str::CompactStr;
+use rolldown_std_utils::{PathExt, strip_path_prefix_to_slash};
+use rolldown_utils::{
+  BitSet,
+  dashmap::FxDashMap,
+  hash_placeholder::HashPlaceholderGenerator,
+  indexmap::{FxIndexMap, FxIndexSet},
+  make_unique_name::make_unique_name,
+};
+use rustc_hash::FxHashMap;
+use sugar_path::SugarPath;
+
+use self::types::{
+  cross_chunk_import_item::CrossChunkImportItem, preliminary_filename::PreliminaryFilename,
+};
+
+bitflags::bitflags! {
+  #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+    pub struct ChunkMeta: u8 {
+        /// `true` if the chunk is dynamic imported by other modules, it would be treated as a dynamic entry if it
+        /// is not a user defined entry point.
+        const DynamicImported = 1;
+        const UserDefinedEntry = 1 << 1;
+        /// `true` if the chunk was emitted via `this.emitFile({ type: 'chunk' })`
+        const EmittedChunk = 1 << 2;
+    }
+}
+
+/// Tracks post-optimization operations applied to chunks during code splitting.
+/// A chunk present in the map has been removed and merged into another chunk.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PostChunkOptimizationOperation {
+  /// The chunk has been removed and merged into another chunk.
+  /// e.g., a dynamic chunk merged into a common chunk or user-defined entry chunk.
+  Removed,
+  /// The chunk has been removed, but its exports should be preserved in the target chunk.
+  /// e.g., an emitted chunk with `preserveEntrySignatures: 'allow-extension'` merged into
+  /// a manual chunks group - all exports should be preserved even though the original
+  /// emitted chunk is removed.
+  RemovedWithPreservedExports,
+}
+
+impl ChunkMeta {
+  #[inline]
+  pub fn is_pure_user_defined_entry(&self) -> bool {
+    *self == ChunkMeta::UserDefinedEntry
+  }
+}
+
+#[derive(Debug, Default)]
+pub struct Chunk {
+  pub exec_order: u32,
+  pub kind: ChunkKind,
+  pub modules: Vec<ModuleIdx>,
+  pub name: Option<ArcStr>,
+  // emitted chunk specified filename, used to generate chunk filename
+  pub file_name: Option<ArcStr>,
+  // emitted chunk corresponding reference_id, used to `PluginContext#getFileName` to search the emitted chunk name
+  pub pre_rendered_chunk: Option<RollupPreRenderedChunk>,
+  pub preliminary_filename: Option<PreliminaryFilename>,
+  pub absolute_preliminary_filename: Option<String>,
+  pub canonical_names: FxHashMap<SymbolRef, CompactStr>,
+  /// For mixed-mode externals: maps external `namespace_ref` to the node-mode binding name.
+  /// Only populated when an external has both ESM and non-ESM importers needing interop.
+  pub node_mode_external_ns_names: FxHashMap<SymbolRef, CompactStr>,
+  // Sorted by Chunk#exec_order of the imported chunks
+  pub cross_chunk_imports: Vec<ChunkIdx>,
+  pub cross_chunk_dynamic_imports: Vec<ChunkIdx>,
+  pub bits: BitSet,
+  pub imports_from_other_chunks: FxIndexMap<ChunkIdx, Vec<CrossChunkImportItem>>,
+  // Only meaningful for cjs format
+  pub require_binding_names_for_other_chunks: FxHashMap<ChunkIdx, String>,
+  /// The first element of tuple is module idx of external module
+  /// the second element is the related named import of external module.
+  /// The second `ModuleIdx` is the importer of the named import which is used to look up related
+  /// import attribute.
+  pub direct_imports_from_external_modules: Vec<(ModuleIdx, Vec<(ModuleIdx, NamedImport)>)>,
+  /// Used for cjs, umd, iife
+  /// The module directly imported symbol actually came from external modules.
+  pub import_symbol_from_external_modules: FxIndexSet<ModuleIdx>,
+  pub exports_to_other_chunks: FxHashMap<SymbolRef, Vec<CompactStr>>,
+  pub input_base: ArcStr,
+  pub debug_info: Vec<ChunkDebugInfo>,
+  pub chunk_reason_type: Box<ChunkReasonType>,
+  pub preserve_entry_signature: Option<PreserveEntrySignatures>,
+  pub depended_runtime_helper: RuntimeHelper,
+  /// related to [`crate::types::import_record::ImportRecordMeta::EntryLevelExternal`]
+  pub entry_level_external_module_idx: Vec<ModuleIdx>,
+  pub insert_map: FxHashMap<ModuleIdx, Vec<(ModuleIdx, ImportRecordIdx)>>,
+  pub remove_map: FxHashMap<ModuleIdx, Vec<ImportRecordIdx>>,
+  pub transformed_parts_rendered: FxIndexMap<(ModuleIdx, ImportRecordIdx), String>,
+  pub module_groups: Vec<ModuleGroup>,
+  pub module_idx_to_group_idx: FxHashMap<ModuleIdx, usize>,
+  pub module_idx_to_render_concatenated_module:
+    FxHashMap<ModuleIdx, RenderedConcatenatedModuleParts>,
+  /// Pre-computed export mode for the chunk
+  pub output_exports: OutputExports,
+}
+
+impl Chunk {
+  pub fn new(
+    name: Option<ArcStr>,
+    file_name: Option<ArcStr>,
+    bits: BitSet,
+    modules: Vec<ModuleIdx>,
+    kind: ChunkKind,
+    input_base: ArcStr,
+    preserve_entry_signature: Option<PreserveEntrySignatures>,
+  ) -> Self {
+    Self {
+      exec_order: u32::MAX,
+      modules,
+      name,
+      file_name,
+      bits,
+      kind,
+      input_base,
+      preserve_entry_signature,
+      ..Self::default()
+    }
+  }
+
+  pub fn has_side_effect(&self, module_table: &ModuleTable) -> bool {
+    self.modules.iter().any(|&module_id| module_table[module_id].side_effects().has_side_effects())
+  }
+
+  pub fn import_path_for(&self, importee: &Chunk) -> String {
+    let importee_filename = importee
+      .absolute_preliminary_filename
+      .as_ref()
+      .expect("importee chunk should have absolute_preliminary_filename");
+    let import_path = self.relative_path_for(importee_filename.as_path());
+    if import_path.starts_with("../") { import_path } else { format!("./{import_path}") }
+  }
+
+  pub fn relative_path_for(&self, target: &Path) -> String {
+    let source_dir = self
+      .absolute_preliminary_filename
+      .as_ref()
+      .expect("chunk should have absolute_preliminary_filename")
+      .as_path()
+      .parent()
+      .expect("absolute_preliminary_filename should have a parent directory");
+    target.relative(source_dir).as_path().expect_to_slash()
+  }
+
+  pub async fn filename_template(
+    &self,
+    options: &NormalizedBundlerOptions,
+    rollup_pre_rendered_chunk: &RollupPreRenderedChunk,
+  ) -> anyhow::Result<FilenameTemplate> {
+    // https://github.com/rollup/rollup/blob/061a0387c8654222620f602471d66afd3c582048/src/Chunk.ts?plain=1#L526-L529
+    // Emitted chunks should always use chunk_filenames, not entry_filenames
+    let is_entry = matches!(self.kind, ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::UserDefinedEntry) && !meta.contains(ChunkMeta::EmittedChunk))
+      || options.preserve_modules;
+
+    let ret = if is_entry {
+      options.entry_filenames.call(rollup_pre_rendered_chunk).await?
+    } else {
+      options.chunk_filenames.call(rollup_pre_rendered_chunk).await?
+    };
+
+    let pattern_name = if is_entry { "entryFileNames" } else { "chunkFileNames" };
+
+    Ok(FilenameTemplate::new(ret, pattern_name))
+  }
+
+  pub async fn generate_preliminary_filename(
+    &self,
+    options: &NormalizedBundlerOptions,
+    rollup_pre_rendered_chunk: &RollupPreRenderedChunk,
+    chunk_name: &ArcStr,
+    hash_placeholder_generator: &mut HashPlaceholderGenerator,
+    used_name_counts: &FxDashMap<ArcStr, u32>,
+  ) -> anyhow::Result<PreliminaryFilename> {
+    if let Some(file) = &options.file {
+      let basename = PathBuf::from(file)
+        .file_name()
+        .expect("The file should have basename")
+        .to_string_lossy()
+        .to_string();
+      return Ok(PreliminaryFilename::new(basename.into(), None));
+    }
+    if let Some(file_name) = &self.file_name {
+      return Ok(PreliminaryFilename::new(file_name.clone(), None));
+    }
+
+    let filename_template = self.filename_template(options, rollup_pre_rendered_chunk).await?;
+    let has_hash_pattern = filename_template.has_hash_pattern();
+
+    let mut hash_placeholder = has_hash_pattern.then_some(vec![]);
+    let hash_replacer = has_hash_pattern.then(|| {
+      let pattern_name = filename_template.pattern_name();
+      |len: Option<usize>| {
+        let hash = hash_placeholder_generator.generate(len, pattern_name)?;
+        if let Some(hash_placeholder) = hash_placeholder.as_mut() {
+          hash_placeholder.push(hash.clone());
+        }
+        Ok(hash)
+      }
+    });
+    let chunk_name = self.get_preserve_modules_chunk_name(options, chunk_name.as_str());
+
+    let filename = filename_template
+      .render(Some(&chunk_name), Some(options.format.as_str()), None, hash_replacer)?
+      .into();
+
+    let name = make_unique_name(&filename, used_name_counts);
+
+    Ok(PreliminaryFilename::new(name, hash_placeholder))
+  }
+
+  fn get_preserve_modules_chunk_name<'a, 'b: 'a>(
+    &'b self,
+    options: &NormalizedBundlerOptions,
+    chunk_name: &'a str,
+  ) -> Cow<'a, str> {
+    if !options.preserve_modules {
+      return Cow::Borrowed(chunk_name);
+    }
+
+    // https://github.com/rollup/rollup/blob/99d4bee3277b96b30e871fb471f6c7ed55f94850/src/Chunk.ts?plain=1#L1125-L1126
+    // TODO: We need to add `ChunkNames` to module struct
+    if let Some(ref name) = self.name {
+      return Cow::Borrowed(name.as_str());
+    }
+
+    let p = PathBuf::from(chunk_name);
+    let p = if p.is_absolute() {
+      if let Some(ref preserve_modules_root) = options.preserve_modules_root {
+        // See meta/design/module-id.md: output paths may normalize separators even when module
+        // ids keep native separators.
+        if let Some(relative_path) =
+          strip_path_prefix_to_slash(chunk_name.as_path(), preserve_modules_root.as_path())
+        {
+          return Cow::Owned(relative_path);
+        }
+      }
+      p.relative(self.input_base.as_str())
+    } else {
+      PathBuf::from(options.virtual_dirname.as_str()).join(p)
+    };
+    Cow::Owned(p.to_slash_lossy().into_owned())
+  }
+
+  pub fn user_defined_entry_module_idx(&self) -> Option<ModuleIdx> {
+    match &self.kind {
+      ChunkKind::EntryPoint { module, meta, .. } if meta.contains(ChunkMeta::UserDefinedEntry) => {
+        Some(*module)
+      }
+      _ => None,
+    }
+  }
+
+  pub fn user_defined_entry_module<'module>(
+    &self,
+    module_table: &'module ModuleTable,
+  ) -> Option<&'module NormalModule> {
+    self.user_defined_entry_module_idx().and_then(|idx| module_table[idx].as_normal())
+  }
+
+  pub fn entry_module_idx(&self) -> Option<ModuleIdx> {
+    match &self.kind {
+      ChunkKind::EntryPoint { module, .. } => Some(*module),
+      ChunkKind::Common => None,
+    }
+  }
+
+  pub fn entry_module<'module>(
+    &self,
+    module_table: &'module ModuleTable,
+  ) -> Option<&'module NormalModule> {
+    self.entry_module_idx().and_then(|idx| module_table[idx].as_normal())
+  }
+
+  pub fn is_user_defined_entry(&self) -> bool {
+    matches!(&self.kind, ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::UserDefinedEntry))
+  }
+
+  pub fn is_async_entry(&self) -> bool {
+    matches!(&self.kind, ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::DynamicImported))
+  }
+
+  /// Returns true if this chunk is an entry point.
+  /// Entry points include both user-defined entries and dynamically imported modules.
+  /// When `generatedCode.symbols` is enabled, entry point chunks get `Symbol.toStringTag` defined.
+  pub fn is_entry_point(&self) -> bool {
+    matches!(&self.kind, ChunkKind::EntryPoint { .. })
+  }
+}

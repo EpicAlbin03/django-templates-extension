@@ -1,0 +1,21 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// HIDDEN [\0rolldown/runtime.js]
+let foo = require("./foo");
+foo = __toESM(foo);
+Object.defineProperty(exports, "all the stuff", {
+	enumerable: true,
+	get: function() {
+		return foo;
+	}
+});
+exports["some export"] = foo["some import"];
+
+```

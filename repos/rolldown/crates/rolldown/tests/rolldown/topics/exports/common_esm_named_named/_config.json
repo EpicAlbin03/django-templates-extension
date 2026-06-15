@@ -1,0 +1,15 @@
+{
+  "config": {
+    "format": "cjs",
+    "strictExecutionOrder": true,
+    "manualCodeSplitting": {
+      "groups": [
+        {
+          "name": "shared",
+          "test": "shared"
+        }
+      ]
+    }
+  },
+  "_comment": "Tests Common chunk + Esm WrapKind + Named OutputExports + named export access"
+}

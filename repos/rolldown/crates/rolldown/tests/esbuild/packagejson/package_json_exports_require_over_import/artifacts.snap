@@ -1,0 +1,16 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region src/entry.js
+(/* @__PURE__ */ __commonJSMin((() => {
+	console.log("SUCCESS");
+})))();
+//#endregion
+
+```

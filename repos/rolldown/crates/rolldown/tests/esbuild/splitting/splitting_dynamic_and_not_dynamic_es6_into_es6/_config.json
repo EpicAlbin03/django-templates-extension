@@ -1,0 +1,15 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "entry",
+        "import": "entry.js"
+      }
+    ]
+  },
+  "configVariants": [
+    {
+      "format": "cjs"
+    }
+  ]
+}

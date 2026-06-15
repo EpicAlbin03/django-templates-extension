@@ -1,0 +1,14 @@
+{
+  "config": {
+    "platform": "node",
+    "external": ["node:assert"]
+  },
+  "configVariants": [
+    {
+      "format": "cjs"
+    },
+    {
+      "codeSplitting": false
+    }
+  ]
+}

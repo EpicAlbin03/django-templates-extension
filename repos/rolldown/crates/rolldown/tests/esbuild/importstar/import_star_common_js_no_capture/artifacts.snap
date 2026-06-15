@@ -1,0 +1,21 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+let node_assert = require("node:assert");
+node_assert = __toESM(node_assert);
+(/* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.foo = 123;
+})))();
+let foo = 234;
+node_assert.default.equal(123, 123);
+node_assert.default.equal(123, 123);
+node_assert.default.equal(foo, 234);
+//#endregion
+
+```

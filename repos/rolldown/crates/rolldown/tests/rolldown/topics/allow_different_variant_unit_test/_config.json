@@ -1,0 +1,13 @@
+{
+  "config": {
+    "minify": false,
+    "treeshake": false
+  },
+  "configVariants": [
+    {
+      "_configName": "enable-treeshake",
+      "treeshake": true
+    }
+  ],
+  "snapshot": false
+}

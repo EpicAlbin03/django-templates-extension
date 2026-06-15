@@ -1,0 +1,35 @@
+[package]
+name = "bench"
+version = "0.1.0"
+publish = false
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+bench = false
+doctest = false
+test = false
+
+[dependencies]
+criterion2 = { workspace = true, features = ["async_tokio"] }
+ignore = { workspace = true }
+rolldown = { workspace = true, features = ["experimental"] }
+rolldown_fs = { workspace = true, features = ["memory"] }
+rolldown_resolver = { workspace = true }
+rolldown_workspace = { workspace = true }
+tokio = { workspace = true, features = ["rt", "rt-multi-thread"] }
+
+[[bench]]
+harness = false
+name = "bench"
+
+[features]
+codspeed = ["criterion2/codspeed"]
+
+[dev-dependencies]
+rustc-hash = { workspace = true }
+mimalloc-safe = { workspace = true }

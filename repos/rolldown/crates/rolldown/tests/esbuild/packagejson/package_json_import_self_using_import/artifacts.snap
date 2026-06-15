@@ -1,0 +1,15 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+//#region src/index.js
+var src_default = "index";
+console.log(src_default, "foo");
+//#endregion
+export { src_default as default };
+
+```

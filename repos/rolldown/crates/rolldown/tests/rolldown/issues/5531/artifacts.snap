@@ -1,0 +1,34 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+//#region leaflet.js
+var require_leaflet = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	(function(global, factory) {
+		typeof exports === "object" && typeof module !== "undefined" ? factory(exports) : typeof define === "function" && define.amd ? define(["exports"], factory) : (global = typeof globalThis !== "undefined" ? globalThis : global || self, factory(global.leaflet = {}));
+	})(exports, function(exports$1) {
+		"use strict";
+		exports$1.foo = "foo";
+		global.L = exports$1;
+	});
+}));
+//#endregion
+//#region leaflet-toolbar.js
+var require_leaflet_toolbar = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	global.bar = global.L.foo;
+	module.exports = bar;
+}));
+require_leaflet();
+require_leaflet_toolbar();
+//#endregion
+//#region main.js
+assert.equal(bar, "foo");
+//#endregion
+
+```

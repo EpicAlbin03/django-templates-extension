@@ -1,0 +1,30 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import b from "./b.js";
+export { b as B };
+
+```
+
+## b.js
+
+```js
+//#region b.ts
+const b = 100;
+//#endregion
+export { b as default };
+
+```
+
+## main.js
+
+```js
+import b from "./b.js";
+export { b as B };
+
+```

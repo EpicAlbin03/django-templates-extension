@@ -1,0 +1,45 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## bar.js
+
+```js
+//#region bar.js
+console.log("bar1");
+const msg = "Bar view";
+//#endregion
+export { msg };
+
+```
+
+## foo.js
+
+```js
+//#region foo.js
+console.log("foo1");
+const msg = "Foo view";
+//#endregion
+export { msg };
+
+```
+
+## main.js
+
+```js
+//#region main.js
+function dy(path) {
+	switch (path) {
+		case "./foo.js": return import("./foo.js");
+		case "./bar.js": return import("./bar.js");
+	}
+}
+const { msg } = await dy(`./foo.js`);
+console.log(msg);
+import(`https://localhost`).catch((mod) => {
+	console.log(mod);
+});
+//#endregion
+
+```

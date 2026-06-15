@@ -1,0 +1,18 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## src_entry.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region src/entry.js
+(/* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.foo = 123;
+	console.log("hello");
+})))();
+console.log("unused import");
+//#endregion
+
+```

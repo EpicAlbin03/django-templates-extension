@@ -1,0 +1,18 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## src_entry.js
+
+```js
+var __esmMin = (fn, res) => () => (fn && (res = fn(fn = 0)), res);
+//#endregion
+//#region src/entry.js
+__esmMin((() => {
+	console.log("hello");
+}))();
+console.log("unused import");
+//#endregion
+
+```

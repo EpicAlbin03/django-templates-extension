@@ -1,0 +1,29 @@
+import { defineTest } from 'rolldown-tests';
+import { expect, vi } from 'vitest';
+
+const fn = vi.fn();
+
+export default defineTest({
+  sequential: true,
+  config: {
+    plugins: [
+      {
+        name: 'virtual-module',
+        resolveId(id) {
+          if (id === '\0module') {
+            return id;
+          }
+        },
+        load(id) {
+          if (id === '\0module') {
+            fn();
+            return `export default 'module'`;
+          }
+        },
+      },
+    ],
+  },
+  afterTest() {
+    expect(fn).toHaveBeenCalledTimes(1);
+  },
+});

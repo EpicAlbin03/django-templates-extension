@@ -1,0 +1,33 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## EVAL
+
+```text
+[EVAL] Use of direct `eval` function is strongly discouraged as it poses security risks and may cause issues with minification.
+   ╭─[ entry.js:4:1 ]
+   │
+ 4 │ eval('foo(a, b, c)')
+   │ ──┬─  
+   │   ╰─── Use of direct `eval` here.
+   │ 
+   │ Help: Consider using indirect eval. For more information, check the documentation: https://rolldown.rs/guide/troubleshooting#avoiding-direct-eval
+───╯
+
+```
+
+# Assets
+
+## entry.js
+
+```js
+import a from "a";
+import * as b from "b";
+import { c } from "c";
+//#region entry.js
+eval("foo(a, b, c)");
+//#endregion
+
+```

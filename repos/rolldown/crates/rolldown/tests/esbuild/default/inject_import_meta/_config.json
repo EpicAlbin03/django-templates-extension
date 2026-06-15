@@ -1,0 +1,28 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "entry",
+        "import": "entry.js"
+      }
+    ],
+    "inject": [
+      {
+        "from": "./inject.js",
+        "imported": "import.meta",
+        "type": "named"
+      },
+      {
+        "from": "./inject.js",
+        "imported": "import.meta.foo",
+        "type": "named"
+      },
+      {
+        "from": "./inject.js",
+        "imported": "import.meta.foo.bar",
+        "type": "named"
+      }
+    ]
+  },
+  "expectExecuted": false
+}

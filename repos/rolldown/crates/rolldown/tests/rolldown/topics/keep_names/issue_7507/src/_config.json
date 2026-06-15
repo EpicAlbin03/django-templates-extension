@@ -1,0 +1,12 @@
+{
+  "config": {
+    "input": [
+      {
+        "import": "./index.cjs",
+        "name": "index"
+      }
+    ],
+    "platform": "node",
+    "keepNames": true
+  }
+}

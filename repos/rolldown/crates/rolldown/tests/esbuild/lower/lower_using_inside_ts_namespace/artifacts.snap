@@ -1,0 +1,54 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## TOLERATED_TRANSFORM
+
+```text
+[TOLERATED_TRANSFORM] Namespaces exporting non-const are not supported by Oxc. Change to const or see: https://oxc.rs/docs/guide/usage/transformer/typescript.html#partial-namespace-support
+   ╭─[ entry.ts:2:13 ]
+   │
+ 2 │     export let a = b
+   │                ──┬──  
+   │                  ╰──── 
+───╯
+
+```
+
+## TOLERATED_TRANSFORM
+
+```text
+[TOLERATED_TRANSFORM] Namespaces exporting non-const are not supported by Oxc. Change to const or see: https://oxc.rs/docs/guide/usage/transformer/typescript.html#partial-namespace-support
+   ╭─[ entry.ts:4:13 ]
+   │
+ 4 │     export let e = f
+   │                ──┬──  
+   │                  ╰──── 
+───╯
+
+```
+
+# Assets
+
+## entry.js
+
+```js
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+//#region entry.ts
+let ns;
+(function(_ns) {
+	try {
+		var _usingCtx$1 = _usingCtx();
+		_ns.a = b;
+		_usingCtx$1.u(d);
+		_ns.e = f;
+	} catch (_) {
+		_usingCtx$1.e = _;
+	} finally {
+		_usingCtx$1.d();
+	}
+})(ns || (ns = {}));
+//#endregion
+
+```

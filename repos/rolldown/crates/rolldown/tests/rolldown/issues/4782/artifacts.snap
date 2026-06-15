@@ -1,0 +1,23 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## lib.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region lib.js
+console.log("hello", !!L);
+//#endregion
+
+```
+
+## main.js
+
+```js
+//#region main.js
+import("./lib.js");
+//#endregion
+
+```

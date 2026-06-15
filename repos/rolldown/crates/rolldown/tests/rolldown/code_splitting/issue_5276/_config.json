@@ -1,0 +1,21 @@
+{
+  "config": {
+    "manualCodeSplitting": {
+      "groups": [
+        {
+          "name": "imp",
+          "test": "imp"
+        }
+      ]
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "disableChunkOptimization",
+      "chunkOptimization": false
+    },
+    {
+      "format": "cjs"
+    }
+  ]
+}

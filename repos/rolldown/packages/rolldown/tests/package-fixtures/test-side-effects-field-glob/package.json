@@ -1,0 +1,8 @@
+{
+  "name": "@rolldown/test-side-effects-field-glob",
+  "type": "module",
+  "sideEffects": [
+    "foo/foo.js"
+  ],
+  "main": "index.js"
+}

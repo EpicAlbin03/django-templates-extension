@@ -1,0 +1,29 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region a.ts
+var a_exports = /* @__PURE__ */ __exportAll({ foo: () => 123 });
+//#endregion
+//#region b.ts
+var b_exports = /* @__PURE__ */ __exportAll({ foo: () => 123 });
+//#endregion
+//#region test.ts
+var Test = void 0;
+//#endregion
+//#region entry.ts
+console.log(a_exports, b_exports, /* @__PURE__ */ __exportAll({
+	Test: () => Test,
+	foo: () => 123
+}), /* @__PURE__ */ __exportAll({
+	Test: () => Test,
+	foo: () => 123
+}));
+//#endregion
+
+```

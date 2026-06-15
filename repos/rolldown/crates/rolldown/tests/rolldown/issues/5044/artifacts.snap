@@ -1,0 +1,34 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## cube.js
+
+```js
+require("preact");
+
+```
+
+## lib.js
+
+```js
+require("./cube.js");
+require("preact");
+
+```
+
+## main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+require("./lib.js");
+let preact = require("preact");
+Object.defineProperty(exports, "createContext", {
+	enumerable: true,
+	get: function() {
+		return preact.createContext;
+	}
+});
+
+```

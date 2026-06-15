@@ -1,0 +1,30 @@
+[package]
+name = "rolldown_plugin_replace"
+version = "1.1.1"
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+publish = true
+repository.workspace = true
+description = "Rolldown plugin for string replacement"
+readme = "../../README.md"
+
+[lints]
+workspace = true
+
+[lib]
+doctest = false
+
+[dependencies]
+anyhow = { workspace = true }
+oxc = { workspace = true }
+regex = { workspace = true }
+regress = { workspace = true }
+rolldown_plugin = { workspace = true }
+rustc-hash = { workspace = true }
+string_wizard = { workspace = true }
+
+[dev-dependencies]
+rolldown = { workspace = true }
+rolldown_testing = { path = '../rolldown_testing' }
+tokio = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread"] }

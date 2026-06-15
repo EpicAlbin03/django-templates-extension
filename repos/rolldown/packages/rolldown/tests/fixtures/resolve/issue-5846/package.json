@@ -1,0 +1,8 @@
+{
+  "name": "5846",
+  "private": true,
+  "sideEffects": false,
+  "dependencies": {
+    "rolldown-tests": "workspace:*"
+  }
+}

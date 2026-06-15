@@ -1,0 +1,29 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+/*!
+* INDEX.TS (ABOVE IMPORT)
+* THIS COMMENT IS NOT PRESERVED
+*/
+/*!
+* INDEX.TS (ABOVE IMPORT)
+* THIS COMMENT IS NOT PRESERVED
+*/
+/*!
+* INDEX.TS (BELOW IMPORT)
+*/
+/*!
+* INDEX.TS (ABOVE EXPORT)
+*/
+var main_default = "foobar";
+/*!
+* INDEX.TS (BELOW EXPORT)
+*/
+export { main_default as default };
+
+```

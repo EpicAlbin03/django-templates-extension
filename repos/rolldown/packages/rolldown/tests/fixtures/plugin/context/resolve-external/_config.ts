@@ -1,0 +1,28 @@
+import { defineTest } from 'rolldown-tests';
+import { expect, vi } from 'vitest';
+
+const fn = vi.fn();
+
+export default defineTest({
+  sequential: true,
+  config: {
+    external: ['external'],
+    plugins: [
+      {
+        name: 'test-plugin-context',
+        async buildStart() {
+          const ret = await this.resolve('external');
+          if (!ret) {
+            throw new Error('resolve failed');
+          }
+          expect(ret.external).toBe(true);
+          expect(ret.id).toBe('external');
+          fn();
+        },
+      },
+    ],
+  },
+  afterTest: () => {
+    expect(fn).toHaveBeenCalledTimes(1);
+  },
+});

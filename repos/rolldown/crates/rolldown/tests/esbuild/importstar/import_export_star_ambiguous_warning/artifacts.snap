@@ -1,0 +1,16 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+import assert from "node:assert";
+//#region entry.js
+assert.equal(1, 1);
+assert.equal(void 0, void 0);
+assert.equal(4, 4);
+//#endregion
+
+```

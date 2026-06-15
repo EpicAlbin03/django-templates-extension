@@ -1,0 +1,15 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "entry",
+        "import": "entry.js"
+      }
+    ],
+    "transform": {
+      "target": "es2021"
+    },
+    "tsconfig": "./tsconfig.json"
+  },
+  "expectExecuted": false
+}
