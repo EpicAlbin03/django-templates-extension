@@ -60,7 +60,15 @@ export default defineConfig({
     },
   },
   fmt: {
-    ignorePatterns: ["dist", "test/**/*.html", "pnpm-lock.yaml", "repos", ".agents", "README.md"],
+    ignorePatterns: [
+      "dist",
+      "test/**/*.html",
+      "pnpm-lock.yaml",
+      "repos",
+      ".agents",
+      "README.md",
+      ".changeset",
+    ],
     useTabs: false,
     printWidth: 100,
     semi: true,

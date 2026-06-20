@@ -1,9 +1,9 @@
 export const ProtectedMarker = {
-  startToken: '#~',
-  endToken: '~#',
+  startToken: "#~",
+  endToken: "~#",
 };
 
-export type ProtectedMarkerKind = 'inline' | 'block' | 'attr';
+export type ProtectedMarkerKind = "inline" | "block" | "attr";
 
 export type DjangoNode =
   | RootNode
@@ -29,32 +29,32 @@ export interface BaseNode {
 }
 
 export interface RootNode extends BaseNode {
-  type: 'root';
+  type: "root";
 }
 
 export interface ExpressionNode extends BaseNode {
-  type: 'expression';
+  type: "expression";
 }
 
 export interface TemplateTagNode extends BaseNode {
-  type: 'template-tag';
+  type: "template-tag";
   keyword: string;
-  role: 'start' | 'branch' | 'end' | 'standalone';
+  role: "start" | "branch" | "end" | "standalone";
 }
 
 export interface TemplateBlockNode extends BaseNode {
-  type: 'template-block';
+  type: "template-block";
   start: TemplateTagNode;
   end: TemplateTagNode;
   containsNewLines: boolean;
 }
 
 export interface CommentNode extends BaseNode {
-  type: 'comment';
+  type: "comment";
 }
 
 export interface RawBlockNode extends BaseNode {
-  type: 'raw-block';
+  type: "raw-block";
   keyword?: string;
   args?: string;
   body?: string;
@@ -62,5 +62,5 @@ export interface RawBlockNode extends BaseNode {
 }
 
 export interface IgnoreRegionNode extends BaseNode {
-  type: 'ignore-region';
+  type: "ignore-region";
 }
