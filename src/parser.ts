@@ -92,7 +92,7 @@ function findNextSpecial(text: string, from: number): number {
 }
 
 function getHtmlState(text: string): Array<{ inAttribute: boolean; inTag: boolean }> {
-  const states = new Array(text.length);
+  const states = Array.from<{ inAttribute: boolean; inTag: boolean }>({ length: text.length });
   let quote: '"' | "'" | null = null;
   let inTag = false;
 

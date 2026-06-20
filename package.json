@@ -26,7 +26,10 @@
   "type": "module",
   "main": "dist/plugin.js",
   "exports": {
-    ".": "./dist/plugin.js",
+    ".": {
+      "types": "./dist/plugin.d.ts",
+      "default": "./dist/plugin.js"
+    },
     "./browser": "./dist/browser.mjs",
     "./package.json": "./package.json"
   },
@@ -38,6 +41,7 @@
     "dev": "vp pack --watch",
     "test": "vp test",
     "check": "vp check",
+    "check:fix": "vp check --fix",
     "lint": "vp lint",
     "format": "vp fmt",
     "prepublishOnly": "vp run build",
