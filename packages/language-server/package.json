@@ -25,7 +25,7 @@
   "scripts": {
     "build": "vp pack",
     "dev": "vp pack --watch",
-    "test": "vp exec cross-env TS_NODE_TRANSPILE_ONLY=true mocha --require ts-node/register \"test/**/*.test.ts\" --no-experimental-strip-types",
+    "test": "vp test",
     "check": "vp check",
     "prepublishOnly": "vp run build"
   },
@@ -47,13 +47,9 @@
   "devDependencies": {
     "@types/globrex": "^0.1.4",
     "@types/lodash": "^4.14.116",
-    "@types/mocha": "^10.0.10",
     "@types/node": "^25.6.2",
     "@types/sinon": "^7.5.2",
-    "cross-env": "^7.0.2",
-    "mocha": "^11.7.6",
     "sinon": "^11.0.0",
-    "ts-node": "^10.0.0",
     "typescript": "^6.0.3",
     "vite-plus": "catalog:"
   },
