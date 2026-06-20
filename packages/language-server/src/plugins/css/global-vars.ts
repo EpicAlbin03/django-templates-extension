@@ -29,7 +29,7 @@ export class GlobalVars {
 
     this.watchedFiles = filesToWatch;
     if (this.fsWatcher) {
-      this.fsWatcher.close();
+      void this.fsWatcher.close();
       this.globalVars.clear();
     }
 

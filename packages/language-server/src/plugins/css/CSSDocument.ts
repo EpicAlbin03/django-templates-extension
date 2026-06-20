@@ -10,7 +10,7 @@ export interface CSSDocumentBase extends DocumentMapper, TextDocument {
 
 export class CSSDocument extends ReadableDocument implements DocumentMapper {
   private styleInfo: Pick<TagInformation, "attributes" | "start" | "end">;
-  readonly version = this.parent.version;
+  readonly version: number;
 
   public stylesheet: Stylesheet;
   public languageId: string;
@@ -21,6 +21,8 @@ export class CSSDocument extends ReadableDocument implements DocumentMapper {
     styleInfo = parent.styleInfo,
   ) {
     super();
+
+    this.version = parent.version;
 
     if (styleInfo) {
       this.styleInfo = styleInfo;

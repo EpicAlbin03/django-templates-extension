@@ -104,7 +104,7 @@ function activateDjangoLanguageServer() {
   }
 
   // Manually create the output channel so it is reused across restarts and does not steal focus.
-  const outputChannel = window.createOutputChannel("Django Templates", "django");
+  const outputChannel = window.createOutputChannel("Django Templates", { log: true });
   const clientOptions: LanguageClientOptions = {
     outputChannel,
     documentSelector: [{ scheme: "file", language: "html" }],
@@ -141,7 +141,7 @@ function activateDjangoLanguageServer() {
   };
 
   const ls = new LanguageClient("django", "Django Templates", serverOptions, clientOptions);
-  ls.start();
+  void ls.start();
 
   let restartingLs = false;
   async function restartLS(showNotification: boolean) {

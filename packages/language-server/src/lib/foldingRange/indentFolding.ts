@@ -18,7 +18,7 @@ export function indentBasedFoldingRangeForTag(
   const startLine = tag.startPos.line + 1;
   const endLine = tag.endPos.line - 1;
 
-  if (startLine > endLine || startLine === endLine) {
+  if (startLine >= endLine) {
     return [];
   }
 

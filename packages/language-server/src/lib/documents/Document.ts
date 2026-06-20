@@ -19,13 +19,14 @@ export class Document extends WritableDocument {
   /**
    * Compute and cache directly for performance because it is queried often.
    */
-  private path = urlToPath(this.url);
+  private path: string | null;
 
   constructor(
     public url: string,
     public content: string,
   ) {
     super();
+    this.path = urlToPath(url);
     this.updateDocInfo();
   }
 

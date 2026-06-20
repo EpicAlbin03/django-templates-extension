@@ -96,14 +96,17 @@ export class IdentityMapper implements DocumentMapper {
  * Maps positions in a fragment relative to a parent.
  */
 export class FragmentMapper implements DocumentMapper {
-  private lineOffsetsOriginal = getLineOffsets(this.originalText);
-  private lineOffsetsGenerated = getLineOffsets(this.tagInfo.content);
+  private lineOffsetsOriginal: number[];
+  private lineOffsetsGenerated: number[];
 
   constructor(
     private originalText: string,
     private tagInfo: TagInformation,
     private url: string,
-  ) {}
+  ) {
+    this.lineOffsetsOriginal = getLineOffsets(originalText);
+    this.lineOffsetsGenerated = getLineOffsets(tagInfo.content);
+  }
 
   getOriginalPosition(generatedPosition: Position): Position {
     const parentOffset = this.offsetInParent(

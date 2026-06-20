@@ -33,7 +33,7 @@ export class PushDiagnosticsManager implements DiagnosticsManager {
 
   private updateAll() {
     this.docManager.getAllOpenedByClient().forEach((doc) => {
-      this.update(doc[1]);
+      void this.update(doc[1]);
     });
     this.pendingUpdates.clear();
   }
@@ -55,7 +55,7 @@ export class PushDiagnosticsManager implements DiagnosticsManager {
     this.cancellationTokens.set(uri, tokenSource);
 
     const diagnostics = await this.getDiagnostics({ uri: document.getURL() }, tokenSource.token);
-    this.sendDiagnostics({
+    void this.sendDiagnostics({
       uri: document.getURL(),
       diagnostics,
     });
@@ -76,7 +76,7 @@ export class PushDiagnosticsManager implements DiagnosticsManager {
 
   removeDiagnostics(document: Document) {
     this.pendingUpdates.delete(document);
-    this.sendDiagnostics({
+    void this.sendDiagnostics({
       uri: document.getURL(),
       diagnostics: [],
     });
@@ -94,7 +94,7 @@ export class PushDiagnosticsManager implements DiagnosticsManager {
 
   private scheduleBatchUpdate = debounceThrottle(() => {
     this.pendingUpdates.forEach((doc) => {
-      this.update(doc);
+      void this.update(doc);
     });
     this.pendingUpdates.clear();
   }, 500);
@@ -123,7 +123,7 @@ export class PullDiagnosticsManager implements DiagnosticsManager {
   }
 
   removeDiagnostics(document: Document): void {
-    this.sendDiagnostics({
+    void this.sendDiagnostics({
       uri: document.getURL(),
       diagnostics: [],
     });

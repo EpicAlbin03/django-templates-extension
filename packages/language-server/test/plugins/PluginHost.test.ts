@@ -1,7 +1,6 @@
 import sinon from "sinon";
 import {
   CompletionItem,
-  DocumentSymbol,
   Location,
   LocationLink,
   Position,
@@ -11,7 +10,7 @@ import {
   TextDocumentItem,
 } from "vscode-languageserver-types";
 import { DocumentManager, Document } from "../../src/lib/documents";
-import { DiagnosticsProvider, LSPProviderConfig, PluginHost } from "../../src/plugins";
+import { LSPProviderConfig, PluginHost } from "../../src/plugins";
 import {
   CompletionTriggerKind,
   CancellationToken,

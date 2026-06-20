@@ -6,7 +6,6 @@ import {
 } from "../src/utils";
 import { Position } from "vscode-languageserver";
 import * as assert from "assert";
-import { URI } from "vscode-uri";
 
 describe("utils", () => {
   describe("#isBeforeOrEqualToPosition", () => {

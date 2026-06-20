@@ -27,7 +27,7 @@ export function getDocumentContext(
   }
 
   return {
-    resolveReference: (ref: string, base = documentUri) => {
+    resolveReference: (ref: string, base: string) => {
       if (ref[0] === "/") {
         // resolve absolute path against the current workspace folder
         const folderUri = getRootFolder();
@@ -35,8 +35,9 @@ export function getDocumentContext(
           return folderUri + ref.substr(1);
         }
       }
-      base = base.substr(0, base.lastIndexOf("/") + 1);
-      return Utils.resolvePath(URI.parse(base), ref).toString();
+      const baseReference = base || documentUri;
+      const baseUri = baseReference.substr(0, baseReference.lastIndexOf("/") + 1);
+      return Utils.resolvePath(URI.parse(baseUri), ref).toString();
     },
   };
 }

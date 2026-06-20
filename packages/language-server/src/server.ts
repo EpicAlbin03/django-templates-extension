@@ -63,7 +63,7 @@ export function startServer(options?: LSOptions) {
   const pluginHost = new PluginHost(docManager);
   const fileSystemProvider = new FileSystemProvider();
   let diagnosticsManager: DiagnosticsManager = new PushDiagnosticsManager(
-    connection.sendDiagnostics,
+    (params) => connection.sendDiagnostics(params),
     docManager,
     pluginHost.getDiagnostics.bind(pluginHost),
   );
@@ -134,7 +134,7 @@ export function startServer(options?: LSOptions) {
     if (evt.capabilities.textDocument?.diagnostic) {
       const refreshDiagnostics = evt.capabilities.workspace?.diagnostics?.refreshSupport;
       diagnosticsManager = new PullDiagnosticsManager(
-        connection.sendDiagnostics,
+        (params) => connection.sendDiagnostics(params),
         refreshDiagnostics
           ? () => connection.sendRequest(DiagnosticRefreshRequest.method)
           : () => {},

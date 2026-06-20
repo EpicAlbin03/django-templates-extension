@@ -1,7 +1,7 @@
 import { isAbsolute } from "path";
 import { Plugin } from "prettier";
 import { FormattingOptions, Range, TextEdit } from "vscode-languageserver-types";
-import { getPackageInfo, importPrettier } from "../../importPackage";
+import { importPrettier } from "../../importPackage";
 import { Document } from "../../lib/documents";
 import { Logger } from "../../logger";
 import { LSConfigManager } from "../../ls-config";
@@ -119,7 +119,7 @@ export class DjangoPlugin implements FormattingProvider {
       p: typeof import("prettier"),
       plugins: Array<Plugin | string> = [],
     ) {
-      if (plugins.some(DjangoPlugin.isPrettierPluginDjangoTemplates)) {
+      if (plugins.some((plugin) => DjangoPlugin.isPrettierPluginDjangoTemplates(plugin))) {
         return true;
       }
       const info = await p.getSupportInfo();

@@ -80,6 +80,6 @@ export class FallbackWatcher {
   }
 
   dispose() {
-    this.watcher.close();
+    void this.watcher.close();
   }
 }

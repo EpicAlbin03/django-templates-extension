@@ -125,7 +125,7 @@ export class PluginHost implements LSProvider, OnWatchFileChanges {
     if (previousResultId) {
       try {
         previousResultIdData = JSON.parse(previousResultId);
-      } catch (error) {}
+      } catch {}
     }
 
     if (this.canSkipDiagnostics(document)) {
@@ -729,7 +729,7 @@ export class PluginHost implements LSProvider, OnWatchFileChanges {
 
   getIncomingCalls(
     item: CallHierarchyItem,
-    cancellationToken?: CancellationToken  ,
+    cancellationToken?: CancellationToken,
   ): Promise<CallHierarchyIncomingCall[] | null> {
     return this.execute<CallHierarchyIncomingCall[] | null>(
       "getIncomingCalls",
@@ -741,7 +741,7 @@ export class PluginHost implements LSProvider, OnWatchFileChanges {
 
   getOutgoingCalls(
     item: CallHierarchyItem,
-    cancellationToken?: CancellationToken  ,
+    cancellationToken?: CancellationToken,
   ): Promise<CallHierarchyOutgoingCall[] | null> {
     return this.execute<CallHierarchyOutgoingCall[] | null>(
       "getOutgoingCalls",
@@ -922,7 +922,7 @@ export class PluginHost implements LSProvider, OnWatchFileChanges {
             return debounce();
           }
           return true;
-        } catch (e) {
+        } catch {
           return false;
         }
       };
