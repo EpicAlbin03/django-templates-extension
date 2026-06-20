@@ -1,5 +1,5 @@
 {
-	"compilerOptions": {
+  "compilerOptions": {
     "target": "esnext",
     "lib": ["es2023"],
     "moduleDetection": "force",
@@ -17,5 +17,5 @@
     "verbatimModuleSyntax": true,
     "skipLibCheck": true
   },
-	"exclude": ["dist"]
+  "exclude": ["dist"]
 }

@@ -1,15 +1,15 @@
-import { dirname, resolve } from "path"
-import * as prettier from "prettier"
-import { Logger } from "./logger"
+import { dirname, resolve } from "path";
+import * as prettier from "prettier";
+import { Logger } from "./logger";
 
 /**
  * Whether or not the current workspace can be trusted.
  * TODO rework this into an injected dependency instead of module state.
  */
-let isTrusted = true
+let isTrusted = true;
 
 export function setIsTrusted(_isTrusted: boolean) {
-	isTrusted = _isTrusted
+  isTrusted = _isTrusted;
 }
 
 /**
@@ -17,39 +17,39 @@ export function setIsTrusted(_isTrusted: boolean) {
  * without transforming each call site.
  */
 function dynamicRequire(dynamicFileToRequire: string): any {
-	// prettier-ignore
-	return require(dynamicFileToRequire);
+  // prettier-ignore
+  return require(dynamicFileToRequire);
 }
 
 export function getPackageInfo(packageName: string, fromPath: string, useFallback = true) {
-	const paths: string[] = []
-	if (isTrusted) {
-		paths.push(fromPath)
-	}
-	if (useFallback) {
-		paths.push(__dirname)
-	}
+  const paths: string[] = [];
+  if (isTrusted) {
+    paths.push(fromPath);
+  }
+  if (useFallback) {
+    paths.push(__dirname);
+  }
 
-	const packageJSONPath = require.resolve(`${packageName}/package.json`, {
-		paths
-	})
-	const { version } = dynamicRequire(packageJSONPath)
-	const [major, minor, patch] = version.split(".")
+  const packageJSONPath = require.resolve(`${packageName}/package.json`, {
+    paths,
+  });
+  const { version } = dynamicRequire(packageJSONPath);
+  const [major, minor, patch] = version.split(".");
 
-	return {
-		path: dirname(packageJSONPath),
-		version: {
-			full: version,
-			major: Number(major),
-			minor: Number(minor),
-			patch: Number(patch)
-		}
-	}
+  return {
+    path: dirname(packageJSONPath),
+    version: {
+      full: version,
+      major: Number(major),
+      minor: Number(minor),
+      patch: Number(patch),
+    },
+  };
 }
 
 export function importPrettier(fromPath: string): typeof prettier {
-	const pkg = getPackageInfo("prettier", fromPath)
-	const main = resolve(pkg.path)
-	Logger.debug("Using Prettier v" + pkg.version.full, "from", main)
-	return dynamicRequire(main)
+  const pkg = getPackageInfo("prettier", fromPath);
+  const main = resolve(pkg.path);
+  Logger.debug("Using Prettier v" + pkg.version.full, "from", main);
+  return dynamicRequire(main);
 }
