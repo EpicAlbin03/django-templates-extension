@@ -6,12 +6,13 @@
   "author": "Albin Carlsson <inquires@albincarlsson.com>",
   "type": "module",
   "scripts": {
-    "bootstrap": "pnpm build",
-    "build": "tsc -b",
-    "test": "cross-env CI=true pnpm test -r",
-    "watch": "tsc -b -watch",
-    "format": "prettier --write .",
-    "lint": "prettier --check ."
+    "ready": "vp check && vp run -r test && vp run -r build",
+    "build": "vp run -r build",
+    "test": "vp run -r test",
+    "watch": "vp run -r --parallel watch",
+    "format": "vp check --fix",
+    "lint": "vp check",
+    "prepare": "vp config"
   },
   "dependencies": {
     "typescript": "^6.0.3"

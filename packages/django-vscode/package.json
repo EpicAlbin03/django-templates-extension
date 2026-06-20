@@ -10,10 +10,11 @@
   ],
   "main": "dist/src/extension.js",
   "scripts": {
-    "build": "tsc -p ./",
-    "vscode:prepublish": "npm install && npm run build && npm prune --production",
-    "watch": "tsc -w -p ./",
-    "test": "vitest --run"
+    "build": "vp pack",
+    "dev": "vp pack --watch",
+    "test": "vp test",
+    "check": "vp check",
+    "vscode:prepublish": "pnpm install && pnpm run build && pnpm prune --production"
   },
   "dependencies": {
     "bumpp": "^11.1.0",
