@@ -6,19 +6,20 @@ import {
   CompletionItem,
   CompletionItemKind,
   TextEdit,
-  CompletionContext,
   SelectionRange,
   CompletionTriggerKind,
   FoldingRangeKind,
   DocumentHighlight,
   DocumentHighlightKind,
 } from "vscode-languageserver";
-import { DocumentManager, Document } from "../../../src/lib/documents";
-import { CSSPlugin } from "../../../src/plugins";
-import { LSConfigManager } from "../../../src/ls-config";
-import { createLanguageServices } from "../../../src/plugins/css/service";
-import { pathToUrl } from "../../../src/utils";
-import { FileType, LanguageServiceOptions } from "vscode-css-languageservice";
+import type { CompletionContext } from "vscode-languageserver";
+import { DocumentManager, Document } from "../../../src/lib/documents/index.js";
+import { CSSPlugin } from "../../../src/plugins/index.js";
+import { LSConfigManager } from "../../../src/ls-config.js";
+import { createLanguageServices } from "../../../src/plugins/css/service.js";
+import { pathToUrl } from "../../../src/utils.js";
+import { FileType } from "vscode-css-languageservice";
+import type { LanguageServiceOptions } from "vscode-css-languageservice";
 
 describe("CSS Plugin", () => {
   function setup(content: string, lsOptions?: LanguageServiceOptions) {

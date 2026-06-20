@@ -9,11 +9,11 @@ import {
   FoldingRange,
   DocumentHighlightKind,
 } from "vscode-languageserver";
-import { HTMLPlugin } from "../../../src/plugins";
-import { DocumentManager, Document } from "../../../src/lib/documents";
-import { LSConfigManager } from "../../../src/ls-config";
+import { HTMLPlugin } from "../../../src/plugins/index.js";
+import { DocumentManager, Document } from "../../../src/lib/documents/index.js";
+import { LSConfigManager } from "../../../src/ls-config.js";
 import { DocumentHighlight } from "vscode-languageserver-types";
-import { FileSystemProvider } from "../../../src/lib/FileSystemProvider";
+import { FileSystemProvider } from "../../../src/lib/FileSystemProvider.js";
 
 describe("HTML Plugin", () => {
   function setup(content: string) {

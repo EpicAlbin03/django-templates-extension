@@ -9,13 +9,11 @@ import {
   SymbolKind,
   TextDocumentItem,
 } from "vscode-languageserver-types";
-import { DocumentManager, Document } from "../../src/lib/documents";
-import { LSPProviderConfig, PluginHost } from "../../src/plugins";
-import {
-  CompletionTriggerKind,
-  CancellationToken,
-  DocumentDiagnosticReport,
-} from "vscode-languageserver";
+import { DocumentManager, Document } from "../../src/lib/documents/index.js";
+import { PluginHost } from "../../src/plugins/index.js";
+import type { LSPProviderConfig } from "../../src/plugins/index.js";
+import { CompletionTriggerKind, CancellationToken } from "vscode-languageserver";
+import type { DocumentDiagnosticReport } from "vscode-languageserver";
 import assert from "assert";
 
 describe("PluginHost", () => {

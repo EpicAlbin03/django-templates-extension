@@ -1,5 +1,5 @@
 import assert from "assert";
-import { FileMap, FileSet } from "../../../src/lib/documents/fileCollection";
+import { FileMap, FileSet } from "../../../src/lib/documents/fileCollection.js";
 
 describe("fileCollection", () => {
   describe("FileSet", () => {

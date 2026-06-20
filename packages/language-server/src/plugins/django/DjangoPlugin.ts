@@ -1,12 +1,12 @@
 import { isAbsolute } from "path";
-import { Plugin } from "prettier";
+import type { Plugin } from "prettier";
 import { FormattingOptions, Range, TextEdit } from "vscode-languageserver-types";
-import { importPrettier } from "../../importPackage";
-import { Document } from "../../lib/documents";
-import { Logger } from "../../logger";
-import { LSConfigManager } from "../../ls-config";
-import { isNotNullOrUndefined } from "../../utils";
-import { FormattingProvider } from "../interfaces";
+import { importPrettier } from "../../importPackage.js";
+import { Document } from "../../lib/documents/index.js";
+import { Logger } from "../../logger.js";
+import { LSConfigManager } from "../../ls-config.js";
+import { isNotNullOrUndefined } from "../../utils.js";
+import type { FormattingProvider } from "../interfaces.js";
 
 const DJANGO_TEMPLATE_TAG_RE = /({%[\s\S]*?%}|{{[\s\S]*?}}|{#[\s\S]*?#})/;
 const DJANGO_HTML_PARSER = "django-html";

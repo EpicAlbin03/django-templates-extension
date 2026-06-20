@@ -1,6 +1,6 @@
 import { dirname, resolve } from "path";
 import * as prettier from "prettier";
-import { Logger } from "./logger";
+import { Logger } from "./logger.js";
 
 /**
  * Whether or not the current workspace can be trusted.

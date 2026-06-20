@@ -1,6 +1,7 @@
 import { sum } from "lodash";
 import { FoldingRange } from "vscode-languageserver-types";
-import { Document, TagInformation } from "../documents";
+import { Document } from "../documents/index.js";
+import type { TagInformation } from "../documents/index.js";
 
 /**
  *

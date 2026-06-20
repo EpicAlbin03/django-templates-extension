@@ -2,6 +2,8 @@ import {
   getCSSLanguageService,
   getSCSSLanguageService,
   getLESSLanguageService,
+} from "vscode-css-languageservice";
+import type {
   LanguageService,
   ICSSDataProvider,
   LanguageServiceOptions,

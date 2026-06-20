@@ -1,7 +1,10 @@
 import * as path from "path";
-import { commands, ExtensionContext, window, workspace } from "vscode";
-import { LanguageClientOptions, RevealOutputChannelOn } from "vscode-languageclient";
-import { LanguageClient, ServerOptions, TransportKind } from "vscode-languageclient/node";
+import { commands, window, workspace } from "vscode";
+import type { ExtensionContext } from "vscode";
+import { RevealOutputChannelOn } from "vscode-languageclient";
+import type { LanguageClientOptions } from "vscode-languageclient";
+import { LanguageClient, TransportKind } from "vscode-languageclient/node";
+import type { ServerOptions } from "vscode-languageclient/node";
 import { versions } from "node:process";
 
 const [nodeMajor, nodeMinor] = (versions?.node ?? "0.0.0-unknown").split(".", 3).map(Number);

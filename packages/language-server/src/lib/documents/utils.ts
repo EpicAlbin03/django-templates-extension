@@ -1,9 +1,9 @@
-import { clamp, isInRange } from "../../utils";
+import { clamp, isInRange } from "../../utils.js";
 import { Position, Range } from "vscode-languageserver";
-import { Node, HTMLDocument } from "vscode-html-languageservice";
+import type { Node, HTMLDocument } from "vscode-html-languageservice";
 import * as path from "path";
-import { parseHtml } from "./parseHtml";
-import { Document } from "./Document";
+import { parseHtml } from "./parseHtml.js";
+import { Document } from "./Document.js";
 
 export interface TagInformation {
   content: string;

@@ -3,7 +3,7 @@ import {
   modifyLines,
   normalizePath,
   regexLastIndexOf,
-} from "../src/utils";
+} from "../src/utils.js";
 import { Position } from "vscode-languageserver";
 import * as assert from "assert";
 

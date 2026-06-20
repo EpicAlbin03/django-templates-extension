@@ -1,17 +1,16 @@
 import {
   CancellationToken,
-  CompletionContext,
-  DocumentDiagnosticReport,
   FileChangeType,
-  LinkedEditingRanges,
   SemanticTokens,
-  SignatureHelpContext,
   TextDocumentContentChangeEvent,
 } from "vscode-languageserver";
+import type {
+  CompletionContext,
+  DocumentDiagnosticReport,
+  LinkedEditingRanges,
+  SignatureHelpContext,
+} from "vscode-languageserver";
 import {
-  CallHierarchyIncomingCall,
-  CallHierarchyItem,
-  CallHierarchyOutgoingCall,
   CodeAction,
   CodeActionContext,
   CodeLens,
@@ -20,7 +19,6 @@ import {
   ColorPresentation,
   CompletionItem,
   CompletionList,
-  DefinitionLink,
   Diagnostic,
   DocumentHighlight,
   FoldingRange,
@@ -30,16 +28,22 @@ import {
   Location,
   Position,
   Range,
-  ReferenceContext,
   SelectionRange,
-  SignatureHelp,
   SymbolInformation,
   TextDocumentIdentifier,
   TextEdit,
   WorkspaceEdit,
   WorkspaceSymbol,
 } from "vscode-languageserver-types";
-import { Document } from "../lib/documents";
+import type {
+  CallHierarchyIncomingCall,
+  CallHierarchyItem,
+  CallHierarchyOutgoingCall,
+  DefinitionLink,
+  ReferenceContext,
+  SignatureHelp,
+} from "vscode-languageserver-types";
+import { Document } from "../lib/documents/index.js";
 
 export type Resolvable<T> = T | Promise<T>;
 

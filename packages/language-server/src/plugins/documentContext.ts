@@ -5,7 +5,7 @@
 
 // adopted from https://github.com/microsoft/vscode/blob/5ffcfde11d8b1b57634627f5094907789db09776/extensions/css-language-features/server/src/utils/documentContext.ts
 
-import { DocumentContext } from "vscode-css-languageservice";
+import type { DocumentContext } from "vscode-css-languageservice";
 import { WorkspaceFolder } from "vscode-languageserver";
 import { Utils, URI } from "vscode-uri";
 

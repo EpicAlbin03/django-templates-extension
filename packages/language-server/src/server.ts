@@ -1,25 +1,28 @@
 import {
-  Connection,
-  DidChangeWatchedFilesParams,
-  DocumentDiagnosticParams,
-  DocumentDiagnosticReport,
   DocumentDiagnosticRequest,
   TextDocumentSyncKind,
   DiagnosticRefreshRequest,
 } from "vscode-languageserver";
-import { IPCMessageReader, IPCMessageWriter, createConnection } from "vscode-languageserver/node";
+import type {
+  Connection,
+  DidChangeWatchedFilesParams,
+  DocumentDiagnosticParams,
+  DocumentDiagnosticReport,
+} from "vscode-languageserver";
 import {
-  DiagnosticsManager,
-  PullDiagnosticsManager,
-  PushDiagnosticsManager,
-} from "./lib/DiagnosticsManager";
-import { Document, DocumentManager } from "./lib/documents";
-import { Logger } from "./logger";
-import { LSConfigManager } from "./ls-config";
-import { CSSPlugin, DjangoPlugin, HTMLPlugin, PluginHost } from "./plugins";
-import { createLanguageServices } from "./plugins/css/service";
-import { FileSystemProvider } from "./lib/FileSystemProvider";
-import { setIsTrusted } from "./importPackage";
+  IPCMessageReader,
+  IPCMessageWriter,
+  createConnection,
+} from "vscode-languageserver/node.js";
+import { PullDiagnosticsManager, PushDiagnosticsManager } from "./lib/DiagnosticsManager.js";
+import type { DiagnosticsManager } from "./lib/DiagnosticsManager.js";
+import { Document, DocumentManager } from "./lib/documents/index.js";
+import { Logger } from "./logger.js";
+import { LSConfigManager } from "./ls-config.js";
+import { CSSPlugin, DjangoPlugin, HTMLPlugin, PluginHost } from "./plugins/index.js";
+import { createLanguageServices } from "./plugins/css/service.js";
+import { FileSystemProvider } from "./lib/FileSystemProvider.js";
+import { setIsTrusted } from "./importPackage.js";
 
 export interface LSOptions {
   /**

@@ -1,8 +1,5 @@
 import { performance } from "perf_hooks";
 import {
-  CallHierarchyIncomingCall,
-  CallHierarchyItem,
-  CallHierarchyOutgoingCall,
   CancellationToken,
   CodeAction,
   CodeActionContext,
@@ -10,24 +7,18 @@ import {
   Color,
   ColorInformation,
   ColorPresentation,
-  CompletionContext,
   CompletionItem,
   CompletionList,
-  DefinitionLink,
   Diagnostic,
   DocumentHighlight,
   FoldingRange,
   FormattingOptions,
   Hover,
-  LinkedEditingRanges,
   Location,
   Position,
   Range,
-  ReferenceContext,
   SelectionRange,
   SemanticTokens,
-  SignatureHelp,
-  SignatureHelpContext,
   SymbolInformation,
   TextDocumentContentChangeEvent,
   TextDocumentIdentifier,
@@ -36,12 +27,23 @@ import {
   InlayHint,
   WorkspaceSymbol,
   DocumentSymbol,
+} from "vscode-languageserver";
+import type {
+  CallHierarchyIncomingCall,
+  CallHierarchyItem,
+  CallHierarchyOutgoingCall,
+  CompletionContext,
+  DefinitionLink,
+  LinkedEditingRanges,
+  ReferenceContext,
+  SignatureHelp,
+  SignatureHelpContext,
   DocumentDiagnosticReport,
 } from "vscode-languageserver";
-import { Document, DocumentManager, getNodeIfIsInHTMLStartTag } from "../lib/documents";
-import { Logger } from "../logger";
-import { isNotNullOrUndefined, regexLastIndexOf } from "../utils";
-import {
+import { Document, DocumentManager, getNodeIfIsInHTMLStartTag } from "../lib/documents/index.js";
+import { Logger } from "../logger.js";
+import { isNotNullOrUndefined, regexLastIndexOf } from "../utils.js";
+import type {
   AppCompletionItem,
   FileRename,
   LSPProviderConfig,
@@ -49,7 +51,7 @@ import {
   OnWatchFileChanges,
   OnWatchFileChangesPara,
   Plugin,
-} from "./interfaces";
+} from "./interfaces.js";
 
 enum ExecuteMode {
   None,

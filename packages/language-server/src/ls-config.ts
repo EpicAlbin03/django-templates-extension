@@ -1,12 +1,12 @@
 import { get, merge } from "lodash";
 import ts from "typescript";
-import { VSCodeEmmetConfig } from "@vscode/emmet-helper";
-import { importPrettier } from "./importPackage";
-import { Document } from "./lib/documents";
-import { returnObjectIfHasKeys } from "./utils";
+import type { VSCodeEmmetConfig } from "@vscode/emmet-helper";
+import { importPrettier } from "./importPackage.js";
+import { Document } from "./lib/documents/index.js";
+import { returnObjectIfHasKeys } from "./utils.js";
 import path from "path";
-import { FileMap } from "./lib/documents/fileCollection";
-import { ClientCapabilities } from "vscode-languageserver-protocol";
+import { FileMap } from "./lib/documents/fileCollection.js";
+import type { ClientCapabilities } from "vscode-languageserver-protocol";
 
 /**
  * Default config for the language server.

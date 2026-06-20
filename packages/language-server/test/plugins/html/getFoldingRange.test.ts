@@ -1,5 +1,5 @@
-import { Document } from "../../../src/lib/documents";
-import { getFoldingRanges } from "../../../src/plugins/html/getFoldingRanges";
+import { Document } from "../../../src/lib/documents/index.js";
+import { getFoldingRanges } from "../../../src/plugins/html/getFoldingRanges.js";
 import * as assert from "assert";
 
 // This test is copied from https://github.com/microsoft/vscode-html-languageservice/blob/580c051637e4029483c7f7c4457001c329099b2b/src/test/folding.test.ts

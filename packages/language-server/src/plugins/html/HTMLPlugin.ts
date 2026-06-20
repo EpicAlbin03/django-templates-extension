@@ -1,15 +1,11 @@
-import {
-  doComplete as doEmmetComplete,
-  FileService,
-  updateExtensionsPath,
-} from "@vscode/emmet-helper";
+import { doComplete as doEmmetComplete, updateExtensionsPath } from "@vscode/emmet-helper";
+import type { FileService } from "@vscode/emmet-helper";
 import {
   getLanguageService,
-  HTMLDocument,
   CompletionItem as HtmlCompletionItem,
-  Node,
   newHTMLDataProvider,
 } from "vscode-html-languageservice";
+import type { HTMLDocument, Node } from "vscode-html-languageservice";
 import {
   CompletionList,
   Hover,
@@ -20,34 +16,34 @@ import {
   TextEdit,
   Range,
   WorkspaceEdit,
-  LinkedEditingRanges,
-  CompletionContext,
   FoldingRange,
   DocumentHighlight,
 } from "vscode-languageserver";
+import type { LinkedEditingRanges, CompletionContext } from "vscode-languageserver";
 import {
   DocumentManager,
   Document,
   isInTag,
   getNodeIfIsInComponentStartTag,
-} from "../../lib/documents";
-import { LSConfigManager, LSHTMLConfig } from "../../ls-config";
-import {
+} from "../../lib/documents/index.js";
+import { LSConfigManager } from "../../ls-config.js";
+import type { LSHTMLConfig } from "../../ls-config.js";
+import type {
   HoverProvider,
   CompletionsProvider,
   RenameProvider,
   LinkedEditingRangesProvider,
   FoldingRangeProvider,
   DocumentHighlightProvider,
-} from "../interfaces";
-import { isInsideMoustacheTag, toRange } from "../../lib/documents/utils";
-import { isNotNullOrUndefined, possiblyComponent } from "../../utils";
+} from "../interfaces.js";
+import { isInsideMoustacheTag, toRange } from "../../lib/documents/utils.js";
+import { isNotNullOrUndefined, possiblyComponent } from "../../utils.js";
 import path from "path";
-import { Logger } from "../../logger";
-import { indentBasedFoldingRangeForTag } from "../../lib/foldingRange/indentFolding";
-import { wordHighlightForTag } from "../../lib/documentHighlight/wordHighlight";
+import { Logger } from "../../logger.js";
+import { indentBasedFoldingRangeForTag } from "../../lib/foldingRange/indentFolding.js";
+import { wordHighlightForTag } from "../../lib/documentHighlight/wordHighlight.js";
 import { URI } from "vscode-uri";
-import { getFoldingRanges } from "./getFoldingRanges";
+import { getFoldingRanges } from "./getFoldingRanges.js";
 
 // https://github.com/microsoft/vscode/blob/c6f507deeb99925e713271b1048f21dbaab4bd54/extensions/html/language-configuration.json#L34
 const wordPattern = /(-?\d*\.\d\w*)|([^`~!@$^&*()=+[{\]}|;:'",.<>/\s]+)/g;

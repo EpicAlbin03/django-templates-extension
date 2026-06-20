@@ -8,6 +8,7 @@
     "Formatters",
     "Programming Languages"
   ],
+  "type": "module",
   "main": "dist/src/extension.js",
   "scripts": {
     "build": "vp pack",

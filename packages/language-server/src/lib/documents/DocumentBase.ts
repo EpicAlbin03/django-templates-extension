@@ -4,7 +4,7 @@ import {
   TextDocument,
   TextDocumentContentChangeEvent,
 } from "vscode-languageserver";
-import { getLineOffsets, offsetAt, positionAt } from "./utils";
+import { getLineOffsets, offsetAt, positionAt } from "./utils.js";
 
 /**
  * Represents a textual document.

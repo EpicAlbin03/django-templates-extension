@@ -1,12 +1,12 @@
 import { Stats } from "fs";
 import fs from "fs/promises";
-import {
+import { FileType } from "vscode-css-languageservice";
+import type {
   FileStat,
   FileSystemProvider as CSSFileSystemProvider,
-  FileType,
 } from "vscode-css-languageservice";
-import { FileService } from "@vscode/emmet-helper";
-import { urlToPath } from "../utils";
+import type { FileService } from "@vscode/emmet-helper";
+import { urlToPath } from "../utils.js";
 import { URI } from "vscode-uri";
 
 interface StatLike {

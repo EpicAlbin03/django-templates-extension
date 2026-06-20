@@ -1,5 +1,5 @@
 import * as assert from "assert";
-import { Document } from "../../../src/lib/documents";
+import { Document } from "../../../src/lib/documents/index.js";
 import { Position } from "vscode-languageserver";
 
 describe("Document", () => {

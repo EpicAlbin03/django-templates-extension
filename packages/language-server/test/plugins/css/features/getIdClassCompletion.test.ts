@@ -1,16 +1,16 @@
 import assert from "assert";
 import { CompletionItem, CompletionItemKind, CompletionList } from "vscode-languageserver";
-import { Document, DocumentManager } from "../../../../src/lib/documents";
-import { LSConfigManager } from "../../../../src/ls-config";
-import { CSSPlugin } from "../../../../src/plugins";
-import { CSSDocument } from "../../../../src/plugins/css/CSSDocument";
+import { Document, DocumentManager } from "../../../../src/lib/documents/index.js";
+import { LSConfigManager } from "../../../../src/ls-config.js";
+import { CSSPlugin } from "../../../../src/plugins/index.js";
+import { CSSDocument } from "../../../../src/plugins/css/CSSDocument.js";
 import {
   collectSelectors,
   NodeType,
-  CSSNode,
-} from "../../../../src/plugins/css/features/getIdClassCompletion";
-import { createLanguageServices } from "../../../../src/plugins/css/service";
-import { pathToUrl } from "../../../../src/utils";
+} from "../../../../src/plugins/css/features/getIdClassCompletion.js";
+import type { CSSNode } from "../../../../src/plugins/css/features/getIdClassCompletion.js";
+import { createLanguageServices } from "../../../../src/plugins/css/service.js";
+import { pathToUrl } from "../../../../src/utils.js";
 
 describe("getIdClassCompletion", () => {
   function createDocument(content: string) {

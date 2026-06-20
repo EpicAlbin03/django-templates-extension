@@ -1,12 +1,12 @@
 import {
-  Connection,
   TextDocumentIdentifier,
   Diagnostic,
   CancellationTokenSource,
   CancellationToken,
 } from "vscode-languageserver";
-import { DocumentManager, Document } from "./documents";
-import { debounceThrottle } from "../utils";
+import type { Connection } from "vscode-languageserver";
+import { DocumentManager, Document } from "./documents/index.js";
+import { debounceThrottle } from "../utils.js";
 
 export type SendDiagnostics = Connection["sendDiagnostics"];
 export type GetDiagnostics = (

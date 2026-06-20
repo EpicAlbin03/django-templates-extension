@@ -16,6 +16,7 @@
   "bin": {
     "djangotemplateserver": "bin/server.js"
   },
+  "type": "module",
   "main": "dist/src/index.js",
   "exports": {
     ".": "./dist/src/index.js",

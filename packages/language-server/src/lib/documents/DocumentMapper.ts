@@ -14,8 +14,9 @@ import {
   InsertReplaceEdit,
   Location,
 } from "vscode-languageserver";
-import { TagInformation, offsetAt, positionAt, getLineOffsets } from "./utils";
-import { Logger } from "../../logger";
+import { offsetAt, positionAt, getLineOffsets } from "./utils.js";
+import type { TagInformation } from "./utils.js";
+import { Logger } from "../../logger.js";
 import { generatedPositionFor, originalPositionFor, TraceMap } from "@jridgewell/trace-mapping";
 
 export interface FilePosition extends Position {

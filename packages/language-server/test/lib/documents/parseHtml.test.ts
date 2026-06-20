@@ -1,7 +1,7 @@
 import assert from "assert";
-import { HTMLDocument } from "vscode-html-languageservice";
-import { getAttributeContextAtPosition, parseHtml } from "../../../src/lib/documents/parseHtml";
-import { Document } from "../../../src/lib/documents";
+import type { HTMLDocument } from "vscode-html-languageservice";
+import { getAttributeContextAtPosition, parseHtml } from "../../../src/lib/documents/parseHtml.js";
+import { Document } from "../../../src/lib/documents/index.js";
 
 describe("parseHtml", () => {
   const testRootElements = (document: HTMLDocument) => {

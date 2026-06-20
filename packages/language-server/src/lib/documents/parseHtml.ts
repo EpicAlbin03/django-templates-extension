@@ -1,14 +1,13 @@
 import {
-  HTMLDocument,
-  Node,
   Position,
   ScannerState,
   TokenType,
   getDefaultHTMLDataProvider,
 } from "vscode-html-languageservice";
-import { createScanner } from "vscode-html-languageservice/lib/umd/parser/htmlScanner";
-import { Document } from "./Document";
-import { scanMatchingBraces } from "./utils";
+import type { HTMLDocument, Node } from "vscode-html-languageservice";
+import { createScanner } from "vscode-html-languageservice/lib/esm/parser/htmlScanner.js";
+import { Document } from "./Document.js";
+import { scanMatchingBraces } from "./utils.js";
 
 const voidElements = new Set(
   getDefaultHTMLDataProvider()

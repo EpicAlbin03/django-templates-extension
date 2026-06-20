@@ -3,7 +3,6 @@ import {
   Color,
   ColorInformation,
   ColorPresentation,
-  CompletionContext,
   CompletionList,
   CompletionTriggerKind,
   Diagnostic,
@@ -16,6 +15,9 @@ import {
   SelectionRange,
   DocumentHighlight,
   WorkspaceFolder,
+} from "vscode-languageserver";
+import type {
+  CompletionContext,
   FullDocumentDiagnosticReport,
   UnchangedDocumentDiagnosticReport,
 } from "vscode-languageserver";
@@ -31,11 +33,12 @@ import {
   mapSelectionRangeToParent,
   isInTag,
   mapRangeToOriginal,
-  TagInformation,
   extractStyleTagAtOffset,
-} from "../../lib/documents";
-import { LSConfigManager, LSCSSConfig } from "../../ls-config";
-import {
+} from "../../lib/documents/index.js";
+import type { TagInformation } from "../../lib/documents/index.js";
+import { LSConfigManager } from "../../ls-config.js";
+import type { LSCSSConfig } from "../../ls-config.js";
+import type {
   ColorPresentationsProvider,
   CompletionsProvider,
   DiagnosticsProvider,
@@ -45,18 +48,21 @@ import {
   FoldingRangeProvider,
   HoverProvider,
   SelectionRangeProvider,
-} from "../interfaces";
-import { CSSDocument, CSSDocumentBase } from "./CSSDocument";
-import { CSSLanguageServices, getLanguage, getLanguageService } from "./service";
-import { GlobalVars } from "./global-vars";
-import { getIdClassCompletion } from "./features/getIdClassCompletion";
-import { AttributeContext, getAttributeContextAtPosition } from "../../lib/documents/parseHtml";
-import { StyleAttributeDocument } from "./StyleAttributeDocument";
-import { getDocumentContext } from "../documentContext";
+} from "../interfaces.js";
+import { CSSDocument } from "./CSSDocument.js";
+import type { CSSDocumentBase } from "./CSSDocument.js";
+import { getLanguage, getLanguageService } from "./service.js";
+import type { CSSLanguageServices } from "./service.js";
+import { GlobalVars } from "./global-vars.js";
+import { getIdClassCompletion } from "./features/getIdClassCompletion.js";
+import { getAttributeContextAtPosition } from "../../lib/documents/parseHtml.js";
+import type { AttributeContext } from "../../lib/documents/parseHtml.js";
+import { StyleAttributeDocument } from "./StyleAttributeDocument.js";
+import { getDocumentContext } from "../documentContext.js";
 import { FoldingRange, FoldingRangeKind } from "vscode-languageserver-types";
-import { indentBasedFoldingRangeForTag } from "../../lib/foldingRange/indentFolding";
-import { wordHighlightForTag } from "../../lib/documentHighlight/wordHighlight";
-import { isNotNullOrUndefined, urlToPath } from "../../utils";
+import { indentBasedFoldingRangeForTag } from "../../lib/foldingRange/indentFolding.js";
+import { wordHighlightForTag } from "../../lib/documentHighlight/wordHighlight.js";
+import { isNotNullOrUndefined, urlToPath } from "../../utils.js";
 
 // https://github.com/microsoft/vscode/blob/c6f507deeb99925e713271b1048f21dbaab4bd54/extensions/css/language-configuration.json#L34
 const wordPattern = /(#?-?\d*\.\d\w*%?)|(::?[\w-]*(?=[^,{;]*[,{]))|(([@#.!])?[\w-?]+%?|[@#!.])/g;

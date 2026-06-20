@@ -1,6 +1,6 @@
 import { CompletionItem, CompletionItemKind, CompletionList } from "vscode-languageserver";
-import { AttributeContext } from "../../../lib/documents/parseHtml";
-import { CSSDocument } from "../CSSDocument";
+import type { AttributeContext } from "../../../lib/documents/parseHtml.js";
+import { CSSDocument } from "../CSSDocument.js";
 
 export function getIdClassCompletion(
   cssDoc: CSSDocument,

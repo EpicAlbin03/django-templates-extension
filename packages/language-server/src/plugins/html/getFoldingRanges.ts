@@ -1,7 +1,7 @@
 import { FoldingRange, FoldingRangeKind } from "vscode-languageserver-types";
-import { Document } from "../../lib/documents";
-import { Node } from "vscode-html-languageservice";
-import { scanCommentWithinTextOrComment } from "../../lib/documents/parseHtml";
+import { Document } from "../../lib/documents/index.js";
+import type { Node } from "vscode-html-languageservice";
+import { scanCommentWithinTextOrComment } from "../../lib/documents/parseHtml.js";
 
 const COMMENT_START = "<!--";
 const regionRegex = /^\s*#(region\b)|(endregion\b)/;

@@ -1,8 +1,9 @@
-import { urlToPath } from "../../utils";
-import { WritableDocument } from "./DocumentBase";
-import { extractScriptTags, extractStyleTag, extractTemplateTag, TagInformation } from "./utils";
-import { parseHtml } from "./parseHtml";
-import { HTMLDocument } from "vscode-html-languageservice";
+import { urlToPath } from "../../utils.js";
+import { WritableDocument } from "./DocumentBase.js";
+import { extractScriptTags, extractStyleTag, extractTemplateTag } from "./utils.js";
+import type { TagInformation } from "./utils.js";
+import { parseHtml } from "./parseHtml.js";
+import type { HTMLDocument } from "vscode-html-languageservice";
 import { Range } from "vscode-languageserver";
 
 /**

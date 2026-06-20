@@ -1,5 +1,5 @@
 import { isEqual, uniqWith } from "lodash";
-import { Node } from "vscode-html-languageservice";
+import type { Node } from "vscode-html-languageservice";
 import { Position, Range } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 

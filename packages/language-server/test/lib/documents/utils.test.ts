@@ -6,7 +6,7 @@ import {
   updateRelativeImport,
   getWordAt,
   isInsideMoustacheTag,
-} from "../../../src/lib/documents/utils";
+} from "../../../src/lib/documents/utils.js";
 import { Position } from "vscode-languageserver";
 
 describe("document/utils", () => {
