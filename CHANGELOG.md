@@ -1,5 +1,13 @@
 # prettier-plugin-django-templates changelog
 
+## 0.1.2
+
+### Patch Changes
+
+- [#9](https://github.com/EpicAlbin03/prettier-plugin-django-templates/pull/9) [`9387d52`](https://github.com/EpicAlbin03/prettier-plugin-django-templates/commit/9387d52a899b56ff2babe6a6a12fbcc0dfbcb1af) Thanks [@EpicAlbin03](https://github.com/EpicAlbin03)! - added more 3rd party django tags
+
+- [#9](https://github.com/EpicAlbin03/prettier-plugin-django-templates/pull/9) [`27442ab`](https://github.com/EpicAlbin03/prettier-plugin-django-templates/commit/27442abb77b86bce2b57a788a33d227019d6ac9a) Thanks [@EpicAlbin03](https://github.com/EpicAlbin03)! - migrated to vite plus (tsdown, oxlint, oxfmt, vitest)
+
 ## 0.1.1
 
 ### Patch Changes
