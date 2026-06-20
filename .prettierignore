@@ -1,8 +1,0 @@
-packages/language-server/test/**/testfiles/**/*.ts
-packages/django-vscode/syntaxes/*.yaml
-packages/django-vscode/test/*/samples/**/*
-**/dist
-.github/**
-.history/**
-pnpm-lock.yaml
-repos

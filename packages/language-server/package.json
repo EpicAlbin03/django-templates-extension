@@ -1,56 +1,65 @@
 {
-	"name": "django-template-language-server",
-	"version": "0.18.2",
-	"description": "A language server for Django templates in HTML files",
-	"main": "dist/src/index.js",
-	"typings": "dist/src/index",
-	"exports": {
-		"./package.json": "./package.json",
-		".": "./dist/src/index.js",
-		"./bin/server.js": "./bin/server.js"
-	},
-	"scripts": {
-		"test": "cross-env TS_NODE_TRANSPILE_ONLY=true mocha --require ts-node/register \"test/**/*.test.ts\" --no-experimental-strip-types",
-		"build": "tsc",
-		"prepublishOnly": "npm run build",
-		"watch": "tsc -w"
-	},
-	"bin": {
-		"djangotemplateserver": "bin/server.js"
-	},
-	"keywords": ["django", "html", "vscode", "language-server"],
-	"license": "MIT",
-	"engines": {
-		"node": ">= 18.0.0"
-	},
-	"devDependencies": {
-		"@types/globrex": "^0.1.4",
-		"@types/lodash": "^4.14.116",
-		"@types/mocha": "^10.0.10",
-		"@types/node": "^18.0.0",
-		"@types/sinon": "^7.5.2",
-		"cross-env": "^7.0.2",
-		"mocha": "^11.7.6",
-		"sinon": "^11.0.0",
-		"ts-node": "^10.0.0",
-		"typescript": "^6.0.3"
-	},
-	"dependencies": {
-		"@jridgewell/trace-mapping": "^0.3.25",
-		"@vscode/emmet-helper": "2.8.4",
-		"chokidar": "^4.0.1",
-		"globrex": "^0.1.2",
-		"lodash": "^4.17.21",
-		"prettier": "~3.3.3",
-		"prettier-plugin-django-templates": "^0.0.2",
-		"vscode-css-languageservice": "~6.3.5",
-		"vscode-html-languageservice": "~5.4.0",
-		"vscode-languageserver": "9.0.1",
-		"vscode-languageserver-protocol": "3.17.5",
-		"vscode-languageserver-types": "3.17.5",
-		"vscode-uri": "~3.1.0"
-	},
-	"peerDependencies": {
-		"typescript": "^5.9.2 || ^6.0.2"
-	}
+  "name": "django-template-language-server",
+  "version": "0.0.0",
+  "description": "A language server for Django templates in HTML files",
+  "keywords": [
+    "django",
+    "formatter",
+    "html",
+    "language-server",
+    "prettier",
+    "syntax highlighting",
+    "templates",
+    "vscode"
+  ],
+  "license": "MIT",
+  "bin": {
+    "djangotemplateserver": "bin/server.js"
+  },
+  "main": "dist/src/index.js",
+  "exports": {
+    ".": "./dist/src/index.js",
+    "./bin/server.js": "./bin/server.js",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "test": "cross-env TS_NODE_TRANSPILE_ONLY=true mocha --require ts-node/register \"test/**/*.test.ts\" --no-experimental-strip-types",
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
+    "watch": "tsc -w"
+  },
+  "dependencies": {
+    "@jridgewell/trace-mapping": "^0.3.25",
+    "@vscode/emmet-helper": "2.8.4",
+    "chokidar": "^4.0.1",
+    "globrex": "^0.1.2",
+    "lodash": "^4.17.21",
+    "prettier": "~3.3.3",
+    "prettier-plugin-django-templates": "^0.1.2",
+    "vscode-css-languageservice": "~6.3.5",
+    "vscode-html-languageservice": "~5.4.0",
+    "vscode-languageserver": "9.0.1",
+    "vscode-languageserver-protocol": "3.17.5",
+    "vscode-languageserver-types": "3.17.5",
+    "vscode-uri": "~3.1.0"
+  },
+  "devDependencies": {
+    "@types/globrex": "^0.1.4",
+    "@types/lodash": "^4.14.116",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^25.6.2",
+    "@types/sinon": "^7.5.2",
+    "cross-env": "^7.0.2",
+    "mocha": "^11.7.6",
+    "sinon": "^11.0.0",
+    "ts-node": "^10.0.0",
+    "typescript": "^6.0.3",
+    "vite-plus": "catalog:"
+  },
+  "peerDependencies": {
+    "typescript": "^5.9.3 || ^6.0.3"
+  },
+  "engines": {
+    "node": ">= 22.18.0"
+  }
 }

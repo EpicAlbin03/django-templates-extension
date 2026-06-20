@@ -1,21 +1,21 @@
 {
 	"compilerOptions": {
-		"lib": ["es2021"],
-		"target": "es2021",
-		"moduleResolution": "node16",
-		"module": "node16",
-
-		"outDir": "dist",
-		"strict": true,
-		"declaration": true,
-		"esModuleInterop": true,
-		"sourceMap": true,
-		"composite": true,
-		"skipLibCheck": true,
-		"rootDir": ".",
-		"forceConsistentCasingInFileNames": true,
-		"types": ["mocha", "node"]
-	},
-	"include": ["src/**/*.ts"],
-	"exclude": ["dist", "node_modules", "test"]
+    "target": "esnext",
+    "lib": ["es2023"],
+    "moduleDetection": "force",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "resolveJsonModule": true,
+    "types": ["node", "mocha"],
+    "strict": true,
+    "noUnusedLocals": true,
+    "declaration": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true
+  },
+	"exclude": ["dist"]
 }

@@ -1,17 +1,21 @@
 {
 	"compilerOptions": {
-		"lib": ["es2021"],
-		"module": "node16",
-		"target": "es2021",
-		"moduleResolution": "node16",
-
-		"outDir": "dist",
-		"strict": true,
-		"esModuleInterop": true,
-		"skipLibCheck": true,
-		"forceConsistentCasingInFileNames": true,
-		"declaration": true,
-		"sourceMap": true,
-		"composite": true
-	}
+    "target": "esnext",
+    "lib": ["es2023"],
+    "moduleDetection": "force",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "resolveJsonModule": true,
+    "types": ["node"],
+    "strict": true,
+    "noUnusedLocals": true,
+    "declaration": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true
+  },
+	"exclude": ["dist"]
 }

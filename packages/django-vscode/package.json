@@ -1,37 +1,30 @@
 {
   "name": "django-vscode",
   "displayName": "Django Templates",
-  "version": "0.5.0",
+  "version": "0.0.0",
   "private": true,
   "description": "Django template language support for VS Code",
+  "categories": [
+    "Formatters",
+    "Programming Languages"
+  ],
   "main": "dist/src/extension.js",
   "scripts": {
     "build": "tsc -p ./",
     "vscode:prepublish": "npm install && npm run build && npm prune --production",
     "watch": "tsc -w -p ./",
-    "test": "node -e \"console.log('No extension tests configured')\""
+    "test": "vitest --run"
   },
-  "categories": [
-    "Programming Languages",
-    "Formatters"
-  ],
-  "engines": {
-    "vscode": "^1.82.0"
+  "dependencies": {
+    "bumpp": "^11.1.0",
+    "django-template-language-server": "workspace:*",
+    "typescript": "^6.0.3",
+    "vite-plus": "catalog:",
+    "vscode-languageclient": "^10.0.0"
   },
-  "activationEvents": [
-    "onLanguage:html",
-    "onCommand:django.restartLanguageServer"
-  ],
-  "capabilities": {
-    "untrustedWorkspaces": {
-      "supported": "limited",
-      "restrictedConfigurations": [
-        "django.language-server.runtime",
-        "django.language-server.ls-path",
-        "django.language-server.runtime-args"
-      ],
-      "description": "The extension requires workspace trust to execute workspace-specified language server settings."
-    }
+  "devDependencies": {
+    "@types/node": "^25.6.2",
+    "@types/vscode": "^1.125.0"
   },
   "contributes": {
     "configuration": {
@@ -61,7 +54,11 @@
         },
         "django.trace.server": {
           "type": "string",
-          "enum": ["off", "messages", "verbose"],
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
           "default": "off",
           "description": "Trace communication between VS Code and the language server."
         }
@@ -101,13 +98,22 @@
       }
     ]
   },
-  "devDependencies": {
-    "@types/node": "^18.0.0",
-    "@types/vscode": "^1.67"
+  "activationEvents": [
+    "onCommand:django.restartLanguageServer",
+    "onLanguage:html"
+  ],
+  "engines": {
+    "vscode": "^1.125.0"
   },
-  "dependencies": {
-    "django-template-language-server": "workspace:*",
-    "typescript": "^6.0.3",
-    "vscode-languageclient": "^9.0.1"
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "restrictedConfigurations": [
+        "django.language-server.runtime",
+        "django.language-server.ls-path",
+        "django.language-server.runtime-args"
+      ],
+      "description": "The extension requires workspace trust to execute workspace-specified language server settings."
+    }
   }
 }

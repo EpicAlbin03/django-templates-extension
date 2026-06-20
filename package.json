@@ -1,23 +1,27 @@
 {
-	"name": "django-templates-extension",
-	"version": "1.0.0",
-	"author": "django-templates-extension contributors",
-	"license": "MIT",
-	"private": true,
-	"scripts": {
-		"bootstrap": "pnpm build",
-		"build": "tsc -b",
-		"test": "cross-env CI=true pnpm test -r",
-		"watch": "tsc -b -watch",
-		"format": "prettier --write .",
-		"lint": "prettier --check ."
-	},
-	"dependencies": {
-		"typescript": "^6.0.3"
-	},
-	"devDependencies": {
-		"cross-env": "^7.0.2",
-		"prettier": "~3.3.3"
-	},
-	"packageManager": "pnpm@9.3.0"
+  "name": "django-templates-extension",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "author": "Albin Carlsson <inquires@albincarlsson.com>",
+  "type": "module",
+  "scripts": {
+    "bootstrap": "pnpm build",
+    "build": "tsc -b",
+    "test": "cross-env CI=true pnpm test -r",
+    "watch": "tsc -b -watch",
+    "format": "prettier --write .",
+    "lint": "prettier --check ."
+  },
+  "dependencies": {
+    "typescript": "^6.0.3"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.2",
+    "vite-plus": "catalog:"
+  },
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "packageManager": "pnpm@11.8.0+sha512.c1f5e7c4cb241c8f174b743851d82f42b802324afc8b0f116b96adb15aa06664948dde36960a3ba1079ba5b4b29dd0140135b94b5b5f5263592249d68e555f26"
 }
