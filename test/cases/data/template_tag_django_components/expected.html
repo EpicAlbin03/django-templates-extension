@@ -1,0 +1,15 @@
+{% load component_tags %}
+{% component "card" title=title %}
+  <h2>{{ title }}</h2>
+  {% fill "body" %}
+    <p{% html_attrs class="copy" data_id=item.id %}>{{ body }}</p>
+  {% endfill %}
+  {% slot "footer" %}
+    <button>Save</button>
+  {% endslot %}
+{% endcomponent %}
+{% provide "theme" value="dark" %}
+  <main>{{ slot }}</main>
+{% endprovide %}
+{% component_css_dependencies %}
+{% component_js_dependencies %}

@@ -404,7 +404,7 @@ function matchesEnd(start: TemplateTagNode, endName: string): boolean {
 
 const BRANCH_PARENTS: Record<string, string[]> = {
   elif: ["if"],
-  else: ["if", "for", "ifchanged", "ifequal", "ifnotequal"],
+  else: ["if", "for", "ifchanged", "ifequal", "ifnotequal", "flag"],
   empty: ["for"],
   plural: ["blocktranslate", "blocktrans"],
 };

@@ -555,6 +555,7 @@ function prepareSegmentForHtml(
   );
 
   prepared = prepared
+    .replace(/(<[A-Za-z][^\s/>]*)(dj\d+="")/g, "$1 $2")
     .replace(/(<!--DJ\d+-->)(<!--DJ\d+-->)/g, "$1\n$2")
     .replace(/(<\/[^>]+>)(<!--DJ\d+-->)/g, "$1\n$2")
     .replace(
