@@ -1,0 +1,19 @@
+{% block sidebar %}
+  {% with links=menu.links %}
+    <aside class="sidebar">
+      <ul>
+        {% for link in links %}
+          <li>
+            {% if link.active %}
+              <strong>{{ link.label }}</strong>
+            {% else %}
+              <a href="{{ link.url }}">{{ link.label }}</a>
+            {% endif %}
+          </li>
+        {% empty %}
+          <li>Nothing here</li>
+        {% endfor %}
+      </ul>
+    </aside>
+  {% endwith %}
+{% endblock %}
