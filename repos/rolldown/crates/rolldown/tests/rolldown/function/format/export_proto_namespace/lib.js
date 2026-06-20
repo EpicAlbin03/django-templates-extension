@@ -1,1 +1,0 @@
-export const __proto__ = 123;

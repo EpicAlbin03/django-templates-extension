@@ -1,1 +1,0 @@
-{ "this is json not js": true }

@@ -1,1 +1,0 @@
-export { fn as "console.log" } from 'pkg'

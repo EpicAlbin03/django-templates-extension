@@ -1,1 +1,0 @@
-new (require("./foo.js")).Foo();

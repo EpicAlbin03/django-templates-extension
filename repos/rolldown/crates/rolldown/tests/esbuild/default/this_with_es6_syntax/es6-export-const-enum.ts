@@ -1,1 +1,0 @@
-export const enum Foo {} console.log(this)

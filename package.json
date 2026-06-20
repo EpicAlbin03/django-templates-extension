@@ -2,72 +2,75 @@
   "name": "prettier-plugin-django-templates",
   "version": "0.1.1",
   "description": "Prettier plugin for formatting Django HTML templates",
-  "main": "plugin.js",
-  "files": [
-    "plugin.js",
-    "plugin.js.map",
-    "browser.mjs",
-    "index.d.ts"
+  "keywords": [
+    "django",
+    "formatter",
+    "html",
+    "plugin",
+    "prettier",
+    "templates"
   ],
-  "types": "./index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./index.d.ts",
-      "default": "./plugin.js"
-    },
-    "./browser": {
-      "types": "./index.d.ts",
-      "import": "./browser.mjs",
-      "default": "./browser.mjs"
-    },
-    "./package.json": "./package.json"
+  "homepage": "https://github.com/EpicAlbin03/prettier-plugin-django-templates#readme",
+  "bugs": {
+    "url": "https://github.com/EpicAlbin03/prettier-plugin-django-templates/issues"
   },
-  "scripts": {
-    "build": "rolldown -c rolldown.config.mjs",
-    "check": "tsc --noEmit",
-    "check:watch": "tsc --noEmit --watch",
-    "lint": "prettier --check .",
-    "format": "prettier --write .",
-    "test": "ava",
-    "test:package": "node test/package-smoke.mjs",
-    "prepare": "pnpm build",
-    "prepublishOnly": "pnpm test",
-    "changeset:version": "changeset version && git add --all",
-    "changeset:publish": "changeset publish"
-  },
+  "license": "MIT",
+  "author": "Albin Carlsson <inquires@albincarlsson.com>",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/EpicAlbin03/prettier-plugin-django-templates.git"
   },
-  "keywords": [
-    "prettier",
-    "plugin",
-    "django",
-    "html",
-    "templates",
-    "formatter"
+  "files": [
+    "dist"
   ],
-  "author": "Albin Carlsson <inquires@albincarlsson.com>",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/EpicAlbin03/prettier-plugin-django-templates/issues"
+  "type": "module",
+  "main": "dist/plugin.js",
+  "exports": {
+    ".": {
+      "types": "./dist/plugin.d.ts",
+      "default": "./dist/plugin.js"
+    },
+    "./browser": "./dist/browser.mjs",
+    "./package.json": "./package.json"
   },
-  "engines": {
-    "node": ">=22"
+  "publishConfig": {
+    "access": "public"
   },
-  "homepage": "https://github.com/EpicAlbin03/prettier-plugin-django-templates#readme",
+  "scripts": {
+    "build": "vp pack",
+    "dev": "vp pack --watch",
+    "test": "vp test",
+    "check": "vp check",
+    "check:fix": "vp check --fix",
+    "lint": "vp lint",
+    "format": "vp fmt",
+    "prepublishOnly": "vp run build",
+    "prepare": "vp config",
+    "changeset:version": "changeset version && git add --all",
+    "changeset:publish": "changeset publish"
+  },
   "devDependencies": {
     "@changesets/changelog-github": "^0.5.1",
     "@changesets/cli": "^2.31.0",
-    "@types/node": "^24",
-    "ava": "3.15.0",
+    "@types/node": "^25.6.2",
+    "@typescript/native-preview": "7.0.0-dev.20260509.2",
+    "bumpp": "^11.1.0",
     "prettier": "^3.8.0",
-    "rolldown": "^1.1.1",
-    "ts-node": "^10.9.2",
-    "typescript": "5.9.3"
+    "typescript": "^6.0.3",
+    "vite-plus": "catalog:",
+    "vitest": "catalog:"
   },
-  "packageManager": "pnpm@11.6.0",
   "peerDependencies": {
     "prettier": "^3.0.0"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "11.8.0",
+      "onFail": "download"
+    }
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

@@ -1,1 +1,0 @@
-export class Foo { static foo = <div/> }

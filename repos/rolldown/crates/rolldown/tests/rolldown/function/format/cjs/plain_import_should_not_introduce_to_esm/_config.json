@@ -1,7 +1,0 @@
-{
-  "config": {
-    "format": "cjs",
-    "external": ["foo", "bar", "baz"]
-  },
-  "expectExecuted": false
-}

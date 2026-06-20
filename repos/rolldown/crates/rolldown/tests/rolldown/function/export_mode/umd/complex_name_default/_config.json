@@ -1,7 +1,0 @@
-{
-  "config": {
-    "format": "umd",
-    "name": "test.module",
-    "exports": "default"
-  }
-}

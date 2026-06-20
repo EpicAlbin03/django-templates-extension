@@ -1,7 +1,0 @@
-{
-  "config": {
-    "external": ["node:fs"],
-    "format": "cjs",
-    "externalLiveBindings": false
-  }
-}

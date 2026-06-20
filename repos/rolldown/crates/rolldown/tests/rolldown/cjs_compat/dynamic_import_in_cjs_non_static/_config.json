@@ -1,7 +1,0 @@
-{
-  "config": {
-    "format": "cjs",
-    "dynamicImportInCjs": false
-  },
-  "expectExecuted": false
-}

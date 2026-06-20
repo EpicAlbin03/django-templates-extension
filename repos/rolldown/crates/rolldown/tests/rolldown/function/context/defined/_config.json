@@ -1,7 +1,0 @@
-{
-  "config": {
-    "context": "window",
-    "format": "cjs",
-    "intro": "const window = {}"
-  }
-}

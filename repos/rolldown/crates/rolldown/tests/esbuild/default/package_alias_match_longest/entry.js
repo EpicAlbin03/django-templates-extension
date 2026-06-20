@@ -1,6 +1,0 @@
-import "pkg"
-import "pkg/foo"
-import "pkg/foo/bar"
-import "pkg/foo/bar/baz"
-import "pkg/bar/baz"
-import "pkg/baz"

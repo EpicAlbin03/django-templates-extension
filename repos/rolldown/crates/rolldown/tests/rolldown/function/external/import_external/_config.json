@@ -1,7 +1,0 @@
-{
-  "expectExecuted": false,
-  "config": {
-    "external": ["external"],
-    "treeshake": false
-  }
-}

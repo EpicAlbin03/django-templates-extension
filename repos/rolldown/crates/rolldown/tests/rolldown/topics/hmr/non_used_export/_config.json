@@ -1,8 +1,0 @@
-{
-  "config": {
-    "experimental": {
-      "devMode": {}
-    },
-    "treeshake": false // NOTE: tree shaking is not supported for HMR now
-  }
-}

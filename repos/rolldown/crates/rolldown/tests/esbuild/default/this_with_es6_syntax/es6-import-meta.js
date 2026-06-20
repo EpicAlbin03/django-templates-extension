@@ -1,1 +1,0 @@
-import.meta; console.log(this)

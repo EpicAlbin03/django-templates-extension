@@ -1,1 +1,0 @@
-export class Foo extends Object { constructor(foo = <div/>) { super() } }

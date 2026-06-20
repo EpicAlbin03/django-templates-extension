@@ -1,1 +1,0 @@
-export let esm_foo_ = 'foo'

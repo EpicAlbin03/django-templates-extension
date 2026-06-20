@@ -1,6 +1,0 @@
-{
-  "config": {
-    "external": ["node:http", "node:net"]
-  },
-  "expectExecuted": false
-}

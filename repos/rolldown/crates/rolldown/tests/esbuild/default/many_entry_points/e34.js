@@ -1,1 +1,0 @@
-import x from './shared'; console.log(x)

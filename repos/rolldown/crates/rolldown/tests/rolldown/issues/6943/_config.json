@@ -1,6 +1,0 @@
-{
-  "config": {
-    "codeSplitting": false,
-    "file": "dist/main.js"
-  }
-}

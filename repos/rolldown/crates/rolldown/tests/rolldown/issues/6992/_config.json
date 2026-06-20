@@ -1,7 +1,0 @@
-{
-  "config": {
-    "external": ["@sentry/node"],
-    "preserveModules": true
-  },
-  "expectExecuted": false
-}

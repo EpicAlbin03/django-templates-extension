@@ -1,1 +1,0 @@
-import("./foo" + bar, { with: { type: 'bytes' } }).then(console.log)

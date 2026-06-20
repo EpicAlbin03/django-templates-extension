@@ -1,6 +1,0 @@
-{
-  "config": {
-    "platform": "node",
-    "external": ["node:module"]
-  }
-}

@@ -1,6 +1,0 @@
-{
-  "config": {
-    "format": "cjs",
-    "external": ["node:fs", "node:path"]
-  }
-}

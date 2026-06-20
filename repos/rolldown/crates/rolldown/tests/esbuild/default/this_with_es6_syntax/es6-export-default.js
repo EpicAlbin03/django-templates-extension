@@ -1,1 +1,0 @@
-export default 123; console.log(this)

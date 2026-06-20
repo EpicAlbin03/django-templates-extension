@@ -1,8 +1,0 @@
-{
-  "config": {
-    "exports": "named",
-    "esModule": "never",
-    "format": "iife",
-    "name": "module"
-  }
-}

@@ -1,1 +1,0 @@
-namespace ns { export const foo = 123; } console.log(this)

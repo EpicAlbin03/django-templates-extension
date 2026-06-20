@@ -1,4 +1,4 @@
-import type { Parser } from 'prettier';
+import type { Parser } from "prettier";
 import {
   getTagRole,
   isBlockStandaloneTag,
@@ -6,7 +6,7 @@ import {
   isEndTag,
   isInlineStandaloneTag,
   isRawTag,
-} from './tags';
+} from "./tags.js";
 import type {
   TemplateBlockNode,
   CommentNode,
@@ -17,11 +17,11 @@ import type {
   RawBlockNode,
   RootNode,
   TemplateTagNode,
-} from './ast';
+} from "./ast.js";
 
 const NOT_FOUND = -1;
 
-type TokenType = 'Text' | 'Variable' | 'Comment' | 'Tag' | 'RawBlock' | 'IgnoreBlock';
+type TokenType = "Text" | "Variable" | "Comment" | "Tag" | "RawBlock" | "IgnoreBlock";
 
 interface TokenBase {
   type: TokenType;
@@ -34,30 +34,30 @@ interface TokenBase {
 }
 
 interface TextToken extends TokenBase {
-  type: 'Text';
+  type: "Text";
 }
 
 interface VariableToken extends TokenBase {
-  type: 'Variable';
+  type: "Variable";
 }
 
 interface CommentToken extends TokenBase {
-  type: 'Comment';
+  type: "Comment";
 }
 
 interface IgnoreBlockToken extends TokenBase {
-  type: 'IgnoreBlock';
+  type: "IgnoreBlock";
 }
 
 interface TagToken extends TokenBase {
-  type: 'Tag';
+  type: "Tag";
   name: string;
   args: string;
-  role: 'start' | 'branch' | 'end' | 'standalone';
+  role: "start" | "branch" | "end" | "standalone";
 }
 
 interface RawBlockToken extends TokenBase {
-  type: 'RawBlock';
+  type: "RawBlock";
   name: string;
   args: string;
   body: string;
@@ -66,8 +66,8 @@ interface RawBlockToken extends TokenBase {
 
 type Token = TextToken | VariableToken | CommentToken | IgnoreBlockToken | TagToken | RawBlockToken;
 
-const IGNORE_BLOCK_STARTS = ['<!-- prettier-ignore-start -->', '{# prettier-ignore-start #}'];
-const IGNORE_BLOCK_ENDS = ['<!-- prettier-ignore-end -->', '{# prettier-ignore-end #}'];
+const IGNORE_BLOCK_STARTS = ["<!-- prettier-ignore-start -->", "{# prettier-ignore-start #}"];
+const IGNORE_BLOCK_ENDS = ["<!-- prettier-ignore-end -->", "{# prettier-ignore-end #}"];
 
 function readUntil(text: string, start: number, endToken: string, errorMessage?: string): number {
   const end = text.indexOf(endToken, start);
@@ -82,17 +82,17 @@ function readUntil(text: string, start: number, endToken: string, errorMessage?:
 
 function findNextSpecial(text: string, from: number): number {
   const candidates = [
-    text.indexOf('{{', from),
-    text.indexOf('{#', from),
-    text.indexOf('{%', from),
-    text.indexOf('<!--', from),
+    text.indexOf("{{", from),
+    text.indexOf("{#", from),
+    text.indexOf("{%", from),
+    text.indexOf("<!--", from),
   ].filter((index) => index !== -1);
 
   return candidates.length === 0 ? text.length : Math.min(...candidates);
 }
 
 function getHtmlState(text: string): Array<{ inAttribute: boolean; inTag: boolean }> {
-  const states = new Array(text.length);
+  const states = Array.from<{ inAttribute: boolean; inTag: boolean }>({ length: text.length });
   let quote: '"' | "'" | null = null;
   let inTag = false;
 
@@ -107,15 +107,15 @@ function getHtmlState(text: string): Array<{ inAttribute: boolean; inTag: boolea
       continue;
     }
 
-    if (char === '<') {
-      const next = text[index + 1] ?? '';
+    if (char === "<") {
+      const next = text[index + 1] ?? "";
       if (/[A-Za-z!/]/.test(next)) {
         inTag = true;
       }
       continue;
     }
 
-    if (char === '>') {
+    if (char === ">") {
       inTag = false;
       continue;
     }
@@ -135,7 +135,7 @@ function createTextToken(
   state: { inAttribute: boolean; inTag: boolean },
 ): TextToken {
   return {
-    type: 'Text',
+    type: "Text",
     raw: text,
     content: text,
     start,
@@ -152,14 +152,14 @@ function createTagToken(
   state: { inAttribute: boolean; inTag: boolean },
 ): TagToken {
   const content = raw.slice(2, -2).trim();
-  const [name = '', ...rest] = content.split(/\s+/);
+  const [name = "", ...rest] = content.split(/\s+/);
 
   return {
-    type: 'Tag',
+    type: "Tag",
     raw,
     content,
     name,
-    args: rest.join(' '),
+    args: rest.join(" "),
     role: getTagRole(name),
     start,
     end,
@@ -177,12 +177,12 @@ function findRawBlockEnd(
   let cursor = from;
 
   while (cursor < text.length) {
-    const tagStart = text.indexOf('{%', cursor);
+    const tagStart = text.indexOf("{%", cursor);
     if (tagStart === -1) {
       return null;
     }
 
-    const closeDelimiter = text.indexOf('%}', tagStart + 2);
+    const closeDelimiter = text.indexOf("%}", tagStart + 2);
     if (closeDelimiter === -1) {
       return null;
     }
@@ -194,7 +194,7 @@ function findRawBlockEnd(
       return {
         end: closeDelimiter + 2,
         closingStart: tagStart,
-        endArgs: rest.join(' '),
+        endArgs: rest.join(" "),
       };
     }
 
@@ -231,7 +231,7 @@ function tokenize(text: string): Token[] {
       const end = findIgnoreBlockEnd(text, cursor + ignoreStart.length);
       const raw = text.slice(cursor, end);
       tokens.push({
-        type: 'IgnoreBlock',
+        type: "IgnoreBlock",
         raw,
         content: raw,
         start: cursor,
@@ -243,24 +243,24 @@ function tokenize(text: string): Token[] {
       continue;
     }
 
-    if (text.startsWith('<!--', cursor)) {
-      const end = readUntil(text, cursor + 4, '-->');
+    if (text.startsWith("<!--", cursor)) {
+      const end = readUntil(text, cursor + 4, "-->");
       const raw = text.slice(cursor, end);
       tokens.push(createTextToken(raw, cursor, end, tokenState));
       cursor = end;
       continue;
     }
 
-    if (text.startsWith('{{', cursor)) {
+    if (text.startsWith("{{", cursor)) {
       const end = readUntil(
         text,
         cursor + 2,
-        '}}',
+        "}}",
         `Unterminated template expression starting at index ${cursor}.`,
       );
       const raw = text.slice(cursor, end);
       tokens.push({
-        type: 'Variable',
+        type: "Variable",
         raw,
         content: raw.slice(2, -2),
         start: cursor,
@@ -272,16 +272,16 @@ function tokenize(text: string): Token[] {
       continue;
     }
 
-    if (text.startsWith('{#', cursor)) {
+    if (text.startsWith("{#", cursor)) {
       const end = readUntil(
         text,
         cursor + 2,
-        '#}',
+        "#}",
         `Unterminated template comment starting at index ${cursor}.`,
       );
       const raw = text.slice(cursor, end);
       tokens.push({
-        type: 'Comment',
+        type: "Comment",
         raw,
         content: raw.slice(2, -2),
         start: cursor,
@@ -293,11 +293,11 @@ function tokenize(text: string): Token[] {
       continue;
     }
 
-    if (text.startsWith('{%', cursor)) {
+    if (text.startsWith("{%", cursor)) {
       const end = readUntil(
         text,
         cursor + 2,
-        '%}',
+        "%}",
         `Unterminated template tag starting at index ${cursor}.`,
       );
       const raw = text.slice(cursor, end);
@@ -308,7 +308,7 @@ function tokenize(text: string): Token[] {
         if (blockEndInfo) {
           const blockRaw = text.slice(cursor, blockEndInfo.end);
           tokens.push({
-            type: 'RawBlock',
+            type: "RawBlock",
             raw: blockRaw,
             content: tag.content,
             name: tag.name,
@@ -349,15 +349,15 @@ function countPreNewLines(text: string, to: number): number {
     return 0;
   }
 
-  return segment.split('\n').length - 1;
+  return segment.split("\n").length - 1;
 }
 
 function createProtectedMarker(id: number, kind: ProtectedMarkerKind): string {
-  if (kind === 'block') {
+  if (kind === "block") {
     return `<!--DJ${id}-->`;
   }
 
-  if (kind === 'attr') {
+  if (kind === "attr") {
     return `dj${id}=""`;
   }
 
@@ -370,14 +370,14 @@ function replaceAt(text: string, replacement: string, start: number, length: num
 
 function normalizeRaw(token: Token): string {
   switch (token.type) {
-    case 'Variable':
+    case "Variable":
       return `{{ ${token.content.trim()} }}`;
-    case 'Comment':
+    case "Comment":
       return `{# ${token.content.trim()} #}`;
-    case 'Tag':
+    case "Tag":
       return `{% ${token.content.trim()} %}`;
-    case 'RawBlock':
-    case 'IgnoreBlock':
+    case "RawBlock":
+    case "IgnoreBlock":
       return token.raw;
     default:
       return token.raw;
@@ -387,11 +387,11 @@ function normalizeRaw(token: Token): string {
 function expectedEndNames(startName: string): string[] {
   const candidates = [`end${startName}`];
 
-  if (startName.endsWith('_custom_end')) {
-    candidates.push(startName.replace(/_custom_end$/, 'end'));
+  if (startName.endsWith("_custom_end")) {
+    candidates.push(startName.replace(/_custom_end$/, "end"));
   }
 
-  if (startName.startsWith('dnd_')) {
+  if (startName.startsWith("dnd_")) {
     candidates.push(`end_${startName}`);
   }
 
@@ -403,10 +403,10 @@ function matchesEnd(start: TemplateTagNode, endName: string): boolean {
 }
 
 const BRANCH_PARENTS: Record<string, string[]> = {
-  elif: ['if'],
-  else: ['if', 'for', 'ifchanged', 'ifequal', 'ifnotequal'],
-  empty: ['for'],
-  plural: ['blocktranslate', 'blocktrans'],
+  elif: ["if"],
+  else: ["if", "for", "ifchanged", "ifequal", "ifnotequal", "flag"],
+  empty: ["for"],
+  plural: ["blocktranslate", "blocktrans"],
 };
 
 function hasMatchingBranchParent(token: TagToken, stack: TemplateTagNode[]): boolean {
@@ -414,11 +414,11 @@ function hasMatchingBranchParent(token: TagToken, stack: TemplateTagNode[]): boo
 }
 
 function actsAsEndTag(token: TagToken, stack: TemplateTagNode[]): boolean {
-  return token.role === 'end' || stack.some((entry) => matchesEnd(entry, token.name));
+  return token.role === "end" || stack.some((entry) => matchesEnd(entry, token.name));
 }
 
 function isStandaloneUrlAssignment(tag: TagToken): boolean {
-  return tag.name === 'url' && /\bas\s+\S+$/.test(tag.args);
+  return tag.name === "url" && /\bas\s+\S+$/.test(tag.args);
 }
 
 function shouldInlineStandalone(tag: TagToken): boolean {
@@ -437,21 +437,21 @@ function hasMatchingEnd(tokens: Token[], startIndex: number, startName: string):
   const endNames = new Set(expectedEndNames(startName));
   return tokens
     .slice(startIndex + 1)
-    .some((token) => token.type === 'Tag' && endNames.has(token.name));
+    .some((token) => token.type === "Tag" && endNames.has(token.name));
 }
 
 function followsIgnoredRegionOrHtmlComment(tokens: Token[], index: number): boolean {
   for (let cursor = index - 1; cursor >= 0; cursor -= 1) {
     const token = tokens[cursor];
-    if (token.type === 'Text' && /^\s*$/.test(token.raw)) {
+    if (token.type === "Text" && /^\s*$/.test(token.raw)) {
       continue;
     }
 
-    if (token.type === 'IgnoreBlock') {
+    if (token.type === "IgnoreBlock") {
       return true;
     }
 
-    return token.type === 'Text' && token.raw.startsWith('<!--') && token.raw.endsWith('-->');
+    return token.type === "Text" && token.raw.startsWith("<!--") && token.raw.endsWith("-->");
   }
 
   return false;
@@ -459,37 +459,37 @@ function followsIgnoredRegionOrHtmlComment(tokens: Token[], index: number): bool
 
 function protectedMarkerKindForToken(token: Token, forceBlock = false): ProtectedMarkerKind {
   if (token.inTag && !token.inAttribute) {
-    return 'attr';
+    return "attr";
   }
 
   if (forceBlock) {
-    return 'block';
+    return "block";
   }
 
-  if (token.type === 'Tag' && token.role === 'standalone' && !shouldInlineStandalone(token)) {
-    return 'block';
+  if (token.type === "Tag" && token.role === "standalone" && !shouldInlineStandalone(token)) {
+    return "block";
   }
 
-  if (token.type === 'IgnoreBlock' || token.type === 'RawBlock') {
-    return token.inTag || token.inAttribute ? 'inline' : 'block';
+  if (token.type === "IgnoreBlock" || token.type === "RawBlock") {
+    return token.inTag || token.inAttribute ? "inline" : "block";
   }
 
-  return 'inline';
+  return "inline";
 }
 
-export const parse: Parser<DjangoNode>['parse'] = (text) => {
+export const parse: Parser<DjangoNode>["parse"] = (text) => {
   const tokens = tokenize(text);
   const nodes: Record<string, DjangoNode> = {};
   const root: RootNode = {
-    type: 'root',
-    id: 'root',
+    type: "root",
+    id: "root",
     content: text,
     originalText: text,
     preNewLines: 0,
     index: 0,
     length: text.length,
     nodes,
-    protectedMarkerKind: 'block',
+    protectedMarkerKind: "block",
   };
 
   let nextId = 0;
@@ -513,14 +513,14 @@ export const parse: Parser<DjangoNode>['parse'] = (text) => {
         ? rawPreNewLines - 1
         : rawPreNewLines;
 
-    if (token.type === 'Text') {
+    if (token.type === "Text") {
       continue;
     }
 
-    if (token.type === 'Variable') {
+    if (token.type === "Variable") {
       const id = createId(token);
       const node: ExpressionNode = {
-        type: 'expression',
+        type: "expression",
         id,
         content: token.content,
         originalText: normalizeRaw(token),
@@ -538,10 +538,10 @@ export const parse: Parser<DjangoNode>['parse'] = (text) => {
       continue;
     }
 
-    if (token.type === 'Comment') {
+    if (token.type === "Comment") {
       const id = createId(token);
       const node: CommentNode = {
-        type: 'comment',
+        type: "comment",
         id,
         content: token.content,
         originalText: normalizeRaw(token),
@@ -559,10 +559,10 @@ export const parse: Parser<DjangoNode>['parse'] = (text) => {
       continue;
     }
 
-    if (token.type === 'IgnoreBlock') {
+    if (token.type === "IgnoreBlock") {
       const id = createId(token, !token.inTag && !token.inAttribute);
       const node: IgnoreRegionNode = {
-        type: 'ignore-region',
+        type: "ignore-region",
         id,
         content: token.raw,
         originalText: token.raw,
@@ -580,10 +580,10 @@ export const parse: Parser<DjangoNode>['parse'] = (text) => {
       continue;
     }
 
-    if (token.type === 'RawBlock') {
+    if (token.type === "RawBlock") {
       const id = createId(token, !token.inTag && !token.inAttribute);
       const node: RawBlockNode = {
-        type: 'raw-block',
+        type: "raw-block",
         id,
         content: token.raw,
         originalText: token.raw,
@@ -620,14 +620,14 @@ export const parse: Parser<DjangoNode>['parse'] = (text) => {
       inAttribute: token.inAttribute,
     } as const;
 
-    if (token.role === 'branch') {
+    if (token.role === "branch") {
       if (!hasMatchingBranchParent(token, stack)) {
         throw new Error(
           `No start tag found for template branch tag "${templateTagBase.originalText}".`,
         );
       }
 
-      const node: TemplateTagNode = { type: 'template-tag', ...templateTagBase };
+      const node: TemplateTagNode = { type: "template-tag", ...templateTagBase };
       nodes[node.id] = node;
       root.content = replaceAt(root.content, node.id, currentIndex, token.raw.length);
       delta += node.id.length - token.raw.length;
@@ -635,7 +635,7 @@ export const parse: Parser<DjangoNode>['parse'] = (text) => {
     }
 
     if (actsAsEndTag(token, stack)) {
-      const endNode: TemplateTagNode = { type: 'template-tag', ...templateTagBase };
+      const endNode: TemplateTagNode = { type: "template-tag", ...templateTagBase };
       nodes[endNode.id] = endNode;
 
       let matchIndex = NOT_FOUND;
@@ -664,7 +664,7 @@ export const parse: Parser<DjangoNode>['parse'] = (text) => {
         protectedMarkerKindForToken(token, !startNode.inTag && !startNode.inAttribute),
       );
       const blockNode: TemplateBlockNode = {
-        type: 'template-block',
+        type: "template-block",
         id: blockId,
         content: blockText.slice(startNode.length, blockText.length - token.raw.length),
         originalText: blockText,
@@ -672,7 +672,7 @@ export const parse: Parser<DjangoNode>['parse'] = (text) => {
         index: startNode.index,
         length: blockText.length,
         nodes,
-        protectedMarkerKind: startNode.inTag || startNode.inAttribute ? 'inline' : 'block',
+        protectedMarkerKind: startNode.inTag || startNode.inAttribute ? "inline" : "block",
         start: startNode,
         end: endNode,
         containsNewLines: /\n/.test(blockText),
@@ -685,12 +685,12 @@ export const parse: Parser<DjangoNode>['parse'] = (text) => {
       continue;
     }
 
-    if (token.role === 'end') {
+    if (token.role === "end") {
       throw new Error(`No start tag found for template end tag "${templateTagBase.originalText}".`);
     }
 
-    if (token.role === 'standalone' && !isBranchTag(token.name) && !isEndTag(token.name)) {
-      const node: TemplateTagNode = { type: 'template-tag', ...templateTagBase };
+    if (token.role === "standalone" && !isBranchTag(token.name) && !isEndTag(token.name)) {
+      const node: TemplateTagNode = { type: "template-tag", ...templateTagBase };
       nodes[node.id] = node;
 
       if (!shouldInlineStandalone(token) && hasMatchingEnd(tokens, tokenIndex, token.name)) {
@@ -703,7 +703,7 @@ export const parse: Parser<DjangoNode>['parse'] = (text) => {
       continue;
     }
 
-    const node: TemplateTagNode = { type: 'template-tag', ...templateTagBase };
+    const node: TemplateTagNode = { type: "template-tag", ...templateTagBase };
     nodes[node.id] = node;
     stack.push(node);
   }

@@ -1,16 +1,16 @@
-import type { Parser, Printer, SupportLanguage } from 'prettier';
-import type { DjangoNode } from './ast';
-import { parse } from './parser';
-import { embed, getVisitorKeys, print } from './printer';
+import type { Parser, Printer, SupportLanguage } from "prettier";
+import type { DjangoNode } from "./ast.js";
+import { parse } from "./parser.js";
+import { embed, getVisitorKeys, print } from "./printer.js";
 
-const PLUGIN_KEY = 'django-html';
+const PLUGIN_KEY = "django-html";
 
 const languages: SupportLanguage[] = [
   {
-    name: 'HTML+Django',
+    name: "HTML+Django",
     parsers: [PLUGIN_KEY],
-    extensions: ['.html'],
-    vscodeLanguageIds: ['html'],
+    extensions: [".html"],
+    vscodeLanguageIds: ["html"],
   },
 ];
 

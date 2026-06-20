@@ -1,4 +1,0 @@
-{
-  "_comment": "Test for issue #7235: Static flags imported from another file should be tree-shaken",
-  "config": {}
-}

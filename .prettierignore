@@ -1,9 +1,0 @@
-test/**/*.html
-pnpm-lock.yaml
-repos
-README.md
-plugin.js
-plugin.js.map
-browser.js
-browser.mjs
-.agents/

@@ -1,8 +1,0 @@
-{
-  "config": {
-    "experimental": {
-      "viteMode": true,
-      "resolveNewUrlToAsset": true
-    }
-  }
-}

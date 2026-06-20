@@ -1,6 +1,0 @@
-export const a = 1;
-export default {
-  a,
-  "🫠": "vite",
-  "const": false
-};

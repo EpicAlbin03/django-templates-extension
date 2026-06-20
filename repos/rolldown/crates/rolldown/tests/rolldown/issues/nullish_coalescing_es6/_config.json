@@ -1,8 +1,0 @@
-{
-  "config": {
-    "transform": {
-      "target": "es2015"
-    },
-    "minify": false
-  }
-}

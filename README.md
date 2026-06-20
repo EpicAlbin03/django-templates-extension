@@ -40,15 +40,15 @@ Using ignore regions is the best way to tell Prettier to leave part of a Django 
 
 ```html
 <!-- prettier-ignore-start -->
-  <script>
-    window.someData = {{ data|safe }}
-  </script>
+<script>
+  window.someData = {{ data|safe }}
+</script>
 <!-- prettier-ignore-end -->
 
 <!-- prettier-ignore-start -->
-  <style>
-    :root { --accent-color: {{ theme_accent_color }} }
-  </style>
+<style>
+  :root { --accent-color: {{ theme_accent_color }} }
+</style>
 <!-- prettier-ignore-end -->
 ```
 
@@ -56,15 +56,15 @@ Or using template comments:
 
 ```html
 {# prettier-ignore-start #}
-  <script>
-    window.someData = {{ data|safe }}
-  </script>
+<script>
+  window.someData = {{ data|safe }}
+</script>
 {# prettier-ignore-end #}
 
 {# prettier-ignore-start #}
-  <style>
-    :root { --accent-color: {{ theme_accent_color }} }
-  </style>
+<style>
+  :root { --accent-color: {{ theme_accent_color }} }
+</style>
 {# prettier-ignore-end #}
 ```
 

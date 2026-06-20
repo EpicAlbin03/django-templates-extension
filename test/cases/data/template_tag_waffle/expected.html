@@ -1,0 +1,13 @@
+{% load waffle_tags %}
+{% flag "new_nav" %}
+  <nav>New navigation</nav>
+{% else %}
+  <nav>Old navigation</nav>
+{% endflag %}
+{% switch "beta_checkout" %}
+  <button>Checkout</button>
+{% endswitch %}
+{% sample "hero_test" %}
+  <h1>Variant A</h1>
+{% endsample %}
+<body>{% wafflejs %}</body>

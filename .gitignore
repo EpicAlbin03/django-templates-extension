@@ -1,7 +1,5 @@
 node_modules
-.history
-plugin.js
-plugin.js.map
-browser.js
-browser.mjs
+*.log
+.DS_Store
+dist
 repos

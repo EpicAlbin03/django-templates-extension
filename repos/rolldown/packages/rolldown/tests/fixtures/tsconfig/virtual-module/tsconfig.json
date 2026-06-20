@@ -1,9 +1,0 @@
-{
-  "compilerOptions": {
-    "baseUrl": "./",
-    "paths": {
-      "@/*": ["alias/*"]
-    }
-  },
-  "exclude": ["_config.ts"]
-}

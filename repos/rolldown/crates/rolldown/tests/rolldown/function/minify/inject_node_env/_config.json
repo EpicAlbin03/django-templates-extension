@@ -1,6 +1,0 @@
-{
-  "config": {
-    "minify": true,
-    "external": ["node:assert"]
-  }
-}

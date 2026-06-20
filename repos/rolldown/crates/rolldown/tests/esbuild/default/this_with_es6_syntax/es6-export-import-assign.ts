@@ -1,1 +1,0 @@
-export import x = require('./dummy'); console.log(this)

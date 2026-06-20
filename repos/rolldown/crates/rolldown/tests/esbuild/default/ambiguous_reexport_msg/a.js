@@ -1,1 +1,0 @@
-export let a = 1, x = 2

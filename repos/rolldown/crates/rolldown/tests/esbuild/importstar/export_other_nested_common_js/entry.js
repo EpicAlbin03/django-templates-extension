@@ -1,1 +1,0 @@
-export {y} from './bar'

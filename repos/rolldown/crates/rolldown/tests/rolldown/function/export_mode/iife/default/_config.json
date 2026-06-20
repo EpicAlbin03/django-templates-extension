@@ -1,7 +1,0 @@
-{
-  "config": {
-    "exports": "default",
-    "format": "iife",
-    "name": "module"
-  }
-}

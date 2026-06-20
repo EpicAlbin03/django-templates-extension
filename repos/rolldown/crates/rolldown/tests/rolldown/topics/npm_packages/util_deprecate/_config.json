@@ -1,9 +1,0 @@
-{
-  "config": {
-    "platform": "node",
-    "format": "cjs",
-    "treeshake": {
-      "moduleSideEffects": false
-    }
-  }
-}

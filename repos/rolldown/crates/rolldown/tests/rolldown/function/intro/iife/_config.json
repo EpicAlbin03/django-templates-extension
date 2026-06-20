@@ -1,7 +1,0 @@
-{
-  "config": {
-    "format": "iife",
-    "intro": "// intro",
-    "name": "module"
-  }
-}

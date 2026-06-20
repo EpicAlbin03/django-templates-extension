@@ -1,5 +1,0 @@
-{
-	"imports": {
-		"#pkg3": "./libs/pkg3.js"
-	}
-}

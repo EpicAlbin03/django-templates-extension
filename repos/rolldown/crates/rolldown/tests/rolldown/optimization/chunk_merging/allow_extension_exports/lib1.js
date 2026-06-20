@@ -1,1 +1,0 @@
-export const value1 = 'lib1-value';

@@ -1,6 +1,0 @@
-{
-  "config": {
-    "tsconfig": "./foo.json"
-  },
-  "expectError": true
-}

@@ -1,1 +1,0 @@
-import * as ns from './indirect'; console.log(ns.buton)

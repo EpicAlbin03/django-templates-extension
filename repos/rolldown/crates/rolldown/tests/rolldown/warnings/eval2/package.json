@@ -1,7 +1,0 @@
-{
-  "name": "eval2",
-  "private": true,
-  "devDependencies": {
-    "peggy": "^5.0.3"
-  }
-}

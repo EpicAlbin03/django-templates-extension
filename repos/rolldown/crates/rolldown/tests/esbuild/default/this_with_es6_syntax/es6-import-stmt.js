@@ -1,1 +1,0 @@
-import './dummy'; console.log(this)

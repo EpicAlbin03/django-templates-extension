@@ -1,7 +1,0 @@
-{
-  "config": {
-    "format": "iife",
-    "exports": "none"
-  },
-  "expectError": true
-}

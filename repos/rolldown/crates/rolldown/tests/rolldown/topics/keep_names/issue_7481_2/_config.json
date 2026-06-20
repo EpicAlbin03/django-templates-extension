@@ -1,6 +1,0 @@
-{
-  "config": {
-    "keepNames": true,
-    "tsconfig": "./tsconfig.json"
-  }
-}

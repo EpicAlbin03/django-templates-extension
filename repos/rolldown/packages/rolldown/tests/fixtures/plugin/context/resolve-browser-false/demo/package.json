@@ -1,7 +1,0 @@
-{
-  "name": "demo",
-  "type": "module",
-  "browser": {
-    "buffer": false
-  }
-}

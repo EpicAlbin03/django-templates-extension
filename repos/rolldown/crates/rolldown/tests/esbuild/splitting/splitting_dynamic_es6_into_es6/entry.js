@@ -1,1 +1,0 @@
-import("./foo.js").then(({bar}) => console.log(bar))

@@ -1,2 +1,0 @@
-mod allow_extension_exports;
-mod allow_extension_merge_same_exports;

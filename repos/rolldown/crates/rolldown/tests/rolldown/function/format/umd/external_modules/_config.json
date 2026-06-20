@@ -1,8 +1,0 @@
-{
-  "config": {
-    "format": "umd",
-    "external": ["node:path", "node:fs"],
-    "name": "module"
-  },
-  "expectExecuted": false
-}

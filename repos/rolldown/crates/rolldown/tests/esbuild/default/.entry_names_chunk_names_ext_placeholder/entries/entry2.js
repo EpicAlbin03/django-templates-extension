@@ -1,1 +1,0 @@
-import "../lib/shared.js"; import "./entry2.css"; console.log('entry2')

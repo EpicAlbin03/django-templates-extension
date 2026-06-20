@@ -1,6 +1,0 @@
-{
-  "imports": {
-    "#foo1/*": "./foo1/*",
-    "#foo2/bar": "./foo2/bar"
-  }
-}

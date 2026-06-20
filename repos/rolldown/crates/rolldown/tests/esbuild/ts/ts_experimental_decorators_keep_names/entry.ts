@@ -1,2 +1,0 @@
-@decoratorMustComeAfterName
-export class Foo {}

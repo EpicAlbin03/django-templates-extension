@@ -1,1 +1,0 @@
-export module Foo {} console.log(this)

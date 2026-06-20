@@ -1,1 +1,0 @@
-class Foo { @dec static foo = Foo }

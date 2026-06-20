@@ -1,1 +1,0 @@
-namespace ns { export namespace Foo {} } console.log(this)

@@ -1,7 +1,0 @@
-{
-  "config": {
-    "format": "iife",
-    "outro": "// outro",
-    "name": "module"
-  }
-}

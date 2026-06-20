@@ -1,1 +1,0 @@
-console.log({ a: 1, a: 2 }, <div a2 a2={3}/>)

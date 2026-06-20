@@ -1,7 +1,0 @@
-{
-  "config": {
-    "name": "bundle",
-    "format": "iife",
-    "codeSplitting": true
-  }
-}

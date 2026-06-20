@@ -1,4 +1,21 @@
 {
+  // vite plus
+  "npm.scriptRunner": "vp",
+  "editor.defaultFormatter": "oxc.oxc-vscode",
+  "[javascript]": {
+    "editor.defaultFormatter": "oxc.oxc-vscode"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "oxc.oxc-vscode"
+  },
+  "oxc.fmt.configPath": "./vite.config.ts",
+  "editor.formatOnSave": true,
+  "editor.formatOnSaveMode": "file",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.oxc": "explicit"
+  },
+
+  // vendored repositories
   "typescript.preferences.autoImportFileExcludePatterns": ["repos/**"],
   "javascript.preferences.autoImportFileExcludePatterns": ["repos/**"],
   "files.exclude": {
@@ -9,5 +26,8 @@
   },
   "search.exclude": {
     "repos/**": true
+  },
+  "[yaml]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
   }
 }
