@@ -225,8 +225,17 @@ function dumpTokens(tokens: Token[]): string {
 describe("Django injection TextMate grammar", () => {
   it("scopes {% comment %} blocks as comments instead of highlighting their contents", async () => {
     const tokens = await tokenize("{% comment %}<div>{{ value }}</div>{% endcomment %}");
+    const openingDelimiter = tokenWithText(tokens, "{%");
+    const openingCommentTag = tokenWithText(tokens, "comment");
+    const closingCommentTag = tokenWithText(tokens, "endcomment");
     const commentedValue = tokenContaining(tokens, "value");
 
+    assertHasScope(openingDelimiter, "comment.block.django.multiline");
+    assertNoScopeContaining(openingDelimiter, "punctuation.definition.tag");
+    assertHasScope(openingCommentTag, "comment.block.django.multiline");
+    assertNoScopeContaining(openingCommentTag, "keyword.control.comment.django");
+    assertHasScope(closingCommentTag, "comment.block.django.multiline");
+    assertNoScopeContaining(closingCommentTag, "keyword.control.comment.django");
     assertHasScope(commentedValue, "comment.block.django.multiline");
     assertNoScopeContaining(commentedValue, "meta.tag.template.variable.django");
     assertNoScopeContaining(commentedValue, "variable.other.django");

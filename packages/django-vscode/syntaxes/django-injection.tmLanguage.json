@@ -158,19 +158,19 @@
           "name": "comment.block.django.multiline",
           "begin": "(\\{%)(-)?\\s*(comment)\\b(?:\\s+(?:\"[^\"]*\"|'[^']*'|[^%]*?))?\\s*(-)?(%\\})",
           "beginCaptures": {
-            "1": { "name": "punctuation.definition.tag.begin.django" },
-            "2": { "name": "keyword.operator.whitespace.django" },
-            "3": { "name": "keyword.control.comment.django" },
-            "4": { "name": "keyword.operator.whitespace.django" },
-            "5": { "name": "punctuation.definition.tag.end.django" }
+            "1": { "name": "punctuation.definition.comment.begin.django" },
+            "2": { "name": "comment.block.django" },
+            "3": { "name": "comment.block.django" },
+            "4": { "name": "comment.block.django" },
+            "5": { "name": "punctuation.definition.comment.begin.django" }
           },
           "end": "(\\{%)(-)?\\s*(endcomment)\\b\\s*(-)?(%\\})",
           "endCaptures": {
-            "1": { "name": "punctuation.definition.tag.begin.django" },
-            "2": { "name": "keyword.operator.whitespace.django" },
-            "3": { "name": "keyword.control.comment.django" },
-            "4": { "name": "keyword.operator.whitespace.django" },
-            "5": { "name": "punctuation.definition.tag.end.django" }
+            "1": { "name": "punctuation.definition.comment.end.django" },
+            "2": { "name": "comment.block.django" },
+            "3": { "name": "comment.block.django" },
+            "4": { "name": "comment.block.django" },
+            "5": { "name": "punctuation.definition.comment.end.django" }
           }
         }
       ]
