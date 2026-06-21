@@ -381,6 +381,128 @@ describe("Django injection TextMate grammar", () => {
     assertHasScope(tokenWithText(tokens, "lorem"), "keyword.control.debug.django");
   });
 
+  it("highlights all template tags from the formatter tag list", async () => {
+    const startTags = [
+      "if",
+      "for",
+      "block",
+      "filter",
+      "with",
+      "autoescape",
+      "ifchanged",
+      "spaceless",
+      "blocktranslate",
+      "cache",
+      "localize",
+      "localtime",
+      "timezone",
+      "language",
+      "verbatim",
+      "comment",
+      "partialdef",
+      "ifequal",
+      "ifnotequal",
+      "blocktrans",
+      "thumbnail",
+      "component",
+      "component_block",
+      "fill",
+      "slot",
+      "provide",
+      "compress",
+      "addtoblock",
+      "with_data",
+      "flag",
+      "switch",
+      "sample",
+      "recursetree",
+      "placeholder",
+      "static_placeholder",
+      "render_model_block",
+      "render_model_add_block",
+      "render_plugin_block",
+      "element",
+      "crispy_addon",
+    ];
+    const standaloneTags = [
+      "elif",
+      "else",
+      "empty",
+      "plural",
+      "cycle",
+      "firstof",
+      "get_media_prefix",
+      "get_static_prefix",
+      "lorem",
+      "now",
+      "querystring",
+      "csp_nonce_attr",
+      "static",
+      "templatetag",
+      "translate",
+      "url",
+      "widthratio",
+      "partial",
+      "trans",
+      "html_attrs",
+      "cms_admin_url",
+      "page_attribute",
+      "page_url",
+      "page_id_url",
+      "page_language_url",
+      "render_model",
+      "render_model_icon",
+      "render_model_add",
+      "render_placeholder",
+      "render_uncached_placeholder",
+      "render_plugin",
+      "show_placeholder",
+      "static_alias",
+      "wafflejs",
+      "csrf_token",
+      "debug",
+      "extends",
+      "include",
+      "load",
+      "regroup",
+      "resetcycle",
+      "get_available_languages",
+      "get_current_language",
+      "get_current_language_bidi",
+      "get_current_timezone",
+      "get_language_info",
+      "get_language_info_list",
+      "drilldown_tree_for_node",
+      "full_tree_for_model",
+      "component_css_dependencies",
+      "component_js_dependencies",
+      "cms_toolbar",
+      "render_block",
+      "add_data",
+      "crispy",
+      "crispy_field",
+    ];
+    const supportedTags = new Set([
+      ...startTags,
+      ...standaloneTags,
+      ...startTags.map((tag) => `end${tag}`),
+    ]);
+
+    for (const tag of supportedTags) {
+      const tokens = await tokenize(`{% ${tag} value %}`);
+      const tagToken = tokenWithText(tokens, tag);
+
+      assert.ok(
+        tagToken.scopes.some(
+          (scope) =>
+            scope.startsWith("keyword.control.") || scope.startsWith("comment.block.django"),
+        ),
+        `Expected ${tag} to be highlighted as a supported tag; scopes were ${tagToken.scopes.join(" ")}`,
+      );
+      assertNoScopeContaining(tagToken, "variable.other.django");
+    }
+  });
+
   it("keeps the contributed grammar attached to HTML TextMate scopes", () => {
     const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8"));
     const grammarContribution = packageJson.contributes.grammars.find(

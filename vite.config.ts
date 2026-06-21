@@ -5,7 +5,15 @@ export default defineConfig({
     "*": "vp check --fix",
   },
   fmt: {
-    ignorePatterns: ["dist", "pnpm-lock.yaml", "repos", ".agents", ".changeset", ".vite-hooks"],
+    ignorePatterns: [
+      "dist",
+      "pnpm-lock.yaml",
+      "repos",
+      ".agents",
+      ".changeset",
+      ".vite-hooks",
+      "all-django-template-tags.html",
+    ],
     useTabs: false,
     printWidth: 100,
     semi: true,
@@ -13,7 +21,7 @@ export default defineConfig({
     singleQuote: false,
   },
   lint: {
-    ignorePatterns: ["dist", "pnpm-lock.yaml", "repos", ".agents"],
+    ignorePatterns: ["dist", "pnpm-lock.yaml", "repos", ".agents", "all-django-template-tags.html"],
     jsPlugins: [{ name: "vite-plus", specifier: "vite-plus/oxlint-plugin" }],
     rules: { "vite-plus/prefer-vite-plus-imports": "error" },
     options: { typeAware: true, typeCheck: true },

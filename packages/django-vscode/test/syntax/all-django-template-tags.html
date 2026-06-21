@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Django template tag manual syntax test</title>
+    {% load static i18n cache l10n tz mptt_tags cms_tags allauth crispy_forms_tags waffle_tags sekizai_tags compress components %}
+  </head>
+  <body>
+    <h1>Built-in Django tags</h1>
+
+    {% autoescape on %}
+      <p>{{ unsafe_html }}</p>
+    {% endautoescape %}
+
+    {% block content %}
+      <p>Block content with {{ block.super }}</p>
+    {% endblock content %}
+
+    {% cache 600 sidebar request.user.pk %}
+      <aside>Cached sidebar</aside>
+    {% endcache %}
+
+    {% comment "comment block" %}
+      This is intentionally hidden from Django highlighting: {{ ignored }} {% if ignored %}
+    {% endcomment %}
+
+    {% filter force_escape|lower %}
+      <p>Filtered content</p>
+    {% endfilter %}
+
+    {% firstof user.display_name user.username "Anonymous" as display_name %}
+    <p>{{ display_name }}</p>
+
+    {% for item in items %}
+      <p>{{ forloop.counter }}: {{ item.name }}</p>
+    {% empty %}
+      <p>No items.</p>
+    {% endfor %}
+
+    {% if user.is_staff %}
+      <p>Staff</p>
+    {% elif user.is_authenticated %}
+      <p>Authenticated</p>
+    {% else %}
+      <p>Guest</p>
+    {% endif %}
+
+    {% ifchanged item.category %}
+      <h2>{{ item.category }}</h2>
+    {% endifchanged %}
+
+    {% ifequal user.username "admin" %}
+      <p>Deprecated ifequal</p>
+    {% endifequal %}
+
+    {% ifnotequal user.username "admin" %}
+      <p>Deprecated ifnotequal</p>
+    {% endifnotequal %}
+
+    {% include "partials/card.html" with item=item only %}
+    {% extends "base.html" %}
+    {% csrf_token %}
+    {% cycle "odd" "even" as row_class %}
+    {% debug %}
+    {% get_media_prefix as media_prefix %}
+    {% get_static_prefix as static_prefix %}
+    {% lorem 2 p random %}
+    {% now "Y-m-d H:i" %}
+    {% querystring page=2 sort="name" %}
+    {% regroup people by city as city_list %}
+    {% resetcycle row_class %}
+    {% static "css/site.css" as site_css %}
+    {% templatetag openblock %}
+    {% url "home" as home_url %}
+    {% widthratio current max 100 as percentage %}
+
+    {% spaceless %}
+      <span> No extra whitespace </span>
+    {% endspaceless %}
+
+    {% verbatim js_template %}
+      <script type="text/template">{{ client_side_value }}</script>
+    {% endverbatim js_template %}
+
+    {% with total=items|length %}
+      <p>Total: {{ total }}</p>
+    {% endwith %}
+
+    <h1>Internationalization tags</h1>
+
+    {% trans "Deprecated trans tag" %}
+    {% translate "Modern translate tag" %}
+
+    {% blocktrans count counter=items|length trimmed %}
+      There is {{ counter }} item.
+    {% plural %}
+      There are {{ counter }} items.
+    {% endblocktrans %}
+
+    {% blocktranslate with name=user.get_full_name trimmed %}
+      Hello {{ name }}.
+    {% endblocktranslate %}
+
+    {% localize on %}
+      {{ value }}
+    {% endlocalize %}
+
+    {% localtime on %}
+      {{ created_at }}
+    {% endlocaltime %}
+
+    {% timezone "Europe/Stockholm" %}
+      {{ created_at }}
+    {% endtimezone %}
+
+    {% language "sv" %}
+      {% translate "Hello" %}
+    {% endlanguage %}
+
+    {% get_available_languages as languages %}
+    {% get_current_language as language_code %}
+    {% get_current_language_bidi as language_bidi %}
+    {% get_current_timezone as current_timezone %}
+    {% get_language_info for language_code as language_info %}
+    {% get_language_info_list for languages as language_info_list %}
+
+    <h1>Partial tags</h1>
+
+    {% partialdef card inline %}
+      <article>{{ card.title }}</article>
+    {% endpartialdef %}
+
+    {% partial card %}
+
+    <h1>sorl-thumbnail</h1>
+
+    {% thumbnail product.image "320x240" crop="center" as thumb %}
+      <img src="{{ thumb.url }}" width="{{ thumb.width }}" height="{{ thumb.height }}" alt="" />
+    {% endthumbnail %}
+
+    <h1>django-components</h1>
+
+    {% component "button" variant="primary" %}
+      Click me
+    {% endcomponent %}
+
+    {% component_block "card" title="Title" %}
+      {% fill "header" %}
+        Card header
+      {% endfill %}
+      {% slot "body" default %}
+        Card body
+      {% endslot %}
+      {% provide "context_name" value="provided" %}
+        Provided content
+      {% endprovide %}
+    {% endcomponent_block %}
+
+    <div {% html_attrs class="button" data_action="save" %}>HTML attrs tag</div>
+    {% component_css_dependencies %}
+    {% component_js_dependencies %}
+
+    <h1>django-compressor</h1>
+
+    {% compress css %}
+      <link rel="stylesheet" href="{% static 'css/site.css' %}" />
+    {% endcompress %}
+
+    <h1>django-sekizai</h1>
+
+    {% addtoblock "css" %}
+      <link rel="stylesheet" href="{% static 'css/extra.css' %}" />
+    {% endaddtoblock %}
+
+    {% with_data "page" title="Manual tag test" %}
+      <p>Data block</p>
+    {% endwith_data %}
+
+    {% render_block "css" %}
+    {% add_data "js-data" "analytics-enabled" True %}
+
+    <h1>django-waffle</h1>
+
+    {% flag "new_ui" %}
+      <p>Flag enabled</p>
+    {% endflag %}
+
+    {% switch "billing" %}
+      <p>Switch enabled</p>
+    {% endswitch %}
+
+    {% sample "beta_banner" %}
+      <p>Sample enabled</p>
+    {% endsample %}
+
+    {% wafflejs %}
+
+    <h1>django-mptt</h1>
+
+    {% recursetree nodes %}
+      <li>
+        {{ node.name }}
+        {% if not node.is_leaf_node %}<ul>{{ children }}</ul>{% endif %}
+      </li>
+    {% endrecursetree %}
+
+    {% drilldown_tree_for_node node as drilldown %}
+    {% full_tree_for_model app.Model as full_tree %}
+
+    <h1>django CMS</h1>
+
+    {% placeholder "content" %}
+      <p>CMS placeholder fallback</p>
+    {% endplaceholder %}
+
+    {% static_placeholder "footer" %}
+      <footer>Static placeholder fallback</footer>
+    {% endstatic_placeholder %}
+
+    {% render_model_block object "title" %}
+      <h2>{{ object.title }}</h2>
+    {% endrender_model_block %}
+
+    {% render_model_add_block object %}
+      <span>Add model</span>
+    {% endrender_model_add_block %}
+
+    {% render_plugin_block plugin %}
+      <article>{{ plugin }}</article>
+    {% endrender_plugin_block %}
+
+    {% cms_admin_url object %}
+    {% cms_toolbar %}
+    {% page_attribute "page_title" %}
+    {% page_url page %}
+    {% page_id_url "home" %}
+    {% page_language_url "sv" %}
+    {% render_model object "title" %}
+    {% render_model_icon object %}
+    {% render_model_add object %}
+    {% render_placeholder placeholder %}
+    {% render_uncached_placeholder placeholder %}
+    {% render_plugin plugin %}
+    {% show_placeholder "content" request.current_page %}
+    {% static_alias "site_logo" %}
+
+    <h1>django-allauth</h1>
+
+    {% element "button" type="submit" tags="primary,action" %}
+      Save
+    {% endelement %}
+
+    <h1>django-crispy-forms</h1>
+
+    {% crispy form %}
+    {% crispy_field form.name %}
+    {% crispy_addon form.email append="@example.com" %}
+      {{ form.email }}
+    {% endcrispy_addon %}
+
+    <h1>Miscellaneous inline tag</h1>
+
+    <script {% csp_nonce_attr %}></script>
+
+    <h1>Single-line comment tag</h1>
+
+    {# Single-line Django comment with {{ ignored_variable }} and {% ignored_tag %} #}
+  </body>
+</html>
