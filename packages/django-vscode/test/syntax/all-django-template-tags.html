@@ -265,5 +265,7 @@
     <h1>Single-line comment tag</h1>
 
     {# Single-line Django comment with {{ ignored_variable }} and {% ignored_tag %} #}
+
+    {% nonexistenttag fallback_arg "literal" key=value %}
   </body>
 </html>

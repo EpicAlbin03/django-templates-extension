@@ -381,6 +381,13 @@ describe("Django injection TextMate grammar", () => {
     assertHasScope(tokenWithText(tokens, "lorem"), "keyword.control.debug.django");
   });
 
+  it("highlights unknown custom tag names with a fallback scope", async () => {
+    const tokens = await tokenize("{% nonexistenttag fallback_arg %}");
+
+    assertHasScope(tokenWithText(tokens, "nonexistenttag"), "keyword.control.tag.django");
+    assertHasScope(tokenWithText(tokens, "fallback_arg"), "variable.other.django");
+  });
+
   it("highlights all template tags from the formatter tag list", async () => {
     const startTags = [
       "if",
