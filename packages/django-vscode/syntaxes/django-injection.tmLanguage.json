@@ -54,6 +54,7 @@
             }
           },
           "patterns": [
+            { "include": "#django-for-tag-body" },
             { "include": "#django-tag-keywords" },
             { "include": "#django-filters" },
             { "include": "#django-strings" },
@@ -213,6 +214,29 @@
             }
           },
           "patterns": [{ "include": "text.html.basic" }]
+        }
+      ]
+    },
+    "django-for-tag-body": {
+      "patterns": [
+        {
+          "name": "meta.tag.template.for.django",
+          "begin": "\\G\\b(for)\\b",
+          "beginCaptures": {
+            "1": { "name": "keyword.control.flow.django" }
+          },
+          "end": "(?=\\s*-?%\\})",
+          "patterns": [
+            {
+              "name": "keyword.control.flow.django",
+              "match": "\\bin\\b"
+            },
+            { "include": "#django-filters" },
+            { "include": "#django-strings" },
+            { "include": "#django-numbers" },
+            { "include": "#django-operators" },
+            { "include": "#django-variables-inner" }
+          ]
         }
       ]
     },

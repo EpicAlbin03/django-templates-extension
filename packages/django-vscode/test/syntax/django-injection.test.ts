@@ -359,6 +359,15 @@ describe("Django injection TextMate grammar", () => {
     assertHasScope(tokenWithText(tokens, "}}"), "entity.other.attribute-name.html");
   });
 
+  it("scopes in inside for tags as control flow", async () => {
+    const forTokens = await tokenize("{% for user in users %}{% endfor %}");
+    const ifTokens = await tokenize("{% if user in staff %}{% endif %}");
+
+    assertHasScope(tokenWithText(forTokens, "in"), "keyword.control.flow.django");
+    assertNoScopeContaining(tokenWithText(forTokens, "in"), "keyword.operator.logical.django");
+    assertHasScope(tokenWithText(ifTokens, "in"), "keyword.operator.logical.django");
+  });
+
   it("highlights supported modern Django built-in tags", async () => {
     const tokens = await tokenize(
       '{% translate "Hi" %}{% blocktranslate count counter=list|length %}{{ counter }}{% plural %}{{ counter }}{% endblocktranslate %}{% querystring page=2 %}{% lorem 2 p %}',
