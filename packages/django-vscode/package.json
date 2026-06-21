@@ -9,7 +9,7 @@
     "Programming Languages"
   ],
   "type": "module",
-  "main": "dist/src/extension.js",
+  "main": "dist/extension.cjs",
   "scripts": {
     "build": "vp pack",
     "dev": "vp pack --watch",
