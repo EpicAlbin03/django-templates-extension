@@ -41,13 +41,17 @@
           "name": "meta.embedded.django meta.tag.template.block.django",
           "begin": "(\\{%)(-)?\\s*",
           "beginCaptures": {
-            "1": { "name": "punctuation.definition.tag.begin.django" },
+            "1": {
+              "name": "punctuation.definition.tag.begin.django entity.other.attribute-name.html"
+            },
             "2": { "name": "keyword.operator.whitespace.django" }
           },
           "end": "\\s*(-)?(%\\})",
           "endCaptures": {
             "1": { "name": "keyword.operator.whitespace.django" },
-            "2": { "name": "punctuation.definition.tag.end.django" }
+            "2": {
+              "name": "punctuation.definition.tag.end.django entity.other.attribute-name.html"
+            }
           },
           "patterns": [
             { "include": "#django-tag-keywords" },
@@ -66,13 +70,17 @@
           "name": "meta.embedded.django meta.tag.template.variable.django",
           "begin": "(\\{\\{)(-)?\\s*",
           "beginCaptures": {
-            "1": { "name": "punctuation.definition.variable.begin.django" },
+            "1": {
+              "name": "punctuation.definition.variable.begin.django entity.other.attribute-name.html"
+            },
             "2": { "name": "keyword.operator.whitespace.django" }
           },
           "end": "\\s*(-)?(\\.\\}\\}|\\}\\})",
           "endCaptures": {
             "1": { "name": "keyword.operator.whitespace.django" },
-            "2": { "name": "punctuation.definition.variable.end.django" }
+            "2": {
+              "name": "punctuation.definition.variable.end.django entity.other.attribute-name.html"
+            }
           },
           "patterns": [
             { "include": "#django-filters" },
@@ -182,19 +190,27 @@
           "contentName": "meta.embedded.verbatim.django",
           "begin": "(\\{%)(-)?\\s*(verbatim)\\b(?:\\s+[^%]*?)?\\s*(-)?(%\\})",
           "beginCaptures": {
-            "1": { "name": "punctuation.definition.tag.begin.django" },
+            "1": {
+              "name": "punctuation.definition.tag.begin.django entity.other.attribute-name.html"
+            },
             "2": { "name": "keyword.operator.whitespace.django" },
             "3": { "name": "keyword.control.verbatim.django" },
             "4": { "name": "keyword.operator.whitespace.django" },
-            "5": { "name": "punctuation.definition.tag.end.django" }
+            "5": {
+              "name": "punctuation.definition.tag.end.django entity.other.attribute-name.html"
+            }
           },
           "end": "(\\{%)(-)?\\s*(endverbatim)\\b(?:\\s+[^%]*?)?\\s*(-)?(%\\})",
           "endCaptures": {
-            "1": { "name": "punctuation.definition.tag.begin.django" },
+            "1": {
+              "name": "punctuation.definition.tag.begin.django entity.other.attribute-name.html"
+            },
             "2": { "name": "keyword.operator.whitespace.django" },
             "3": { "name": "keyword.control.verbatim.django" },
             "4": { "name": "keyword.operator.whitespace.django" },
-            "5": { "name": "punctuation.definition.tag.end.django" }
+            "5": {
+              "name": "punctuation.definition.tag.end.django entity.other.attribute-name.html"
+            }
           },
           "patterns": [{ "include": "text.html.basic" }]
         }

@@ -350,6 +350,15 @@ describe("Django injection TextMate grammar", () => {
     assertHasScope(tokenWithText(tokens, "default"), "support.function.filter.django");
   });
 
+  it("colors Django template delimiters like HTML attribute names", async () => {
+    const tokens = await tokenize("{% if user %}{{ user.username }}{% endif %}");
+
+    assertHasScope(tokenWithText(tokens, "{%"), "entity.other.attribute-name.html");
+    assertHasScope(tokenWithText(tokens, "%}"), "entity.other.attribute-name.html");
+    assertHasScope(tokenWithText(tokens, "{{"), "entity.other.attribute-name.html");
+    assertHasScope(tokenWithText(tokens, "}}"), "entity.other.attribute-name.html");
+  });
+
   it("highlights supported modern Django built-in tags", async () => {
     const tokens = await tokenize(
       '{% translate "Hi" %}{% blocktranslate count counter=list|length %}{{ counter }}{% plural %}{{ counter }}{% endblocktranslate %}{% querystring page=2 %}{% lorem 2 p %}',
