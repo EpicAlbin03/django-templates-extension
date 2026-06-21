@@ -17,9 +17,13 @@
     "djangotemplateserver": "bin/server.js"
   },
   "type": "module",
-  "main": "dist/src/index.js",
+  "main": "dist/index.mjs",
+  "types": "dist/index.d.mts",
   "exports": {
-    ".": "./dist/src/index.js",
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    },
     "./bin/server.js": "./bin/server.js",
     "./package.json": "./package.json"
   },
@@ -31,31 +35,18 @@
     "prepublishOnly": "vp run build"
   },
   "dependencies": {
-    "@jridgewell/trace-mapping": "^0.3.25",
-    "@vscode/emmet-helper": "2.8.4",
-    "chokidar": "^4.0.1",
-    "globrex": "^0.1.2",
-    "lodash": "^4.17.21",
     "prettier": "~3.3.3",
     "prettier-plugin-django-templates": "^0.1.2",
-    "vscode-css-languageservice": "~6.3.5",
-    "vscode-html-languageservice": "~5.4.0",
     "vscode-languageserver": "9.0.1",
-    "vscode-languageserver-protocol": "3.17.5",
     "vscode-languageserver-types": "3.17.5",
     "vscode-uri": "~3.1.0"
   },
   "devDependencies": {
-    "@types/globrex": "^0.1.4",
-    "@types/lodash": "^4.14.116",
     "@types/node": "^25.6.2",
     "@types/sinon": "^7.5.2",
     "sinon": "^11.0.0",
     "typescript": "^6.0.3",
     "vite-plus": "catalog:"
-  },
-  "peerDependencies": {
-    "typescript": "^5.9.3 || ^6.0.3"
   },
   "engines": {
     "node": ">= 22.18.0"

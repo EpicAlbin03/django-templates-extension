@@ -18,6 +18,9 @@ export default defineConfig({
     rules: { "vite-plus/prefer-vite-plus-imports": "error" },
     options: { typeAware: true, typeCheck: true },
   },
+  test: {
+    exclude: ["**/node_modules/**", "**/.git/**", "repos/**", "**/dist/**"],
+  },
   run: {
     cache: true,
   },

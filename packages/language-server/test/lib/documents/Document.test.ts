@@ -1,6 +1,6 @@
 import * as assert from "assert";
+import { describe, it } from "vite-plus/test";
 import { Document } from "../../../src/lib/documents/index.js";
-import { Position } from "vscode-languageserver";
 
 describe("Document", () => {
   it("gets the correct text", () => {
@@ -27,40 +27,6 @@ describe("Document", () => {
       },
     ]);
     assert.strictEqual(document.version, 2);
-  });
-
-  it("recalculates the tag infos on edits", () => {
-    const document = new Document("file:///hello.html", "<script>a</script><style>b</style>");
-    assert.deepEqual(document.scriptInfo, {
-      content: "a",
-      attributes: {},
-      start: 8,
-      end: 9,
-      startPos: Position.create(0, 8),
-      endPos: Position.create(0, 9),
-      container: { start: 0, end: 18 },
-    });
-    assert.deepEqual(document.styleInfo, {
-      content: "b",
-      attributes: {},
-      start: 25,
-      end: 26,
-      startPos: Position.create(0, 25),
-      endPos: Position.create(0, 26),
-      container: { start: 18, end: 34 },
-    });
-
-    document.setText("<script>b</script>");
-    assert.deepEqual(document.scriptInfo, {
-      content: "b",
-      attributes: {},
-      start: 8,
-      end: 9,
-      startPos: Position.create(0, 8),
-      endPos: Position.create(0, 9),
-      container: { start: 0, end: 18 },
-    });
-    assert.strictEqual(document.styleInfo, null);
   });
 
   it("returns the correct file path", () => {

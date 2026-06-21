@@ -13,20 +13,20 @@
   "scripts": {
     "build": "vp pack",
     "dev": "vp pack --watch",
-    "test": "vp test",
+    "test": "vp test --passWithNoTests",
     "check": "vp check",
     "vscode:prepublish": "pnpm install && pnpm run build && pnpm prune --production"
   },
   "dependencies": {
     "bumpp": "^11.1.0",
     "django-template-language-server": "workspace:*",
-    "typescript": "^6.0.3",
     "vite-plus": "catalog:",
     "vscode-languageclient": "^10.0.0"
   },
   "devDependencies": {
     "@types/node": "^25.6.2",
-    "@types/vscode": "^1.125.0"
+    "@types/vscode": "^1.125.0",
+    "typescript": "^6.0.3"
   },
   "contributes": {
     "configuration": {
@@ -72,14 +72,7 @@
         "path": "./syntaxes/django-injection.tmLanguage.json",
         "injectTo": [
           "text.html.basic",
-          "text.html.derivative",
-          "source.js",
-          "source.js.jsx",
-          "source.ts",
-          "source.tsx",
-          "source.css",
-          "text.xml",
-          "text.xml.xsl"
+          "text.html.derivative"
         ]
       }
     ],

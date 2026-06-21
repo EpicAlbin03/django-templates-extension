@@ -1,4 +1,6 @@
-import { isAbsolute } from "path";
+import { createRequire } from "node:module";
+import { dirname, isAbsolute } from "path";
+import { fileURLToPath } from "url";
 import type { Plugin } from "prettier";
 import { FormattingOptions, Range, TextEdit } from "vscode-languageserver-types";
 import { importPrettier } from "../../importPackage.js";
@@ -8,6 +10,8 @@ import { LSConfigManager } from "../../ls-config.js";
 import { isNotNullOrUndefined } from "../../utils.js";
 import type { FormattingProvider } from "../interfaces.js";
 
+const require = createRequire(import.meta.url);
+const serverDirectory = dirname(fileURLToPath(import.meta.url));
 const DJANGO_TEMPLATE_TAG_RE = /({%[\s\S]*?%}|{{[\s\S]*?}}|{#[\s\S]*?#})/;
 const DJANGO_HTML_PARSER = "django-html";
 const DJANGO_PRETTIER_PLUGIN = "prettier-plugin-django-templates";
@@ -18,10 +22,6 @@ export class DjangoPlugin implements FormattingProvider {
   constructor(private configManager: LSConfigManager) {}
 
   async formatDocument(document: Document, options: FormattingOptions): Promise<TextEdit[]> {
-    if (!this.featureEnabled()) {
-      return [];
-    }
-
     const text = document.getText();
     if (!DJANGO_TEMPLATE_TAG_RE.test(text)) {
       return [];
@@ -36,9 +36,7 @@ export class DjangoPlugin implements FormattingProvider {
       const importFittingPrettier = async () => {
         const getConfig = async (p: any) => {
           return this.configManager.getMergedPrettierConfig(
-            await p.resolveConfig(filePath, {
-              editorconfig: this.configManager.getPrettierConfigLoadingOptions(),
-            }),
+            await p.resolveConfig(filePath, this.configManager.getPrettierConfigLoadingOptions()),
             options && {
               tabWidth: options.tabSize,
               useTabs: !options.insertSpaces,
@@ -59,7 +57,7 @@ export class DjangoPlugin implements FormattingProvider {
           };
         }
 
-        const prettier2 = importPrettier(__dirname);
+        const prettier2 = importPrettier(serverDirectory);
         const config2 = await getConfig(prettier2);
         const resolvedPlugins2 = resolvePlugins(config2.plugins);
         return {
@@ -146,10 +144,6 @@ export class DjangoPlugin implements FormattingProvider {
         Logger.error(`failed to resolve plugin ${plugin} with error:\n`, error);
       }
     }
-  }
-
-  private featureEnabled() {
-    return this.configManager.enabled("html.enable");
   }
 
   private static isPrettierPluginDjangoTemplates(plugin: string | Plugin): boolean {

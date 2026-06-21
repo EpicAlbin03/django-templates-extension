@@ -1,6 +1,11 @@
+import { createRequire } from "node:module";
 import { dirname, resolve } from "path";
+import { fileURLToPath } from "url";
 import * as prettier from "prettier";
 import { Logger } from "./logger.js";
+
+const require = createRequire(import.meta.url);
+const serverDirectory = dirname(fileURLToPath(import.meta.url));
 
 /**
  * Whether or not the current workspace can be trusted.
@@ -27,7 +32,7 @@ export function getPackageInfo(packageName: string, fromPath: string, useFallbac
     paths.push(fromPath);
   }
   if (useFallback) {
-    paths.push(__dirname);
+    paths.push(serverDirectory);
   }
 
   const packageJSONPath = require.resolve(`${packageName}/package.json`, {

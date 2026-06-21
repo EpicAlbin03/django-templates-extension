@@ -114,31 +114,13 @@ function activateDjangoLanguageServer() {
     revealOutputChannelOn: RevealOutputChannelOn.Never,
     synchronize: {
       // TODO deprecated upstream, rework this when the minimum VS Code version allows it.
-      configurationSection: [
-        "django",
-        "prettier",
-        "emmet",
-        "javascript",
-        "typescript",
-        "css",
-        "less",
-        "scss",
-        "html",
-      ],
+      configurationSection: ["django", "prettier"],
     },
     initializationOptions: {
       configuration: {
         django: workspace.getConfiguration("django"),
         prettier: workspace.getConfiguration("prettier"),
-        emmet: workspace.getConfiguration("emmet"),
-        javascript: workspace.getConfiguration("javascript"),
-        typescript: workspace.getConfiguration("typescript"),
-        css: workspace.getConfiguration("css"),
-        less: workspace.getConfiguration("less"),
-        scss: workspace.getConfiguration("scss"),
-        html: workspace.getConfiguration("html"),
       },
-      dontFilterIncompleteCompletions: true, // VS Code already filters client-side and does a better job here
       isTrusted: workspace.isTrusted,
     },
   };

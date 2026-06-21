@@ -1,6 +1,7 @@
-import ts from "typescript";
 import { createGetCanonicalFileName } from "../../utils.js";
 import type { GetCanonicalFileName } from "../../utils.js";
+
+const defaultUseCaseSensitiveFileNames = process.platform !== "win32";
 
 /**
  * wrapper around Map<string, T> for case insensitive file systems
@@ -9,7 +10,7 @@ export class FileMap<T> implements Iterable<[string, T]> {
   private getCanonicalFileName: GetCanonicalFileName;
   private readonly map = new Map<string, T>();
 
-  constructor(useCaseSensitiveFileNames = ts.sys.useCaseSensitiveFileNames) {
+  constructor(useCaseSensitiveFileNames = defaultUseCaseSensitiveFileNames) {
     this.getCanonicalFileName = createGetCanonicalFileName(useCaseSensitiveFileNames);
   }
 
@@ -76,7 +77,7 @@ export class FileSet implements Iterable<string> {
   private getCanonicalFileName: GetCanonicalFileName;
   private readonly set = new Set<string>();
 
-  constructor(useCaseSensitiveFileNames = ts.sys.useCaseSensitiveFileNames) {
+  constructor(useCaseSensitiveFileNames = defaultUseCaseSensitiveFileNames) {
     this.getCanonicalFileName = createGetCanonicalFileName(useCaseSensitiveFileNames);
   }
 

@@ -1,4 +1,5 @@
 import assert from "assert";
+import { describe, it } from "vite-plus/test";
 import { FileMap, FileSet } from "../../../src/lib/documents/fileCollection.js";
 
 describe("fileCollection", () => {

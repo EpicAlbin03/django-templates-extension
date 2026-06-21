@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
   "name": "Django Template Injection",
   "scopeName": "source.django.injection",
-  "injectionSelector": "L:text.html, L:text.html.basic, L:text.html.derivative, L:source.js, L:source.js.jsx, L:source.ts, L:source.tsx, L:text.xml, L:text.xml.xsl, L:comment.block.js, L:comment.block.ts, L:comment.block",
+  "injectionSelector": "L:text.html, L:text.html.basic, L:text.html.derivative",
   "patterns": [
     { "include": "#wrapped-django-tags" },
     { "include": "#django-template-tags" },
