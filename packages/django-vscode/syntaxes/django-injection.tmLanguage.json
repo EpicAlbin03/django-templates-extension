@@ -2,12 +2,14 @@
   "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
   "name": "Django Template Injection",
   "scopeName": "source.django.injection",
-  "injectionSelector": "L:text.html, L:text.html.basic, L:text.html.derivative",
+  "injectionSelector": "L:text.html -comment -meta.embedded.verbatim.django, L:text.html.basic -comment -meta.embedded.verbatim.django, L:text.html.derivative -comment -meta.embedded.verbatim.django",
   "patterns": [
     { "include": "#wrapped-django-tags" },
+    { "include": "#django-template-attributes" },
+    { "include": "#django-comments" },
+    { "include": "#django-verbatim-blocks" },
     { "include": "#django-template-tags" },
-    { "include": "#django-template-variables" },
-    { "include": "#django-comments" }
+    { "include": "#django-template-variables" }
   ],
   "repository": {
     "wrapped-django-tags": {
@@ -22,9 +24,10 @@
             },
             "2": {
               "patterns": [
+                { "include": "#django-comments" },
+                { "include": "#django-verbatim-blocks" },
                 { "include": "#django-template-tags" },
-                { "include": "#django-template-variables" },
-                { "include": "#django-comments" }
+                { "include": "#django-template-variables" }
               ]
             },
             "3": { "name": "punctuation.definition.comment.end.django-wrapper" }
@@ -35,7 +38,7 @@
     "django-template-tags": {
       "patterns": [
         {
-          "name": "meta.tag.template.block.django",
+          "name": "meta.embedded.django meta.tag.template.block.django",
           "begin": "(\\{%)(-)?\\s*",
           "beginCaptures": {
             "1": { "name": "punctuation.definition.tag.begin.django" },
@@ -60,7 +63,7 @@
     "django-template-variables": {
       "patterns": [
         {
-          "name": "meta.tag.template.variable.django",
+          "name": "meta.embedded.django meta.tag.template.variable.django",
           "begin": "(\\{\\{)(-)?\\s*",
           "beginCaptures": {
             "1": { "name": "punctuation.definition.variable.begin.django" },
@@ -81,33 +84,101 @@
         }
       ]
     },
+    "django-template-attributes": {
+      "patterns": [
+        {
+          "name": "meta.attribute.template.django.html",
+          "begin": "\\b((?i:(?:data-)?(?:href|src|srcset)|xlink:href|action|formaction|poster))\\b\\s*(=)\\s*(\")(?=[^\"]*(?:\\{\\{|\\{%|\\{#))",
+          "beginCaptures": {
+            "1": { "name": "entity.other.attribute-name.html" },
+            "2": { "name": "punctuation.separator.key-value.html" },
+            "3": { "name": "punctuation.definition.string.begin.html" }
+          },
+          "end": "\"",
+          "endCaptures": {
+            "0": { "name": "punctuation.definition.string.end.html" }
+          },
+          "patterns": [
+            { "include": "#django-comments" },
+            { "include": "#django-verbatim-blocks" },
+            { "include": "#django-template-tags" },
+            { "include": "#django-template-variables" }
+          ]
+        },
+        {
+          "name": "meta.attribute.template.django.html",
+          "begin": "\\b((?i:(?:data-)?(?:href|src|srcset)|xlink:href|action|formaction|poster))\\b\\s*(=)\\s*(')(?=[^']*(?:\\{\\{|\\{%|\\{#))",
+          "beginCaptures": {
+            "1": { "name": "entity.other.attribute-name.html" },
+            "2": { "name": "punctuation.separator.key-value.html" },
+            "3": { "name": "punctuation.definition.string.begin.html" }
+          },
+          "end": "'",
+          "endCaptures": {
+            "0": { "name": "punctuation.definition.string.end.html" }
+          },
+          "patterns": [
+            { "include": "#django-comments" },
+            { "include": "#django-verbatim-blocks" },
+            { "include": "#django-template-tags" },
+            { "include": "#django-template-variables" }
+          ]
+        }
+      ]
+    },
     "django-comments": {
       "patterns": [
         {
-          "name": "comment.block.django",
-          "begin": "\\{#",
-          "beginCaptures": {
-            "0": { "name": "punctuation.definition.comment.begin.django" }
-          },
-          "end": "#\\}",
-          "endCaptures": {
-            "0": { "name": "punctuation.definition.comment.end.django" }
+          "name": "comment.line.number-sign.django",
+          "match": "(\\{#).*?(#\\})",
+          "captures": {
+            "1": { "name": "punctuation.definition.comment.begin.django" },
+            "2": { "name": "punctuation.definition.comment.end.django" }
           }
         },
         {
           "name": "comment.block.django.multiline",
-          "begin": "(\\{%)\\s*(comment)\\s*(%\\})",
+          "begin": "(\\{%)(-)?\\s*(comment)\\b(?:\\s+(?:\"[^\"]*\"|'[^']*'|[^%]*?))?\\s*(-)?(%\\})",
           "beginCaptures": {
             "1": { "name": "punctuation.definition.tag.begin.django" },
-            "2": { "name": "keyword.control.comment.django" },
-            "3": { "name": "punctuation.definition.tag.end.django" }
+            "2": { "name": "keyword.operator.whitespace.django" },
+            "3": { "name": "keyword.control.comment.django" },
+            "4": { "name": "keyword.operator.whitespace.django" },
+            "5": { "name": "punctuation.definition.tag.end.django" }
           },
-          "end": "(\\{%)\\s*(endcomment)\\s*(%\\})",
+          "end": "(\\{%)(-)?\\s*(endcomment)\\b\\s*(-)?(%\\})",
           "endCaptures": {
             "1": { "name": "punctuation.definition.tag.begin.django" },
-            "2": { "name": "keyword.control.comment.django" },
-            "3": { "name": "punctuation.definition.tag.end.django" }
+            "2": { "name": "keyword.operator.whitespace.django" },
+            "3": { "name": "keyword.control.comment.django" },
+            "4": { "name": "keyword.operator.whitespace.django" },
+            "5": { "name": "punctuation.definition.tag.end.django" }
           }
+        }
+      ]
+    },
+    "django-verbatim-blocks": {
+      "patterns": [
+        {
+          "name": "meta.tag.template.verbatim.django",
+          "contentName": "meta.embedded.verbatim.django",
+          "begin": "(\\{%)(-)?\\s*(verbatim)\\b(?:\\s+[^%]*?)?\\s*(-)?(%\\})",
+          "beginCaptures": {
+            "1": { "name": "punctuation.definition.tag.begin.django" },
+            "2": { "name": "keyword.operator.whitespace.django" },
+            "3": { "name": "keyword.control.verbatim.django" },
+            "4": { "name": "keyword.operator.whitespace.django" },
+            "5": { "name": "punctuation.definition.tag.end.django" }
+          },
+          "end": "(\\{%)(-)?\\s*(endverbatim)\\b(?:\\s+[^%]*?)?\\s*(-)?(%\\})",
+          "endCaptures": {
+            "1": { "name": "punctuation.definition.tag.begin.django" },
+            "2": { "name": "keyword.operator.whitespace.django" },
+            "3": { "name": "keyword.control.verbatim.django" },
+            "4": { "name": "keyword.operator.whitespace.django" },
+            "5": { "name": "punctuation.definition.tag.end.django" }
+          },
+          "patterns": [{ "include": "text.html.basic" }]
         }
       ]
     },
@@ -115,11 +186,11 @@
       "patterns": [
         {
           "name": "keyword.control.flow.django",
-          "match": "\\b(if|elif|else|endif|for|empty|endfor|while|endwhile)\\b"
+          "match": "\\b(if|elif|else|endif|for|empty|endfor|while|endwhile|ifchanged|endifchanged|ifequal|endifequal|ifnotequal|endifnotequal)\\b"
         },
         {
           "name": "keyword.control.block.django",
-          "match": "\\b(block|endblock|extends|include|load|macro|endmacro|call|endcall|set|endset)\\b"
+          "match": "\\b(block|endblock|extends|include|load|macro|endmacro|call|endcall|set|endset|partial|partialdef|endpartialdef)\\b"
         },
         {
           "name": "keyword.control.import.django",
@@ -146,8 +217,12 @@
           "match": "\\b(verbatim|endverbatim)\\b"
         },
         {
+          "name": "keyword.control.i18n.django",
+          "match": "\\b(trans|translate|blocktrans|endblocktrans|blocktranslate|endblocktranslate|plural|localize|endlocalize|localtime|endlocaltime|timezone|endtimezone|language|endlanguage|get_available_languages|get_current_language|get_current_language_bidi|get_language_info|get_language_info_list|get_current_timezone)\\b"
+        },
+        {
           "name": "keyword.control.url.django",
-          "match": "\\b(url|static|csrf_token|trans|blocktrans|endblocktrans|plural)\\b"
+          "match": "\\b(url|static|querystring|get_static_prefix|get_media_prefix|csrf_token)\\b"
         },
         {
           "name": "keyword.control.cache.django",
@@ -155,11 +230,11 @@
         },
         {
           "name": "keyword.control.cycle.django",
-          "match": "\\b(cycle|firstof|ifchanged|endifchanged|ifequal|endifequal|ifnotequal|endifnotequal)\\b"
+          "match": "\\b(cycle|firstof)\\b"
         },
         {
           "name": "keyword.control.debug.django",
-          "match": "\\b(debug|now|regroup|resetcycle|templatetag|widthratio)\\b"
+          "match": "\\b(debug|now|regroup|resetcycle|templatetag|widthratio|lorem)\\b"
         },
         {
           "name": "keyword.operator.logical.django",
@@ -228,7 +303,7 @@
         },
         {
           "name": "keyword.operator.arithmetic.django",
-          "match": "\\+|-|\\*|/|%|\\*\\*|//"
+          "match": "\\*\\*|//|\\+|-|\\*|/|%"
         },
         {
           "name": "punctuation.separator.django",

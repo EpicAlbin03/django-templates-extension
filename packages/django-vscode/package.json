@@ -26,7 +26,9 @@
   "devDependencies": {
     "@types/node": "^25.6.2",
     "@types/vscode": "^1.125.0",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vscode-oniguruma": "^2.0.1",
+    "vscode-textmate": "^9.2.1"
   },
   "contributes": {
     "configuration": {
@@ -71,6 +73,7 @@
         "scopeName": "source.django.injection",
         "path": "./syntaxes/django-injection.tmLanguage.json",
         "injectTo": [
+          "text.html",
           "text.html.basic",
           "text.html.derivative"
         ]
