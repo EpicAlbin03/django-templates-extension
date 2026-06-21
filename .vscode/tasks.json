@@ -1,18 +1,35 @@
 {
-	"version": "2.0.0",
-	"tasks": [
-		{
-			"type": "npm",
-			"script": "watch",
-			"problemMatcher": "$tsc-watch",
-			"isBackground": true,
-			"presentation": {
-				"reveal": "never"
-			},
-			"group": {
-				"kind": "build",
-				"isDefault": true
-			}
-		}
-	]
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build language server for debug",
+      "type": "shell",
+      "command": "vp",
+      "args": ["pack"],
+      "options": {
+        "cwd": "${workspaceFolder}/packages/language-server"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "build extension for debug",
+      "type": "shell",
+      "command": "vp",
+      "args": ["pack"],
+      "options": {
+        "cwd": "${workspaceFolder}/packages/django-vscode"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "build debug extension",
+      "dependsOn": ["build language server for debug", "build extension for debug"],
+      "dependsOrder": "sequence",
+      "problemMatcher": [],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    }
+  ]
 }

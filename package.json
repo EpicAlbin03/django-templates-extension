@@ -9,7 +9,7 @@
     "ready": "vp check && vp run -r test && vp run -r build",
     "build": "vp run -r build",
     "test": "vp run -r test",
-    "watch": "vp run -r --parallel watch",
+    "watch": "vp run -r --parallel dev",
     "format": "vp check --fix",
     "lint": "vp check",
     "prepare": "vp config"

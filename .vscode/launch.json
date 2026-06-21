@@ -1,28 +1,28 @@
 {
-	"version": "0.2.0",
-	"configurations": [
-		{
-			"name": "Run VS Code Extension",
-			"type": "extensionHost",
-			"request": "launch",
-			"runtimeExecutable": "${execPath}",
-			"args": ["--extensionDevelopmentPath=${workspaceRoot}/packages/django-vscode"],
-			"stopOnEntry": false,
-			"sourceMaps": true,
-			"outFiles": ["${workspaceRoot}/packages/django-vscode/dist/**/*.js"],
-			"preLaunchTask": "npm: watch",
-			"env": {
-				"TSS_DEBUG": "5859",
-				"TSS_REMOTE_DEBUG": "5859"
-			}
-		},
-		{
-			"type": "node",
-			"request": "attach",
-			"name": "Attach debugger to language server",
-			"port": 6009,
-			"outFiles": ["${workspaceRoot}/packages/language-server/dist/**/*.js"],
-			"skipFiles": ["<node_internals>/**"]
-		}
-	]
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run VS Code Extension",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": ["--extensionDevelopmentPath=${workspaceFolder}/packages/django-vscode"],
+      "stopOnEntry": false,
+      "sourceMaps": true,
+      "outFiles": ["${workspaceFolder}/packages/django-vscode/dist/**/*.js"],
+      "preLaunchTask": "build debug extension",
+      "env": {
+        "TSS_DEBUG": "5859",
+        "TSS_REMOTE_DEBUG": "5859"
+      }
+    },
+    {
+      "type": "node",
+      "request": "attach",
+      "name": "Attach debugger to language server",
+      "port": 6009,
+      "outFiles": ["${workspaceFolder}/packages/language-server/dist/**/*.js"],
+      "skipFiles": ["<node_internals>/**"]
+    }
+  ]
 }

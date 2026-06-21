@@ -60,6 +60,8 @@ export function startServer(options?: LSOptions) {
     Logger.log("Initialize language server at ", workspaceUris.join(", "));
 
     const isTrusted: boolean = evt.initializationOptions?.isTrusted ?? true;
+    const formattingProviderHandledByClient =
+      evt.initializationOptions?.handledCapabilities?.documentFormattingProvider === true;
     setIsTrusted(isTrusted);
 
     Logger.setDebug(evt.initializationOptions?.configuration?.django?.["language-server"]?.debug);
@@ -76,7 +78,7 @@ export function startServer(options?: LSOptions) {
           change: TextDocumentSyncKind.Incremental,
           save: { includeText: false },
         },
-        documentFormattingProvider: true,
+        documentFormattingProvider: !formattingProviderHandledByClient,
       },
     };
   });

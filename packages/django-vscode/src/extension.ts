@@ -1,5 +1,5 @@
 import * as path from "path";
-import { commands, window, workspace } from "vscode";
+import { commands, languages, Range, TextEdit, window, workspace } from "vscode";
 import type { ExtensionContext } from "vscode";
 import { RevealOutputChannelOn } from "vscode-languageclient";
 import type { LanguageClientOptions } from "vscode-languageclient";
@@ -13,6 +13,16 @@ const addExperimentalStripTypesFlag =
   (nodeMajor === 22 && nodeMinor > 5 && nodeMinor < 18) || // flag added in 22.6.0, removed in 22.18.0
   (nodeMajor === 23 && nodeMinor < 6); // flag removed in 23.6.0
 
+const djangoDocumentSelector = [{ language: "html" }];
+
+type ProtocolTextEdit = {
+  range: {
+    start: { line: number; character: number };
+    end: { line: number; character: number };
+  };
+  newText: string;
+};
+
 let lsApi:
   | {
       getLS(): LanguageClient;
@@ -25,6 +35,36 @@ export function activate(context: ExtensionContext) {
   lsApi = activateDjangoLanguageServer();
 
   context.subscriptions.push(
+    languages.registerDocumentFormattingEditProvider(djangoDocumentSelector, {
+      async provideDocumentFormattingEdits(document, options, token) {
+        const client = lsApi?.getLS();
+        if (!client) {
+          return [];
+        }
+
+        try {
+          await client.start();
+          const edits = await client.sendRequest<ProtocolTextEdit[] | null>(
+            "textDocument/formatting",
+            {
+              textDocument: { uri: document.uri.toString() },
+              options: {
+                tabSize: options.tabSize,
+                insertSpaces: options.insertSpaces,
+              },
+            },
+            token,
+          );
+          return edits?.map(protocolTextEditToVsCodeTextEdit) ?? [];
+        } catch (error) {
+          void window.showErrorMessage(
+            `Django Templates formatter failed. See the Django Templates output for details.`,
+          );
+          client.error("Django Templates formatter failed", error, false);
+          return [];
+        }
+      },
+    }),
     commands.registerCommand("django.restartLanguageServer", async () => {
       await lsApi?.restartLS(true);
     }),
@@ -50,6 +90,18 @@ export function deactivate() {
   const stop = lsApi?.getLS().stop();
   lsApi = undefined;
   return stop;
+}
+
+function protocolTextEditToVsCodeTextEdit(edit: ProtocolTextEdit): TextEdit {
+  return TextEdit.replace(
+    new Range(
+      edit.range.start.line,
+      edit.range.start.character,
+      edit.range.end.line,
+      edit.range.end.character,
+    ),
+    edit.newText,
+  );
 }
 
 function activateDjangoLanguageServer() {
@@ -110,7 +162,7 @@ function activateDjangoLanguageServer() {
   const outputChannel = window.createOutputChannel("Django Templates", { log: true });
   const clientOptions: LanguageClientOptions = {
     outputChannel,
-    documentSelector: [{ scheme: "file", language: "html" }],
+    documentSelector: djangoDocumentSelector,
     revealOutputChannelOn: RevealOutputChannelOn.Never,
     synchronize: {
       // TODO deprecated upstream, rework this when the minimum VS Code version allows it.
@@ -122,11 +174,22 @@ function activateDjangoLanguageServer() {
         prettier: workspace.getConfiguration("prettier"),
       },
       isTrusted: workspace.isTrusted,
+      handledCapabilities: {
+        documentFormattingProvider: true,
+      },
     },
   };
 
   const ls = new LanguageClient("django", "Django Templates", serverOptions, clientOptions);
-  void ls.start();
+  outputChannel.appendLine(`Starting Django Templates language server from ${serverModule}`);
+  void ls.start().then(
+    () => outputChannel.appendLine("Django Templates language server started."),
+    (error) => {
+      outputChannel.appendLine(
+        `Failed to start Django Templates language server: ${String(error)}`,
+      );
+    },
+  );
 
   let restartingLs = false;
   async function restartLS(showNotification: boolean) {

@@ -1,6 +1,6 @@
 import { createRequire } from "node:module";
 import { dirname, isAbsolute } from "path";
-import { fileURLToPath } from "url";
+import { fileURLToPath, pathToFileURL } from "url";
 import type { Plugin } from "prettier";
 import { FormattingOptions, Range, TextEdit } from "vscode-languageserver-types";
 import { importPrettier } from "../../importPackage.js";
@@ -78,14 +78,14 @@ export class DjangoPlugin implements FormattingProvider {
         return [];
       }
 
+      const plugins = resolvedPlugins.filter(
+        (plugin) => !DjangoPlugin.isPrettierPluginDjangoTemplatesPath(plugin),
+      );
       const formattedCode = await prettier.format(text, {
         ...config,
         filepath: filePath,
         plugins: Array.from(
-          new Set([
-            ...resolvedPlugins,
-            ...(await getDjangoTemplatePlugin(prettier, resolvedPlugins, isFallback)),
-          ]),
+          new Set([...plugins, ...(await getDjangoTemplatePlugin(prettier, plugins, isFallback))]),
         ),
         parser: DJANGO_HTML_PARSER as any,
       });
@@ -110,14 +110,20 @@ export class DjangoPlugin implements FormattingProvider {
     ) {
       return !useFallback && (await hasDjangoTemplatePluginLoaded(p, plugins))
         ? []
-        : [require.resolve(DJANGO_PRETTIER_PLUGIN)];
+        : [await importDjangoTemplatePlugin()];
+    }
+
+    async function importDjangoTemplatePlugin(): Promise<Plugin> {
+      const pluginPath = require.resolve(`${DJANGO_PRETTIER_PLUGIN}/browser`);
+      const plugin = await import(pathToFileURL(pluginPath).href);
+      return (plugin.default ?? plugin) as Plugin;
     }
 
     async function hasDjangoTemplatePluginLoaded(
       p: typeof import("prettier"),
       plugins: Array<Plugin | string> = [],
     ) {
-      if (plugins.some((plugin) => DjangoPlugin.isPrettierPluginDjangoTemplates(plugin))) {
+      if (plugins.some((plugin) => DjangoPlugin.isPrettierPluginDjangoTemplatesObject(plugin))) {
         return true;
       }
       const info = await p.getSupportInfo();
@@ -146,14 +152,17 @@ export class DjangoPlugin implements FormattingProvider {
     }
   }
 
-  private static isPrettierPluginDjangoTemplates(plugin: string | Plugin): boolean {
-    if (typeof plugin === "string") {
-      return plugin.includes(DJANGO_PRETTIER_PLUGIN);
-    }
+  private static isPrettierPluginDjangoTemplatesPath(plugin: string | Plugin): boolean {
+    return typeof plugin === "string" && plugin.includes(DJANGO_PRETTIER_PLUGIN);
+  }
 
-    return !!plugin?.languages?.find(
-      (language) =>
-        (language.parsers as string[] | undefined)?.includes(DJANGO_HTML_PARSER) ?? false,
+  private static isPrettierPluginDjangoTemplatesObject(plugin: string | Plugin): boolean {
+    return (
+      typeof plugin !== "string" &&
+      !!plugin?.languages?.find(
+        (language) =>
+          (language.parsers as string[] | undefined)?.includes(DJANGO_HTML_PARSER) ?? false,
+      )
     );
   }
 }
