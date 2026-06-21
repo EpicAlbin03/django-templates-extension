@@ -12,7 +12,7 @@ export default defineConfig({
       ".agents",
       ".changeset",
       ".vite-hooks",
-      "all-django-template-tags.html",
+      "**/test/syntax/manual/**",
     ],
     useTabs: false,
     printWidth: 100,
@@ -21,7 +21,7 @@ export default defineConfig({
     singleQuote: false,
   },
   lint: {
-    ignorePatterns: ["dist", "pnpm-lock.yaml", "repos", ".agents", "all-django-template-tags.html"],
+    ignorePatterns: ["dist", "pnpm-lock.yaml", "repos", ".agents", "**/test/syntax/manual/**"],
     jsPlugins: [{ name: "vite-plus", specifier: "vite-plus/oxlint-plugin" }],
     rules: { "vite-plus/prefer-vite-plus-imports": "error" },
     options: { typeAware: true, typeCheck: true },
