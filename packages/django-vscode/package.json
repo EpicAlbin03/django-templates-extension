@@ -68,6 +68,11 @@
         }
       }
     },
+    "configurationDefaults": {
+      "[html]": {
+        "editor.links": false
+      }
+    },
     "grammars": [
       {
         "scopeName": "source.django.injection",

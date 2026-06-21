@@ -306,6 +306,19 @@ describe("Django injection TextMate grammar", () => {
     assertHasScope(staticTag, "meta.tag.template.block.django");
   });
 
+  it("does not scope plain HTML link attribute values as underlined links", async () => {
+    const tokens = await tokenizeHtml(
+      '<a href="/tasks/">Tasks</a><img src="/static/img/logo.svg" alt="" />',
+    );
+    const hrefValue = tokenWithText(tokens, "/tasks/");
+    const srcValue = tokenWithText(tokens, "/static/img/logo.svg");
+
+    assertNoScopeContaining(hrefValue, "markup.underline.link");
+    assertHasScope(hrefValue, "string.quoted.double.html");
+    assertNoScopeContaining(srcValue, "markup.underline.link");
+    assertHasScope(srcValue, "string.quoted.double.html");
+  });
+
   it("does not highlight Django syntax inside verbatim blocks", async () => {
     const tokens = await tokenize(
       "{% verbatim js_template %}<script>{{ not_django }}</script>{% endverbatim js_template %}",
@@ -353,5 +366,14 @@ describe("Django injection TextMate grammar", () => {
       "text.html.basic",
       "text.html.derivative",
     ]);
+  });
+
+  it("disables editor document-link underlines for HTML templates", () => {
+    const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8"));
+
+    assert.strictEqual(
+      packageJson.contributes.configurationDefaults["[html]"]["editor.links"],
+      false,
+    );
   });
 });

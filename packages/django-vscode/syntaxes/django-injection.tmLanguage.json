@@ -88,15 +88,16 @@
       "patterns": [
         {
           "name": "meta.attribute.template.django.html",
-          "begin": "\\b((?i:(?:data-)?(?:href|src|srcset)|xlink:href|action|formaction|poster))\\b\\s*(=)\\s*(\")(?=[^\"]*(?:\\{\\{|\\{%|\\{#))",
+          "begin": "(?<![\\w:-])((?i:(?:data-)?(?:href|src|srcset)|xlink:href|action|formaction|poster))(?![\\w:-])\\s*(=)\\s*(\")",
           "beginCaptures": {
             "1": { "name": "entity.other.attribute-name.html" },
             "2": { "name": "punctuation.separator.key-value.html" },
-            "3": { "name": "punctuation.definition.string.begin.html" }
+            "3": { "name": "string.quoted.double.html punctuation.definition.string.begin.html" }
           },
+          "contentName": "string.quoted.double.html",
           "end": "\"",
           "endCaptures": {
-            "0": { "name": "punctuation.definition.string.end.html" }
+            "0": { "name": "string.quoted.double.html punctuation.definition.string.end.html" }
           },
           "patterns": [
             { "include": "#django-comments" },
@@ -107,16 +108,33 @@
         },
         {
           "name": "meta.attribute.template.django.html",
-          "begin": "\\b((?i:(?:data-)?(?:href|src|srcset)|xlink:href|action|formaction|poster))\\b\\s*(=)\\s*(')(?=[^']*(?:\\{\\{|\\{%|\\{#))",
+          "begin": "(?<![\\w:-])((?i:(?:data-)?(?:href|src|srcset)|xlink:href|action|formaction|poster))(?![\\w:-])\\s*(=)\\s*(')",
           "beginCaptures": {
             "1": { "name": "entity.other.attribute-name.html" },
             "2": { "name": "punctuation.separator.key-value.html" },
-            "3": { "name": "punctuation.definition.string.begin.html" }
+            "3": { "name": "string.quoted.single.html punctuation.definition.string.begin.html" }
           },
+          "contentName": "string.quoted.single.html",
           "end": "'",
           "endCaptures": {
-            "0": { "name": "punctuation.definition.string.end.html" }
+            "0": { "name": "string.quoted.single.html punctuation.definition.string.end.html" }
           },
+          "patterns": [
+            { "include": "#django-comments" },
+            { "include": "#django-verbatim-blocks" },
+            { "include": "#django-template-tags" },
+            { "include": "#django-template-variables" }
+          ]
+        },
+        {
+          "name": "meta.attribute.template.django.html",
+          "begin": "(?<![\\w:-])((?i:(?:data-)?(?:href|src|srcset)|xlink:href|action|formaction|poster))(?![\\w:-])\\s*(=)\\s*(?=[^\\s\"'=<>`/]|/(?!>))",
+          "beginCaptures": {
+            "1": { "name": "entity.other.attribute-name.html" },
+            "2": { "name": "punctuation.separator.key-value.html" }
+          },
+          "contentName": "string.unquoted.html",
+          "end": "(?=\\s|>)",
           "patterns": [
             { "include": "#django-comments" },
             { "include": "#django-verbatim-blocks" },
