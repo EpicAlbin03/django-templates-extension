@@ -7,6 +7,7 @@ import {
 import { Document } from "./Document.js";
 import { normalizeUri } from "../../utils.js";
 import { FileMap, FileSet } from "./fileCollection.js";
+import { isUseCaseSensitiveFileNames } from "./isFileSystemCaseSensitive.js";
 
 export type DocumentEvent = "documentOpen" | "documentChange" | "documentClose";
 
@@ -22,7 +23,7 @@ export class DocumentManager {
   constructor(
     private createDocument: (textDocument: Pick<TextDocumentItem, "text" | "uri">) => Document,
     options: { useCaseSensitiveFileNames: boolean } = {
-      useCaseSensitiveFileNames: process.platform !== "win32",
+      useCaseSensitiveFileNames: isUseCaseSensitiveFileNames,
     },
   ) {
     this.documents = new FileMap(options.useCaseSensitiveFileNames);
