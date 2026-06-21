@@ -1,10 +1,10 @@
-import { TextDocumentSyncKind } from "vscode-languageserver";
-import type { Connection } from "vscode-languageserver";
 import {
   IPCMessageReader,
   IPCMessageWriter,
+  TextDocumentSyncKind,
   createConnection,
-} from "vscode-languageserver/node.js";
+  type Connection,
+} from "vscode-languageserver/node";
 import { Document, DocumentManager } from "./lib/documents/index.js";
 import { Logger } from "./logger.js";
 import { LSConfigManager } from "./ls-config.js";
@@ -24,23 +24,24 @@ export interface LSOptions {
   logErrorsOnly?: boolean;
 }
 
+function createServerConnection(): Connection {
+  if (process.argv.includes("--stdio")) {
+    console.log = (...args: any[]) => {
+      console.warn(...args);
+    };
+    return createConnection(process.stdin, process.stdout);
+  }
+
+  return createConnection(new IPCMessageReader(process), new IPCMessageWriter(process));
+}
+
 /**
  * Starts the language server.
  *
  * @param options Options to customize behavior
  */
 export function startServer(options?: LSOptions) {
-  let connection = options?.connection;
-  if (!connection) {
-    if (process.argv.includes("--stdio")) {
-      console.log = (...args: any[]) => {
-        console.warn(...args);
-      };
-      connection = createConnection(process.stdin, process.stdout);
-    } else {
-      connection = createConnection(new IPCMessageReader(process), new IPCMessageWriter(process));
-    }
-  }
+  const connection = options?.connection ?? createServerConnection();
 
   if (options?.logErrorsOnly !== undefined) {
     Logger.setLogErrorsOnly(options.logErrorsOnly);
