@@ -246,7 +246,7 @@ function printTemplateTag(node: TemplateTagNode): Doc {
     const standaloneNeedsSpacing =
       node.role === "standalone" &&
       (node.protectedMarkerKind !== "block" || !block || !hasHtmlMarkup(block.content));
-    if (standaloneNeedsSpacing || (node.role === "end" && block && !/^\s*$/.test(block.content))) {
+    if (standaloneNeedsSpacing) {
       return builders.group([builders.trim, builders.hardline, templateTag]);
     }
   }
