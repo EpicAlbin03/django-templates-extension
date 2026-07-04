@@ -22,4 +22,4 @@ peerDependencyRules:
     vite: "*"
     vitest: "*"
 minimumReleaseAgeExclude:
-  - prettier-plugin-django-templates@0.1.2
+  - prettier-plugin-django-templates@0.1.3
