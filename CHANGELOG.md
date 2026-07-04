@@ -1,5 +1,11 @@
 # prettier-plugin-django-templates changelog
 
+## 0.1.3
+
+### Patch Changes
+
+- [#11](https://github.com/EpicAlbin03/prettier-plugin-django-templates/pull/11) [`3e65c10`](https://github.com/EpicAlbin03/prettier-plugin-django-templates/commit/3e65c1096e927dfeca96c43d56af39554aee20cc) Thanks [@EpicAlbin03](https://github.com/EpicAlbin03)! - fix: remove blank lines before end tags
+
 ## 0.1.2
 
 ### Patch Changes
