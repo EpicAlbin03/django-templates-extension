@@ -1,0 +1,7 @@
+{% for contact in contacts %}
+  {% include "partials/contact-row.html" %}
+{% endfor %}
+
+{% if form.name.errors %}
+  <div class="form-text text-danger">{{ form.name.errors }}</div>
+{% endif %}
