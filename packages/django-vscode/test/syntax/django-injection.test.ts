@@ -127,6 +127,19 @@ async function loadHtmlGrammar(): Promise<IGrammar> {
                           "1": { name: "punctuation.definition.string.end.html" },
                         },
                       },
+                      {
+                        begin: '\\b([A-Za-z_:][A-Za-z0-9_:.-]*)\\s*(=)\\s*(")',
+                        end: '(")',
+                        name: "meta.attribute.html string.quoted.double.html",
+                        beginCaptures: {
+                          "1": { name: "entity.other.attribute-name.html" },
+                          "2": { name: "punctuation.separator.key-value.html" },
+                          "3": { name: "punctuation.definition.string.begin.html" },
+                        },
+                        endCaptures: {
+                          "1": { name: "punctuation.definition.string.end.html" },
+                        },
+                      },
                       { begin: '"', end: '"', name: "string.quoted.double.html" },
                       { match: "\\s+", name: "meta.tag.html" },
                       { match: "[^\\s>]+", name: "meta.tag.html" },
@@ -339,6 +352,28 @@ describe("Django injection TextMate grammar", () => {
     assertNoScopeContaining(verbatimValue, "variable.other.django");
   });
 
+  it("scopes dotted variable chains like TypeScript object/property access", async () => {
+    const tokens = await tokenize("{% if form.email.errors %}");
+
+    assertHasScope(tokenWithText(tokens, "form"), "variable.other.object.django");
+    assertHasScope(tokenWithText(tokens, "email"), "variable.other.object.property.django");
+    assertHasScope(tokenWithText(tokens, "errors"), "variable.other.property.django");
+    assertHasScope(tokenWithText(tokens, "."), "punctuation.accessor.django");
+  });
+
+  it("keeps dotted variable chain scopes when injected into HTML strings", async () => {
+    const tokens = await tokenizeHtml(
+      '<div class="{% if form.email.errors %}invalid{% endif %}"></div>',
+    );
+
+    assertHasScope(tokenWithText(tokens, "form"), "variable.other.object.django");
+    assertHasScope(tokenWithText(tokens, "email"), "variable.other.object.property.django");
+    assertHasScope(tokenWithText(tokens, "errors"), "variable.other.property.django");
+    assertNoScopeContaining(tokenWithText(tokens, "form"), "entity.other.attribute-name.html");
+    assertNoScopeContaining(tokenWithText(tokens, "email"), "entity.other.attribute-name.html");
+    assertNoScopeContaining(tokenWithText(tokens, "errors"), "entity.other.attribute-name.html");
+  });
+
   it("continues to highlight ordinary tags, variables, filters, and operators", async () => {
     const tokens = await tokenize(
       "{% if user and user.is_staff %}{{ user.username|default:'anon' }}{% endif %}",
@@ -346,7 +381,8 @@ describe("Django injection TextMate grammar", () => {
 
     assertHasScope(tokenWithText(tokens, "if"), "keyword.control.flow.django");
     assertHasScope(tokenWithText(tokens, "and"), "keyword.operator.logical.django");
-    assertHasScope(tokenWithText(tokens, "username"), "variable.other.django");
+    assertHasScope(tokenWithText(tokens, "is_staff"), "variable.other.property.django");
+    assertHasScope(tokenWithText(tokens, "username"), "variable.other.property.django");
     assertHasScope(tokenWithText(tokens, "default"), "support.function.filter.django");
   });
 

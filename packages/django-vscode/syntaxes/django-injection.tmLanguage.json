@@ -382,6 +382,33 @@
     "django-variables-inner": {
       "patterns": [
         {
+          "comment": "Dotted variable chains use TypeScript-like object/property scopes for theme compatibility.",
+          "name": "meta.variable.dotted.django",
+          "begin": "(?<![a-zA-Z0-9_.])([a-zA-Z_][a-zA-Z0-9_]*)(?=\\.[a-zA-Z_])",
+          "beginCaptures": {
+            "1": { "name": "variable.other.object.django" }
+          },
+          "end": "(?!\\.[a-zA-Z_])",
+          "patterns": [
+            {
+              "comment": "Middle segments in a dotted variable chain, like `email` in `form.email.errors`.",
+              "match": "(\\.)([a-zA-Z_][a-zA-Z0-9_]*)(?=\\.[a-zA-Z_])",
+              "captures": {
+                "1": { "name": "punctuation.accessor.django" },
+                "2": { "name": "variable.other.object.property.django" }
+              }
+            },
+            {
+              "comment": "Final segments in a dotted variable chain, like `errors` in `form.email.errors`.",
+              "match": "(\\.)([a-zA-Z_][a-zA-Z0-9_]*)(?!\\.[a-zA-Z_])",
+              "captures": {
+                "1": { "name": "punctuation.accessor.django" },
+                "2": { "name": "variable.other.property.django" }
+              }
+            }
+          ]
+        },
+        {
           "name": "variable.other.django",
           "match": "[a-zA-Z_][a-zA-Z0-9_]*"
         },
