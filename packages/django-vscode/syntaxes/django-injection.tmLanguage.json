@@ -244,11 +244,11 @@
       "patterns": [
         {
           "name": "keyword.control.flow.django",
-          "match": "\\b(if|elif|else|endif|for|empty|endfor|while|endwhile|ifchanged|endifchanged|ifequal|endifequal|ifnotequal|endifnotequal)\\b"
+          "match": "\\G\\b(if|elif|else|endif|for|empty|endfor|while|endwhile|ifchanged|endifchanged|ifequal|endifequal|ifnotequal|endifnotequal)\\b"
         },
         {
           "name": "keyword.control.block.django",
-          "match": "\\b(block|endblock|extends|include|load|macro|endmacro|call|endcall|set|endset|partial|partialdef|endpartialdef)\\b"
+          "match": "\\G\\b(block|endblock|extends|include|load|macro|endmacro|call|endcall|set|endset|partial|partialdef|endpartialdef)\\b"
         },
         {
           "name": "keyword.control.import.django",
@@ -256,48 +256,48 @@
         },
         {
           "name": "keyword.control.filter.django",
-          "match": "\\b(filter|endfilter)\\b"
+          "match": "\\G\\b(filter|endfilter)\\b"
         },
         {
           "name": "keyword.control.with.django",
-          "match": "\\b(with|endwith)\\b"
+          "match": "\\G\\b(with|endwith)\\b"
         },
         {
           "name": "keyword.control.autoescape.django",
-          "match": "\\b(autoescape|endautoescape)\\b"
+          "match": "\\G\\b(autoescape|endautoescape)\\b"
         },
         {
           "name": "keyword.control.spaceless.django",
-          "match": "\\b(spaceless|endspaceless)\\b"
+          "match": "\\G\\b(spaceless|endspaceless)\\b"
         },
         {
           "name": "keyword.control.verbatim.django",
-          "match": "\\b(verbatim|endverbatim)\\b"
+          "match": "\\G\\b(verbatim|endverbatim)\\b"
         },
         {
           "name": "keyword.control.i18n.django",
-          "match": "\\b(trans|translate|blocktrans|endblocktrans|blocktranslate|endblocktranslate|plural|localize|endlocalize|localtime|endlocaltime|timezone|endtimezone|language|endlanguage|get_available_languages|get_current_language|get_current_language_bidi|get_language_info|get_language_info_list|get_current_timezone)\\b"
+          "match": "\\G\\b(trans|translate|blocktrans|endblocktrans|blocktranslate|endblocktranslate|plural|localize|endlocalize|localtime|endlocaltime|timezone|endtimezone|language|endlanguage|get_available_languages|get_current_language|get_current_language_bidi|get_language_info|get_language_info_list|get_current_timezone)\\b"
         },
         {
           "name": "keyword.control.url.django",
-          "match": "\\b(url|static|querystring|get_static_prefix|get_media_prefix|csrf_token)\\b"
+          "match": "\\G\\b(url|static|querystring|get_static_prefix|get_media_prefix|csrf_token)\\b"
         },
         {
           "name": "keyword.control.cache.django",
-          "match": "\\b(cache|endcache)\\b"
+          "match": "\\G\\b(cache|endcache)\\b"
         },
         {
           "name": "keyword.control.cycle.django",
-          "match": "\\b(cycle|firstof)\\b"
+          "match": "\\G\\b(cycle|firstof)\\b"
         },
         {
           "name": "keyword.control.debug.django",
-          "match": "\\b(debug|now|regroup|resetcycle|templatetag|widthratio|lorem)\\b"
+          "match": "\\G\\b(debug|now|regroup|resetcycle|templatetag|widthratio|lorem)\\b"
         },
         {
           "comment": "Additional formatter-supported tags from prettier-plugin-django-templates",
           "name": "keyword.control.tag.django",
-          "match": "\\b(thumbnail|endthumbnail|component|endcomponent|component_block|endcomponent_block|fill|endfill|slot|endslot|provide|endprovide|html_attrs|component_css_dependencies|component_js_dependencies|compress|endcompress|addtoblock|endaddtoblock|with_data|endwith_data|render_block|add_data|flag|endflag|switch|endswitch|sample|endsample|wafflejs|recursetree|endrecursetree|drilldown_tree_for_node|full_tree_for_model|placeholder|endplaceholder|static_placeholder|endstatic_placeholder|render_model_block|endrender_model_block|render_model_add_block|endrender_model_add_block|render_plugin_block|endrender_plugin_block|cms_admin_url|page_attribute|page_url|page_id_url|page_language_url|render_model|render_model_icon|render_model_add|render_placeholder|render_uncached_placeholder|render_plugin|show_placeholder|static_alias|cms_toolbar|element|endelement|crispy_addon|endcrispy_addon|crispy|crispy_field|csp_nonce_attr|comment|endcomment)\\b"
+          "match": "\\G\\b(thumbnail|endthumbnail|component|endcomponent|component_block|endcomponent_block|fill|endfill|slot|endslot|provide|endprovide|html_attrs|component_css_dependencies|component_js_dependencies|compress|endcompress|addtoblock|endaddtoblock|with_data|endwith_data|render_block|add_data|flag|endflag|switch|endswitch|sample|endsample|wafflejs|recursetree|endrecursetree|drilldown_tree_for_node|full_tree_for_model|placeholder|endplaceholder|static_placeholder|endstatic_placeholder|render_model_block|endrender_model_block|render_model_add_block|endrender_model_add_block|render_plugin_block|endrender_plugin_block|cms_admin_url|page_attribute|page_url|page_id_url|page_language_url|render_model|render_model_icon|render_model_add|render_placeholder|render_uncached_placeholder|render_plugin|show_placeholder|static_alias|cms_toolbar|element|endelement|crispy_addon|endcrispy_addon|crispy|crispy_field|csp_nonce_attr|comment|endcomment)\\b"
         },
         {
           "name": "keyword.operator.logical.django",

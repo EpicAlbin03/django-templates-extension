@@ -215,6 +215,15 @@ function tokenWithText(tokens: Token[], text: string): Token {
   return token;
 }
 
+function tokensWithText(tokens: Token[], text: string): Token[] {
+  const matchingTokens = tokens.filter((candidate) => candidate.text === text);
+  assert.ok(
+    matchingTokens.length > 0,
+    `Expected tokens equal to ${JSON.stringify(text)} in ${dumpTokens(tokens)}`,
+  );
+  return matchingTokens;
+}
+
 function assertHasScope(token: Token, scope: string): void {
   assert.ok(
     token.scopes.includes(scope),
@@ -384,6 +393,30 @@ describe("Django injection TextMate grammar", () => {
     assertHasScope(tokenWithText(tokens, "is_staff"), "variable.other.property.django");
     assertHasScope(tokenWithText(tokens, "username"), "variable.other.property.django");
     assertHasScope(tokenWithText(tokens, "default"), "support.function.filter.django");
+  });
+
+  it("only highlights template tag names at the start of tag blocks", async () => {
+    const loadTokens = await tokenize("{% load static i18n tz cache thumbnail compress %}");
+
+    assertHasScope(tokenWithText(loadTokens, "load"), "keyword.control.block.django");
+    for (const libraryName of ["static", "i18n", "tz", "cache", "thumbnail", "compress"]) {
+      const token = tokenWithText(loadTokens, libraryName);
+
+      assertHasScope(token, "variable.other.django");
+      assertNoScopeContaining(token, "keyword.control.");
+    }
+
+    const ifTokens = await tokenize("{% if if.is_authenticated %}");
+    const ifOccurrences = tokensWithText(ifTokens, "if");
+
+    assert.strictEqual(
+      ifOccurrences.length,
+      2,
+      `Expected two if tokens in ${dumpTokens(ifTokens)}`,
+    );
+    assertHasScope(ifOccurrences[0], "keyword.control.flow.django");
+    assertHasScope(ifOccurrences[1], "variable.other.object.django");
+    assertNoScopeContaining(ifOccurrences[1], "keyword.control.");
   });
 
   it("colors Django template delimiters like HTML attribute names", async () => {
