@@ -79,6 +79,10 @@ export function startServer(options?: LSOptions) {
           save: { includeText: false },
         },
         hoverProvider: true,
+        completionProvider: {
+          triggerCharacters: ["%", "{", "|", " ", '"', "'"],
+          resolveProvider: false,
+        },
         documentFormattingProvider: !formattingProviderHandledByClient,
       },
     };
@@ -103,6 +107,14 @@ export function startServer(options?: LSOptions) {
     }
 
     return djangoPlugin.doHover(document, evt.position);
+  });
+  connection.onCompletion((evt) => {
+    const document = docManager.get(evt.textDocument.uri);
+    if (!document) {
+      return null;
+    }
+
+    return djangoPlugin.getCompletions(document, evt.position);
   });
   connection.onDocumentFormatting((evt) => {
     const document = docManager.get(evt.textDocument.uri);

@@ -3,13 +3,15 @@ import { dirname, isAbsolute } from "path";
 import { fileURLToPath, pathToFileURL } from "url";
 import type { Plugin } from "prettier";
 import type { FormattingOptions, Hover, Position } from "vscode-languageserver-types";
-import { Range, TextEdit } from "vscode-languageserver-types";
+import { CompletionList, Range, TextEdit } from "vscode-languageserver-types";
 import { importPrettier } from "../../importPackage.js";
 import type { Document } from "../../lib/documents/index.js";
 import { Logger } from "../../logger.js";
 import { LSConfigManager } from "../../ls-config.js";
 import { isNotNullOrUndefined } from "../../utils.js";
-import type { FormattingProvider, HoverProvider } from "../interfaces.js";
+import type { CompletionProvider, FormattingProvider, HoverProvider } from "../interfaces.js";
+import { djangoFilterCompletionItems, djangoTagCompletionItems } from "./djangoCompletions.js";
+import { getDjangoCompletionContext } from "./getCompletionContext.js";
 import { getDjangoHoverInfo } from "./getHoverInfo.js";
 
 const require = createRequire(import.meta.url);
@@ -18,13 +20,27 @@ const DJANGO_TEMPLATE_TAG_RE = /({%[\s\S]*?%}|{{[\s\S]*?}}|{#[\s\S]*?#})/;
 const DJANGO_HTML_PARSER = "django-html";
 const DJANGO_PRETTIER_PLUGIN = "prettier-plugin-django-templates";
 
-export class DjangoPlugin implements FormattingProvider, HoverProvider {
+export class DjangoPlugin implements CompletionProvider, FormattingProvider, HoverProvider {
   __name = "django";
 
   constructor(private configManager: LSConfigManager) {}
 
   doHover(document: Document, position: Position): Hover | null {
     return getDjangoHoverInfo(document, position);
+  }
+
+  getCompletions(document: Document, position: Position): CompletionList | null {
+    const context = getDjangoCompletionContext(document, position);
+
+    if (context.type === "tag") {
+      return CompletionList.create(djangoTagCompletionItems, false);
+    }
+
+    if (context.type === "filter") {
+      return CompletionList.create(djangoFilterCompletionItems, false);
+    }
+
+    return null;
   }
 
   async formatDocument(document: Document, options: FormattingOptions): Promise<TextEdit[]> {

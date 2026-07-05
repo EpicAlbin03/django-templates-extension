@@ -1,4 +1,11 @@
-import type { FormattingOptions, Hover, Position, TextEdit } from "vscode-languageserver-types";
+import type {
+  CompletionItem,
+  CompletionList,
+  FormattingOptions,
+  Hover,
+  Position,
+  TextEdit,
+} from "vscode-languageserver-types";
 import type { Document } from "../lib/documents/index.js";
 
 export type Resolvable<T> = T | Promise<T>;
@@ -9,4 +16,11 @@ export interface FormattingProvider {
 
 export interface HoverProvider {
   doHover(document: Document, position: Position): Resolvable<Hover | null>;
+}
+
+export interface CompletionProvider {
+  getCompletions(
+    document: Document,
+    position: Position,
+  ): Resolvable<CompletionList | CompletionItem[] | null>;
 }
