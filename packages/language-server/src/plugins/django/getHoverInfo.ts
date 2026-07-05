@@ -103,7 +103,7 @@ function renderDjangoTagHover(tagName: string, doc: DjangoTagDoc): string {
 
   lines.push("", "#### Usage");
   for (const example of doc.examples) {
-    lines.push("", "```django", example, "```");
+    lines.push("", "```html", example, "```");
   }
 
   if (doc.reference) {
