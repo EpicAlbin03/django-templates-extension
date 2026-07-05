@@ -226,7 +226,7 @@
   "load": {
     "description": "{% load tags %}",
     "prefix": "load",
-    "body": "{% load ${1|static,i18n,cache,l10n,tz,humanize,flatpages|} %}"
+    "body": "{% load ${1|static,i18n,cache,l10n,tz,humanize,flatpages,thumbnail,component_tags,components,compress,sekizai_tags,waffle_tags,mptt_tags,cms_tags,allauth,crispy_forms_tags|} %}"
   },
 
   "lorem": {
@@ -442,5 +442,575 @@
     "prefix": "static",
     "description": "static",
     "body": "{% static '${1:$SELECTION}' %}"
+  },
+
+  "get_static_prefix": {
+    "description": "{% get_static_prefix %}",
+    "prefix": "get_static_prefix",
+    "body": "{% get_static_prefix as ${1:STATIC_PREFIX} %}"
+  },
+
+  "get_media_prefix": {
+    "description": "{% get_media_prefix %}",
+    "prefix": "get_media_prefix",
+    "body": "{% get_media_prefix as ${1:MEDIA_PREFIX} %}"
+  },
+
+  "get_available_languages": {
+    "description": "{% get_available_languages %}",
+    "prefix": "get_available_languages",
+    "body": "{% get_available_languages as ${1:LANGUAGES} %}"
+  },
+
+  "get_current_language": {
+    "description": "{% get_current_language %}",
+    "prefix": "get_current_language",
+    "body": "{% get_current_language as ${1:LANGUAGE_CODE} %}"
+  },
+
+  "get_current_language_bidi": {
+    "description": "{% get_current_language_bidi %}",
+    "prefix": "get_current_language_bidi",
+    "body": "{% get_current_language_bidi as ${1:LANGUAGE_BIDI} %}"
+  },
+
+  "get_language_info": {
+    "description": "{% get_language_info %}",
+    "prefix": "get_language_info",
+    "body": "{% get_language_info for ${1:LANGUAGE_CODE} as ${2:language} %}"
+  },
+
+  "get_language_info_list": {
+    "description": "{% get_language_info_list %}",
+    "prefix": "get_language_info_list",
+    "body": "{% get_language_info_list for ${1:LANGUAGES} as ${2:languages} %}"
+  },
+
+  "localize": {
+    "description": "{% localize %}",
+    "prefix": "localize",
+    "body": "{% localize ${1|on,off|} %}$0{% endlocalize %}"
+  },
+
+  "endlocalize": {
+    "description": "{% endlocalize %}",
+    "prefix": "endlocalize",
+    "body": "{% endlocalize %}"
+  },
+
+  "localtime": {
+    "description": "{% localtime %}",
+    "prefix": "localtime",
+    "body": "{% localtime ${1|on,off|} %}$0{% endlocaltime %}"
+  },
+
+  "endlocaltime": {
+    "description": "{% endlocaltime %}",
+    "prefix": "endlocaltime",
+    "body": "{% endlocaltime %}"
+  },
+
+  "timezone": {
+    "description": "{% timezone %}",
+    "prefix": "timezone",
+    "body": "{% timezone '${1:Europe/Stockholm}' %}$0{% endtimezone %}"
+  },
+
+  "endtimezone": {
+    "description": "{% endtimezone %}",
+    "prefix": "endtimezone",
+    "body": "{% endtimezone %}"
+  },
+
+  "get_current_timezone": {
+    "description": "{% get_current_timezone %}",
+    "prefix": "get_current_timezone",
+    "body": "{% get_current_timezone as ${1:TIME_ZONE} %}"
+  },
+
+  "cache": {
+    "description": "{% cache %}",
+    "prefix": "cache",
+    "body": "{% cache ${1:500} ${2:fragment_name} %}$0{% endcache %}"
+  },
+
+  "endcache": {
+    "description": "{% endcache %}",
+    "prefix": "endcache",
+    "body": "{% endcache %}"
+  },
+
+  "language": {
+    "description": "{% language %}",
+    "prefix": "language",
+    "body": "{% language '${1:fr}' %}$0{% endlanguage %}"
+  },
+
+  "endlanguage": {
+    "description": "{% endlanguage %}",
+    "prefix": "endlanguage",
+    "body": "{% endlanguage %}"
+  },
+
+  "ifequal": {
+    "description": "{% ifequal %}",
+    "prefix": "ifequal",
+    "body": "{% ifequal $1 $2 %}$0{% endifequal %}"
+  },
+
+  "endifequal": {
+    "description": "{% endifequal %}",
+    "prefix": "endifequal",
+    "body": "{% endifequal %}"
+  },
+
+  "ifnotequal": {
+    "description": "{% ifnotequal %}",
+    "prefix": "ifnotequal",
+    "body": "{% ifnotequal $1 $2 %}$0{% endifnotequal %}"
+  },
+
+  "endifnotequal": {
+    "description": "{% endifnotequal %}",
+    "prefix": "endifnotequal",
+    "body": "{% endifnotequal %}"
+  },
+
+  "partialdef": {
+    "description": "{% partialdef %}",
+    "prefix": "partialdef",
+    "body": "{% partialdef ${1:name} %}$0{% endpartialdef %}"
+  },
+
+  "endpartialdef": {
+    "description": "{% endpartialdef %}",
+    "prefix": "endpartialdef",
+    "body": "{% endpartialdef %}"
+  },
+
+  "partial": {
+    "description": "{% partial %}",
+    "prefix": "partial",
+    "body": "{% partial ${1:name} %}"
+  },
+
+  "querystring": {
+    "description": "{% querystring %}",
+    "prefix": "querystring",
+    "body": "{% querystring ${1:key}=${2:value} %}"
+  },
+
+  "csp_nonce_attr": {
+    "description": "{% csp_nonce_attr %}",
+    "prefix": "csp_nonce_attr",
+    "body": "{% csp_nonce_attr %}"
+  },
+
+  "empty": {
+    "description": "{% empty %}",
+    "prefix": "empty",
+    "body": "{% empty %}"
+  },
+
+  "plural": {
+    "description": "{% plural %}",
+    "prefix": "plural",
+    "body": "{% plural %}"
+  },
+
+  "endblocktranslate": {
+    "description": "{% endblocktranslate %}",
+    "prefix": "endblocktranslate",
+    "body": "{% endblocktranslate %}"
+  },
+
+  "endblocktrans": {
+    "description": "{% endblocktrans %}",
+    "prefix": "endblocktrans",
+    "body": "{% endblocktrans %}"
+  },
+
+  "thumbnail": {
+    "description": "{% thumbnail %}",
+    "prefix": "thumbnail",
+    "body": "{% thumbnail ${1:image} '${2:300x200}' ${3:crop='center' }as ${4:im} %}$0{% endthumbnail %}"
+  },
+
+  "endthumbnail": {
+    "description": "{% endthumbnail %}",
+    "prefix": "endthumbnail",
+    "body": "{% endthumbnail %}"
+  },
+
+  "component": {
+    "description": "{% component %}",
+    "prefix": "component",
+    "body": "{% component '${1:name}' ${2:attr}=${3:value} %}$0{% endcomponent %}"
+  },
+
+  "endcomponent": {
+    "description": "{% endcomponent %}",
+    "prefix": "endcomponent",
+    "body": "{% endcomponent %}"
+  },
+
+  "component_block": {
+    "description": "{% component_block %}",
+    "prefix": "component_block",
+    "body": "{% component_block '${1:name}' %}$0{% endcomponent_block %}"
+  },
+
+  "endcomponent_block": {
+    "description": "{% endcomponent_block %}",
+    "prefix": "endcomponent_block",
+    "body": "{% endcomponent_block %}"
+  },
+
+  "fill": {
+    "description": "{% fill %}",
+    "prefix": "fill",
+    "body": "{% fill '${1:slot}' %}$0{% endfill %}"
+  },
+
+  "endfill": {
+    "description": "{% endfill %}",
+    "prefix": "endfill",
+    "body": "{% endfill %}"
+  },
+
+  "slot": {
+    "description": "{% slot %}",
+    "prefix": "slot",
+    "body": "{% slot '${1:name}' %}$0{% endslot %}"
+  },
+
+  "endslot": {
+    "description": "{% endslot %}",
+    "prefix": "endslot",
+    "body": "{% endslot %}"
+  },
+
+  "provide": {
+    "description": "{% provide %}",
+    "prefix": "provide",
+    "body": "{% provide '${1:name}' ${2:key}=${3:value} %}$0{% endprovide %}"
+  },
+
+  "endprovide": {
+    "description": "{% endprovide %}",
+    "prefix": "endprovide",
+    "body": "{% endprovide %}"
+  },
+
+  "html_attrs": {
+    "description": "{% html_attrs %}",
+    "prefix": "html_attrs",
+    "body": "{% html_attrs ${1:attrs} ${2:defaults:class='card'} ${3:class='featured'} %}"
+  },
+
+  "component_css_dependencies": {
+    "description": "{% component_css_dependencies %}",
+    "prefix": "component_css_dependencies",
+    "body": "{% component_css_dependencies %}"
+  },
+
+  "component_js_dependencies": {
+    "description": "{% component_js_dependencies %}",
+    "prefix": "component_js_dependencies",
+    "body": "{% component_js_dependencies %}"
+  },
+
+  "compress": {
+    "description": "{% compress %}",
+    "prefix": "compress",
+    "body": "{% compress ${1|css,js|} %}$0{% endcompress %}"
+  },
+
+  "endcompress": {
+    "description": "{% endcompress %}",
+    "prefix": "endcompress",
+    "body": "{% endcompress %}"
+  },
+
+  "addtoblock": {
+    "description": "{% addtoblock %}",
+    "prefix": "addtoblock",
+    "body": "{% addtoblock '${1:js}' %}$0{% endaddtoblock %}"
+  },
+
+  "endaddtoblock": {
+    "description": "{% endaddtoblock %}",
+    "prefix": "endaddtoblock",
+    "body": "{% endaddtoblock %}"
+  },
+
+  "with_data": {
+    "description": "{% with_data %}",
+    "prefix": "with_data",
+    "body": "{% with_data '${1:name}' ${2:key}=${3:value} %}$0{% endwith_data %}"
+  },
+
+  "endwith_data": {
+    "description": "{% endwith_data %}",
+    "prefix": "endwith_data",
+    "body": "{% endwith_data %}"
+  },
+
+  "render_block": {
+    "description": "{% render_block %}",
+    "prefix": "render_block",
+    "body": "{% render_block '${1:js}' %}"
+  },
+
+  "add_data": {
+    "description": "{% add_data %}",
+    "prefix": "add_data",
+    "body": "{% add_data '${1:name}' ${2:value} %}"
+  },
+
+  "flag": {
+    "description": "{% flag %}",
+    "prefix": "flag",
+    "body": "{% flag '${1:flag_name}' %}$0{% endflag %}"
+  },
+
+  "endflag": {
+    "description": "{% endflag %}",
+    "prefix": "endflag",
+    "body": "{% endflag %}"
+  },
+
+  "switch": {
+    "description": "{% switch %}",
+    "prefix": "switch",
+    "body": "{% switch '${1:switch_name}' %}$0{% endswitch %}"
+  },
+
+  "endswitch": {
+    "description": "{% endswitch %}",
+    "prefix": "endswitch",
+    "body": "{% endswitch %}"
+  },
+
+  "sample": {
+    "description": "{% sample %}",
+    "prefix": "sample",
+    "body": "{% sample '${1:sample_name}' %}$0{% endsample %}"
+  },
+
+  "endsample": {
+    "description": "{% endsample %}",
+    "prefix": "endsample",
+    "body": "{% endsample %}"
+  },
+
+  "wafflejs": {
+    "description": "{% wafflejs %}",
+    "prefix": "wafflejs",
+    "body": "{% wafflejs %}"
+  },
+
+  "recursetree": {
+    "description": "{% recursetree %}",
+    "prefix": "recursetree",
+    "body": "{% recursetree ${1:nodes} %}$0{% endrecursetree %}"
+  },
+
+  "endrecursetree": {
+    "description": "{% endrecursetree %}",
+    "prefix": "endrecursetree",
+    "body": "{% endrecursetree %}"
+  },
+
+  "drilldown_tree_for_node": {
+    "description": "{% drilldown_tree_for_node %}",
+    "prefix": "drilldown_tree_for_node",
+    "body": "{% drilldown_tree_for_node ${1:node} as ${2:drilldown} %}"
+  },
+
+  "full_tree_for_model": {
+    "description": "{% full_tree_for_model %}",
+    "prefix": "full_tree_for_model",
+    "body": "{% full_tree_for_model ${1:app.Model} as ${2:tree} %}"
+  },
+
+  "placeholder": {
+    "description": "{% placeholder %}",
+    "prefix": "placeholder",
+    "body": "{% placeholder '${1:content}' %}$0{% endplaceholder %}"
+  },
+
+  "endplaceholder": {
+    "description": "{% endplaceholder %}",
+    "prefix": "endplaceholder",
+    "body": "{% endplaceholder %}"
+  },
+
+  "static_placeholder": {
+    "description": "{% static_placeholder %}",
+    "prefix": "static_placeholder",
+    "body": "{% static_placeholder '${1:footer}' %}$0{% endstatic_placeholder %}"
+  },
+
+  "endstatic_placeholder": {
+    "description": "{% endstatic_placeholder %}",
+    "prefix": "endstatic_placeholder",
+    "body": "{% endstatic_placeholder %}"
+  },
+
+  "render_model_block": {
+    "description": "{% render_model_block %}",
+    "prefix": "render_model_block",
+    "body": "{% render_model_block ${1:object} '${2:field}' %}$0{% endrender_model_block %}"
+  },
+
+  "endrender_model_block": {
+    "description": "{% endrender_model_block %}",
+    "prefix": "endrender_model_block",
+    "body": "{% endrender_model_block %}"
+  },
+
+  "render_model_add_block": {
+    "description": "{% render_model_add_block %}",
+    "prefix": "render_model_add_block",
+    "body": "{% render_model_add_block ${1:object} %}$0{% endrender_model_add_block %}"
+  },
+
+  "endrender_model_add_block": {
+    "description": "{% endrender_model_add_block %}",
+    "prefix": "endrender_model_add_block",
+    "body": "{% endrender_model_add_block %}"
+  },
+
+  "render_plugin_block": {
+    "description": "{% render_plugin_block %}",
+    "prefix": "render_plugin_block",
+    "body": "{% render_plugin_block ${1:plugin} %}$0{% endrender_plugin_block %}"
+  },
+
+  "endrender_plugin_block": {
+    "description": "{% endrender_plugin_block %}",
+    "prefix": "endrender_plugin_block",
+    "body": "{% endrender_plugin_block %}"
+  },
+
+  "cms_admin_url": {
+    "description": "{% cms_admin_url %}",
+    "prefix": "cms_admin_url",
+    "body": "{% cms_admin_url ${1:object} ${2:'change'} %}"
+  },
+
+  "page_attribute": {
+    "description": "{% page_attribute %}",
+    "prefix": "page_attribute",
+    "body": "{% page_attribute '${1:page_title}' %}"
+  },
+
+  "page_url": {
+    "description": "{% page_url %}",
+    "prefix": "page_url",
+    "body": "{% page_url ${1:page} %}"
+  },
+
+  "page_id_url": {
+    "description": "{% page_id_url %}",
+    "prefix": "page_id_url",
+    "body": "{% page_id_url ${1:page_id} %}"
+  },
+
+  "page_language_url": {
+    "description": "{% page_language_url %}",
+    "prefix": "page_language_url",
+    "body": "{% page_language_url '${1:language_code}' %}"
+  },
+
+  "render_model": {
+    "description": "{% render_model %}",
+    "prefix": "render_model",
+    "body": "{% render_model ${1:object} '${2:field}' %}"
+  },
+
+  "render_model_icon": {
+    "description": "{% render_model_icon %}",
+    "prefix": "render_model_icon",
+    "body": "{% render_model_icon ${1:object} '${2:field}' %}"
+  },
+
+  "render_model_add": {
+    "description": "{% render_model_add %}",
+    "prefix": "render_model_add",
+    "body": "{% render_model_add ${1:object} %}"
+  },
+
+  "render_placeholder": {
+    "description": "{% render_placeholder %}",
+    "prefix": "render_placeholder",
+    "body": "{% render_placeholder ${1:placeholder} %}"
+  },
+
+  "render_uncached_placeholder": {
+    "description": "{% render_uncached_placeholder %}",
+    "prefix": "render_uncached_placeholder",
+    "body": "{% render_uncached_placeholder ${1:placeholder} %}"
+  },
+
+  "render_plugin": {
+    "description": "{% render_plugin %}",
+    "prefix": "render_plugin",
+    "body": "{% render_plugin ${1:plugin} %}"
+  },
+
+  "show_placeholder": {
+    "description": "{% show_placeholder %}",
+    "prefix": "show_placeholder",
+    "body": "{% show_placeholder '${1:content}' ${2:request.current_page} %}"
+  },
+
+  "static_alias": {
+    "description": "{% static_alias %}",
+    "prefix": "static_alias",
+    "body": "{% static_alias '${1:alias}' %}"
+  },
+
+  "cms_toolbar": {
+    "description": "{% cms_toolbar %}",
+    "prefix": "cms_toolbar",
+    "body": "{% cms_toolbar %}"
+  },
+
+  "element": {
+    "description": "{% element %}",
+    "prefix": "element",
+    "body": "{% element '${1:button}' ${2:type='submit'} %}$0{% endelement %}"
+  },
+
+  "endelement": {
+    "description": "{% endelement %}",
+    "prefix": "endelement",
+    "body": "{% endelement %}"
+  },
+
+  "crispy": {
+    "description": "{% crispy %}",
+    "prefix": "crispy",
+    "body": "{% crispy ${1:form} %}"
+  },
+
+  "crispy_field": {
+    "description": "{% crispy_field %}",
+    "prefix": "crispy_field",
+    "body": "{% crispy_field ${1:form.field} %}"
+  },
+
+  "crispy_addon": {
+    "description": "{% crispy_addon %}",
+    "prefix": "crispy_addon",
+    "body": "{% crispy_addon ${1:form.field} ${2:append='@example.com'} %}$0{% endcrispy_addon %}"
+  },
+
+  "endcrispy_addon": {
+    "description": "{% endcrispy_addon %}",
+    "prefix": "endcrispy_addon",
+    "body": "{% endcrispy_addon %}"
   }
 }
