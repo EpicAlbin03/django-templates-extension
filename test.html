@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Django template tag hover test</title>
+    {% load static i18n l10n tz cache %} {% extends "base.html" %}
+  </head>
+  <body>
+    {% block content %}
+    <h1>{% firstof page_title "Tooltip test" %}</h1>
+
+    {% autoescape off %} {{ trusted_html }} {% endautoescape %} {% comment "Hover
+    comment/endcomment" %} This text is intentionally not rendered. {% endcomment %}
+
+    <form method="post">
+      {% csrf_token %}
+      <button type="submit">Save</button>
+    </form>
+
+    <table>
+      {% for item in items %}
+      <tr class="{% cycle 'odd' 'even' as row_class %}">
+        <td>{{ forloop.counter }}</td>
+        <td>{{ item.name }}</td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="2">No items.</td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% resetcycle row_class %} {% if user.is_authenticated %}
+    <p>{% translate "Welcome" %}, {{ user.username }}.</p>
+    {% elif user %}
+    <p>{% trans "Welcome back" %}.</p>
+    {% else %}
+    <p>{% translate "Please sign in" %}.</p>
+    {% endif %} {% for article in articles %} {% ifchanged article.category %}
+    <h2>{{ article.category }}</h2>
+    {% else %}
+    <span class="same-category">Same category</span>
+    {% endifchanged %}
+    <article>{{ article.title }}</article>
+    {% endfor %} {% filter force_escape|lower %} {{ user_input }} {% endfilter %} {% include
+    "partials/card.html" with item=featured_item only %} {% lorem 2 p random %}
+    <time datetime="{% now 'c' %}">{% now "Y-m-d H:i" %}</time>
+
+    {% regroup cities by country as country_list %} {% for country in country_list %}
+    <section>
+      <h2>{{ country.grouper }}</h2>
+      {% for city in country.list %}
+      <span>{{ city.name }}</span>
+      {% endfor %}
+    </section>
+    {% endfor %} {% spaceless %}
+    <p>
+      <a href="/">Home</a>
+    </p>
+    {% endspaceless %}
+
+    <p>{% templatetag openblock %} example {% templatetag closeblock %}</p>
+    <a href="{% url 'article-detail' article.pk %}">Article detail</a>
+
+    {% verbatim %} {{ handled_by_client_framework }} {% endverbatim %} {% widthratio current max 100
+    as percent_done %}
+    <progress value="{{ percent_done }}" max="100"></progress>
+
+    {% with total=cart.items.count %} {{ total }} item{{ total|pluralize }} {% endwith %}
+
+    <link rel="stylesheet" href="{% static 'css/site.css' %}" />
+    {% get_static_prefix as STATIC_PREFIX %} {% get_media_prefix as MEDIA_PREFIX %}
+    <img src="{{ STATIC_PREFIX }}images/logo.svg" alt="" />
+    <img src="{{ MEDIA_PREFIX }}{{ user.avatar }}" alt="" />
+
+    {% blocktranslate count count=items|length %} There is {{ count }} item. {% plural %} There are
+    {{ count }} items. {% endblocktranslate %} {% blocktrans with name=user.get_full_name %}Hello {{
+    name }}{% endblocktrans %} {% get_available_languages as LANGUAGES %} {% get_current_language as
+    LANGUAGE_CODE %} {% get_current_language_bidi as LANGUAGE_BIDI %} {% get_language_info for
+    LANGUAGE_CODE as language %} {% get_language_info_list for LANGUAGES as languages %} {% localize
+    off %} {{ decimal_value }} {% endlocalize %} {% localtime on %} {{ event.starts_at }} {%
+    endlocaltime %} {% timezone "Europe/Paris" %} {{ event.starts_at }} {% endtimezone %} {%
+    get_current_timezone as TIME_ZONE %} {% cache 500 sidebar request.user.username %}
+    <aside>Cached sidebar</aside>
+    {% endcache %} {% debug %} {% endblock %}
+  </body>
+</html>
