@@ -15,16 +15,19 @@ export interface DjangoTagDoc {
   reference?: string;
 }
 
+// Django references
 const builtinsReference = "https://docs.djangoproject.com/en/6.0/ref/templates/builtins/";
 const translationReference = "https://docs.djangoproject.com/en/6.0/topics/i18n/translation/";
 const formattingReference = "https://docs.djangoproject.com/en/6.0/topics/i18n/formatting/";
 const timezoneReference = "https://docs.djangoproject.com/en/6.0/topics/i18n/timezones/";
 const cacheReference = "https://docs.djangoproject.com/en/6.0/topics/cache/";
-const djangoCspReference = "https://django-csp.readthedocs.io/en/latest/nonce.html";
+const cspNonceAttrReference =
+  "https://docs.djangoproject.com/en/6.1/ref/templates/builtins/#std-templatetag-csp_nonce_attr";
+// 3rd party references
 const sorlThumbnailReference = "https://sorl-thumbnail.readthedocs.io/en/latest/template.html";
 const djangoComponentsReference =
   "https://django-components.github.io/django-components/latest/reference/template_tags/";
-const djangoCompressorReference = "https://django-compressor.readthedocs.io/en/stable/usage/";
+const djangoCompressorReference = "https://django-compressor.readthedocs.io/en/stable/usage.html";
 const djangoSekizaiReference = "https://django-sekizai.readthedocs.io/en/latest/";
 const djangoWaffleReference = "https://waffle.readthedocs.io/en/stable/usage/templates.html";
 const djangoMpttReference = "https://django-mptt.readthedocs.io/en/latest/templates.html";
@@ -621,14 +624,13 @@ export const djangoTagDocs: DjangoTagDoc[] = [
   },
   {
     name: "csp_nonce_attr",
-    load: "csp",
     description:
-      "Outputs a Content Security Policy nonce attribute for inline scripts or styles when using django-csp.",
+      "Outputs a Content Security Policy nonce attribute for external scripts, stylesheets, or Media assets.",
     examples: [
-      `{% load csp %}
-<script {% csp_nonce_attr %}>window.appReady = true;</script>`,
+      `<script src="/path/to/script.js" {% csp_nonce_attr %}></script>
+<link rel="stylesheet" href="/path/to/style.css" {% csp_nonce_attr %}>`,
     ],
-    reference: djangoCspReference,
+    reference: cspNonceAttrReference,
   },
   {
     name: "thumbnail",
@@ -642,7 +644,7 @@ export const djangoTagDocs: DjangoTagDoc[] = [
   <img src="{{ im.url }}" width="{{ im.width }}" height="{{ im.height }}" alt="">
 {% endthumbnail %}`,
     ],
-    reference: sorlThumbnailReference,
+    reference: `${sorlThumbnailReference}#thumbnail`,
   },
   {
     name: "component",
@@ -820,7 +822,7 @@ export const djangoTagDocs: DjangoTagDoc[] = [
   <nav>Old navigation</nav>
 {% endflag %}`,
     ],
-    reference: djangoWaffleReference,
+    reference: `${djangoWaffleReference}#flags`,
   },
   {
     name: "switch",
@@ -833,7 +835,7 @@ export const djangoTagDocs: DjangoTagDoc[] = [
   <button>Checkout</button>
 {% endswitch %}`,
     ],
-    reference: djangoWaffleReference,
+    reference: `${djangoWaffleReference}#switches`,
   },
   {
     name: "sample",
@@ -846,7 +848,7 @@ export const djangoTagDocs: DjangoTagDoc[] = [
   <h1>Variant A</h1>
 {% endsample %}`,
     ],
-    reference: djangoWaffleReference,
+    reference: `${djangoWaffleReference}#samples`,
   },
   {
     name: "wafflejs",
@@ -871,7 +873,7 @@ export const djangoTagDocs: DjangoTagDoc[] = [
   <li>{{ node.name }}{% if not node.is_leaf_node %}<ul>{{ children }}</ul>{% endif %}</li>
 {% endrecursetree %}`,
     ],
-    reference: djangoMpttReference,
+    reference: `${djangoMpttReference}#recursetree`,
   },
   {
     name: "drilldown_tree_for_node",
@@ -882,7 +884,7 @@ export const djangoTagDocs: DjangoTagDoc[] = [
       `{% load mptt_tags %}
 {% drilldown_tree_for_node node as drilldown %}`,
     ],
-    reference: djangoMpttReference,
+    reference: `${djangoMpttReference}#drilldown-tree-for-node`,
   },
   {
     name: "full_tree_for_model",
@@ -893,7 +895,7 @@ export const djangoTagDocs: DjangoTagDoc[] = [
       `{% load mptt_tags %}
 {% full_tree_for_model app.Model as tree %}`,
     ],
-    reference: djangoMpttReference,
+    reference: `${djangoMpttReference}#full-tree-for-model`,
   },
   {
     name: "placeholder",
@@ -1117,7 +1119,7 @@ export const djangoTagDocs: DjangoTagDoc[] = [
   Continue
 {% endelement %}`,
     ],
-    reference: djangoAllauthReference,
+    reference: `${djangoAllauthReference}#elements`,
   },
   {
     name: "crispy",
