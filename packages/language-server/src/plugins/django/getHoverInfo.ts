@@ -107,7 +107,7 @@ function renderDjangoTagHover(tagName: string, doc: DjangoTagDoc): string {
   }
 
   if (doc.reference) {
-    lines.push("", `[Django documentation](${doc.reference})`);
+    lines.push("", `[Documentation](${doc.reference})`);
   }
 
   return lines.join("\n");

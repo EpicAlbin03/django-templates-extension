@@ -108,8 +108,8 @@
     {% endfill %} {% endcomponent %} {% component_block "legacy_card" title=title %}
     <p>Legacy component block.</p>
     {% endcomponent_block %} {% slot "footer" %} Default footer {% endslot %} {% provide "theme"
-    value="dark" %} {% component "card" / %} {% endprovide %} {% component_js_dependencies %} {%
-    compress css %}
+    value="dark" %} {% component "card" %} Themed card {% endcomponent %} {% endprovide %} {%
+    component_js_dependencies %} {% compress css %}
     <link rel="stylesheet" href="{% static 'css/app.css' %}" />
     {% endcompress %} {% addtoblock "js" %}
     <script src="/static/app.js"></script>
