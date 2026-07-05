@@ -64,18 +64,24 @@
   "comment": {
     "description": "{% comment %}",
     "prefix": "comment",
+    "body": "{% comment %}$0{% endcomment %}"
+  },
+
+  "comment_note": {
+    "description": "{% comment \"note\" %}",
+    "prefix": "comment_note",
     "body": "{% comment \"$1\" %}$0{% endcomment %}"
   },
 
   "comment_paste": {
     "description": "{% comment %} (paste)",
-    "prefix": "comment",
+    "prefix": "comment_paste",
     "body": "{% comment %}${CLIPBOARD}{% endcomment %}"
   },
 
   "comment_selection": {
     "description": "{% comment %} (selection)",
-    "prefix": "comment",
+    "prefix": "comment_selection",
     "body": ["$0{% comment %}", "\t${TM_SELECTED_TEXT}", "$0{% endcomment %}"]
   },
 
@@ -124,6 +130,12 @@
   "firstof": {
     "description": "{% firstof %}",
     "prefix": "firstof",
+    "body": "{% firstof $1 %}"
+  },
+
+  "firstof_as": {
+    "description": "{% firstof %} (assign result)",
+    "prefix": "firstof_as",
     "body": "{% firstof $1 as $2 %}"
   },
 
@@ -317,30 +329,48 @@
   "verbatim": {
     "description": "{% verbatim %}",
     "prefix": "verbatim",
+    "body": "{% verbatim %}$0{% endverbatim %}"
+  },
+
+  "verbatim_named": {
+    "description": "{% verbatim %} (named)",
+    "prefix": "verbatim_named",
     "body": "{% verbatim $1 %}$0{% endverbatim $1 %}"
   },
 
   "verbatim_paste": {
     "description": "{% verbatim %} (paste)",
     "prefix": "verbatim_paste",
-    "body": "{% verbatim $1 %}$0${CLIPBOARD}{% endverbatim $1 %}"
+    "body": "{% verbatim %}$0${CLIPBOARD}{% endverbatim %}"
   },
 
   "endverbatim": {
     "description": "{% endverbatim %}",
     "prefix": "endverbatim",
-    "body": "{% endverbatim $1%}"
+    "body": "{% endverbatim %}"
   },
 
   "widthratio": {
     "description": "{% widthratio %}",
     "prefix": "widthratio",
-    "body": "{% widthratio ${1:this_value} ${2:max_value} ${3:max_width} ${4:as ${5:width}}%}"
+    "body": "{% widthratio ${1:this_value} ${2:max_value} ${3:max_width} %}"
+  },
+
+  "widthratio_as": {
+    "description": "{% widthratio %} (assign result)",
+    "prefix": "widthratio_as",
+    "body": "{% widthratio ${1:this_value} ${2:max_value} ${3:max_width} as ${4:width} %}"
   },
 
   "with": {
     "description": "{% with %}",
     "prefix": "with",
+    "body": "{% with ${1:name}=${2:value} %}$0{% endwith %}"
+  },
+
+  "with_as": {
+    "description": "{% with %} (as)",
+    "prefix": "with_as",
     "body": "{% with $1 as $2 %}$0{% endwith %}"
   },
 
@@ -351,15 +381,15 @@
   },
 
   "with_selection": {
-    "description": "{% with as %} (selection)",
+    "description": "{% with %} (selection)",
     "prefix": "with_selection",
-    "body": ["$0{% with $1 as $2 %}", "\t${TM_SELECTED_TEXT}", "$0{% endwith %}"]
+    "body": ["$0{% with ${1:name}=${2:value} %}", "\t${TM_SELECTED_TEXT}", "$0{% endwith %}"]
   },
 
   "with_paste": {
-    "description": "{% with as %} (paste)",
+    "description": "{% with %} (paste)",
     "prefix": "with_paste",
-    "body": "{% with $1 as $2 %}${CLIPBOARD}{% endwith %}"
+    "body": "{% with ${1:name}=${2:value} %}${CLIPBOARD}{% endwith %}"
   },
 
   "trans": {
@@ -380,22 +410,34 @@
     "body": "{% blocktrans %}$0{% endblocktrans %}"
   },
 
+  "blocktrans_trimmed": {
+    "description": "{% blocktrans trimmed %}{% endblocktrans %}",
+    "prefix": "blocktrans_trimmed",
+    "body": "{% blocktrans trimmed %}$0{% endblocktrans %}"
+  },
+
   "blocktrans_paste": {
     "description": "{% blocktrans %}(paste){% endblocktrans %}",
     "prefix": "blocktrans_paste",
-    "body": ["{% blocktrans ${2:trimmed }%}", "$0${CLIPBOARD}", "{% endblocktrans %}"]
+    "body": ["{% blocktrans %}", "$0${CLIPBOARD}", "{% endblocktrans %}"]
   },
 
   "blocktrans_with": {
-    "description": "{% blocktrans as %}{% endblocktrans %}",
+    "description": "{% blocktrans with %}{% endblocktrans %}",
     "prefix": "blocktrans_with",
-    "body": "{% blocktrans with $1=$2 ${3:trimmed }%}$0{% endblocktrans %}"
+    "body": "{% blocktrans with $1=$2 %}$0{% endblocktrans %}"
+  },
+
+  "blocktrans_with_trimmed": {
+    "description": "{% blocktrans with trimmed %}{% endblocktrans %}",
+    "prefix": "blocktrans_with_trimmed",
+    "body": "{% blocktrans with $1=$2 trimmed %}$0{% endblocktrans %}"
   },
 
   "blocktrans_with_paste": {
-    "description": "{% blocktrans as %}(paste){% endblocktrans %}",
+    "description": "{% blocktrans with %}(paste){% endblocktrans %}",
     "prefix": "blocktrans_with_paste",
-    "body": ["{% blocktrans with $1=$2 ${3:trimmed }%}", "$0${CLIPBOARD}", "{% endblocktrans %}"]
+    "body": ["{% blocktrans with $1=$2 %}", "$0${CLIPBOARD}", "{% endblocktrans %}"]
   },
 
   "translate": {
@@ -416,26 +458,34 @@
     "body": "{% blocktranslate %}$0{% endblocktranslate %}"
   },
 
+  "blocktranslate_trimmed": {
+    "description": "{% blocktranslate trimmed %}{% endblocktranslate %}",
+    "prefix": "blocktranslate_trimmed",
+    "body": "{% blocktranslate trimmed %}$0{% endblocktranslate %}"
+  },
+
   "blocktranslate_paste": {
     "description": "{% blocktranslate %}(paste){% endblocktranslate %}",
     "prefix": "blocktranslate_paste",
-    "body": ["{% blocktranslate ${2:trimmed }%}", "$0${CLIPBOARD}", "{% endblocktranslate %}"]
+    "body": ["{% blocktranslate %}", "$0${CLIPBOARD}", "{% endblocktranslate %}"]
   },
 
   "blocktranslate_with": {
-    "description": "{% blocktranslate as %}{% endblocktranslate %}",
+    "description": "{% blocktranslate with %}{% endblocktranslate %}",
     "prefix": "blocktranslate_with",
-    "body": "{% blocktranslate with $1=$2 ${3:trimmed }%}$0{% endblocktranslate %}"
+    "body": "{% blocktranslate with $1=$2 %}$0{% endblocktranslate %}"
+  },
+
+  "blocktranslate_with_trimmed": {
+    "description": "{% blocktranslate with trimmed %}{% endblocktranslate %}",
+    "prefix": "blocktranslate_with_trimmed",
+    "body": "{% blocktranslate with $1=$2 trimmed %}$0{% endblocktranslate %}"
   },
 
   "blocktranslate_with_paste": {
-    "description": "{% blocktranslate as %}(paste){% endblocktranslate %}",
+    "description": "{% blocktranslate with %}(paste){% endblocktranslate %}",
     "prefix": "blocktranslate_with_paste",
-    "body": [
-      "{% blocktranslate with $1=$2 ${3:trimmed }%}",
-      "$0${CLIPBOARD}",
-      "{% endblocktranslate %}"
-    ]
+    "body": ["{% blocktranslate with $1=$2 %}", "$0${CLIPBOARD}", "{% endblocktranslate %}"]
   },
 
   "static": {
@@ -597,6 +647,12 @@
   "querystring": {
     "description": "{% querystring %}",
     "prefix": "querystring",
+    "body": "{% querystring %}"
+  },
+
+  "querystring_set": {
+    "description": "{% querystring %} (set value)",
+    "prefix": "querystring_set",
     "body": "{% querystring ${1:key}=${2:value} %}"
   },
 
@@ -633,7 +689,13 @@
   "thumbnail": {
     "description": "{% thumbnail %}",
     "prefix": "thumbnail",
-    "body": "{% thumbnail ${1:image} '${2:300x200}' ${3:crop='center' }as ${4:im} %}$0{% endthumbnail %}"
+    "body": "{% thumbnail ${1:image} '${2:300x200}' as ${3:im} %}$0{% endthumbnail %}"
+  },
+
+  "thumbnail_crop": {
+    "description": "{% thumbnail %} (crop)",
+    "prefix": "thumbnail_crop",
+    "body": "{% thumbnail ${1:image} '${2:300x200}' crop='${3:center}' as ${4:im} %}$0{% endthumbnail %}"
   },
 
   "endthumbnail": {
@@ -645,6 +707,12 @@
   "component": {
     "description": "{% component %}",
     "prefix": "component",
+    "body": "{% component '${1:name}' %}$0{% endcomponent %}"
+  },
+
+  "component_attr": {
+    "description": "{% component %} (attribute)",
+    "prefix": "component_attr",
     "body": "{% component '${1:name}' ${2:attr}=${3:value} %}$0{% endcomponent %}"
   },
 
@@ -705,7 +773,19 @@
   "html_attrs": {
     "description": "{% html_attrs %}",
     "prefix": "html_attrs",
-    "body": "{% html_attrs ${1:attrs} ${2:defaults:class='card'} ${3:class='featured'} %}"
+    "body": "{% html_attrs ${1:attrs} %}"
+  },
+
+  "html_attrs_class": {
+    "description": "{% html_attrs %} (class)",
+    "prefix": "html_attrs_class",
+    "body": "{% html_attrs ${1:attrs} class='${2:class-name}' %}"
+  },
+
+  "html_attrs_defaults": {
+    "description": "{% html_attrs %} (defaults)",
+    "prefix": "html_attrs_defaults",
+    "body": "{% html_attrs ${1:attrs} defaults:class='${2:card}' %}"
   },
 
   "component_css_dependencies": {
@@ -981,6 +1061,12 @@
   "element": {
     "description": "{% element %}",
     "prefix": "element",
+    "body": "{% element '${1:button}' %}$0{% endelement %}"
+  },
+
+  "element_attr": {
+    "description": "{% element %} (attribute)",
+    "prefix": "element_attr",
     "body": "{% element '${1:button}' ${2:type='submit'} %}$0{% endelement %}"
   },
 
