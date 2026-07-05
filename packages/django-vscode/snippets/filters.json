@@ -335,5 +335,185 @@
     "description": "Filter |pprint",
     "prefix": "pprint",
     "body": "pprint"
+  },
+
+  "escapeseq": {
+    "description": "Filter |escapeseq",
+    "prefix": "escapeseq",
+    "body": "escapeseq"
+  },
+
+  "json_script": {
+    "description": "Filter |json_script",
+    "prefix": "json_script",
+    "body": "json_script:${1:'element-id'}$0"
+  },
+
+  "language_name": {
+    "description": "Filter |language_name",
+    "prefix": "language_name",
+    "body": "language_name"
+  },
+
+  "language_name_local": {
+    "description": "Filter |language_name_local",
+    "prefix": "language_name_local",
+    "body": "language_name_local"
+  },
+
+  "language_bidi": {
+    "description": "Filter |language_bidi",
+    "prefix": "language_bidi",
+    "body": "language_bidi"
+  },
+
+  "language_name_translated": {
+    "description": "Filter |language_name_translated",
+    "prefix": "language_name_translated",
+    "body": "language_name_translated"
+  },
+
+  "localize": {
+    "description": "Filter |localize",
+    "prefix": "localize",
+    "body": "localize"
+  },
+
+  "unlocalize": {
+    "description": "Filter |unlocalize",
+    "prefix": "unlocalize",
+    "body": "unlocalize"
+  },
+
+  "localtime": {
+    "description": "Filter |localtime",
+    "prefix": "localtime",
+    "body": "localtime"
+  },
+
+  "utc": {
+    "description": "Filter |utc",
+    "prefix": "utc",
+    "body": "utc"
+  },
+
+  "timezone": {
+    "description": "Filter |timezone",
+    "prefix": "timezone",
+    "body": "timezone:${1:'Europe/Paris'}$0"
+  },
+
+  "apnumber": {
+    "description": "Filter |apnumber",
+    "prefix": "apnumber",
+    "body": "apnumber"
+  },
+
+  "intcomma": {
+    "description": "Filter |intcomma",
+    "prefix": "intcomma",
+    "body": "intcomma"
+  },
+
+  "intword": {
+    "description": "Filter |intword",
+    "prefix": "intword",
+    "body": "intword"
+  },
+
+  "naturalday": {
+    "description": "Filter |naturalday",
+    "prefix": "naturalday",
+    "body": "naturalday"
+  },
+
+  "naturaltime": {
+    "description": "Filter |naturaltime",
+    "prefix": "naturaltime",
+    "body": "naturaltime"
+  },
+
+  "ordinal": {
+    "description": "Filter |ordinal",
+    "prefix": "ordinal",
+    "body": "ordinal"
+  },
+
+  "tree_info": {
+    "description": "Filter |tree_info",
+    "prefix": "tree_info",
+    "body": "tree_info"
+  },
+
+  "tree_path": {
+    "description": "Filter |tree_path",
+    "prefix": "tree_path",
+    "body": "tree_path:${1:' > '}$0"
+  },
+
+  "crispy": {
+    "description": "Filter |crispy",
+    "prefix": "crispy",
+    "body": "crispy"
+  },
+
+  "as_crispy_errors": {
+    "description": "Filter |as_crispy_errors",
+    "prefix": "as_crispy_errors",
+    "body": "as_crispy_errors"
+  },
+
+  "as_crispy_field": {
+    "description": "Filter |as_crispy_field",
+    "prefix": "as_crispy_field",
+    "body": "as_crispy_field"
+  },
+
+  "flatatt": {
+    "description": "Filter |flatatt",
+    "prefix": "flatatt",
+    "body": "flatatt"
+  },
+
+  "optgroups": {
+    "description": "Filter |optgroups",
+    "prefix": "optgroups",
+    "body": "optgroups"
+  },
+
+  "resolution": {
+    "description": "Filter |resolution",
+    "prefix": "resolution",
+    "body": "resolution:${1:'2x'}$0"
+  },
+
+  "is_portrait": {
+    "description": "Filter |is_portrait",
+    "prefix": "is_portrait",
+    "body": "is_portrait"
+  },
+
+  "margin": {
+    "description": "Filter |margin",
+    "prefix": "margin",
+    "body": "margin:${1:'300x200'}$0"
+  },
+
+  "background_margin": {
+    "description": "Filter |background_margin",
+    "prefix": "background_margin",
+    "body": "background_margin:${1:'300x200'}$0"
+  },
+
+  "markdown_thumbnails": {
+    "description": "Filter |markdown_thumbnails",
+    "prefix": "markdown_thumbnails",
+    "body": "markdown_thumbnails"
+  },
+
+  "html_thumbnails": {
+    "description": "Filter |html_thumbnails",
+    "prefix": "html_thumbnails",
+    "body": "html_thumbnails"
   }
 }
