@@ -43,9 +43,9 @@
     "body": "{% block $1 %}$0{% endblock $1 %}"
   },
 
-  "blok": {
+  "block_unnamed": {
     "description": "{% block %} (unnamed endblock)",
-    "prefix": "blok",
+    "prefix": "block_unnamed",
     "body": "{% block $1 %}$0{% endblock %}"
   },
 
@@ -329,25 +329,25 @@
   "verbatim": {
     "description": "{% verbatim %}",
     "prefix": "verbatim",
-    "body": "{% verbatim %}$0{% endverbatim %}"
+    "body": "{% verbatim $1 %}$0{% endverbatim $1 %}"
   },
 
-  "verbatim_named": {
-    "description": "{% verbatim %} (named)",
-    "prefix": "verbatim_named",
-    "body": "{% verbatim $1 %}$0{% endverbatim $1 %}"
+  "verbatim_unnamed": {
+    "description": "{% verbatim %} (unnamed)",
+    "prefix": "verbatim_unnamed",
+    "body": "{% verbatim %}$0{% endverbatim %}"
   },
 
   "verbatim_paste": {
     "description": "{% verbatim %} (paste)",
     "prefix": "verbatim_paste",
-    "body": "{% verbatim %}$0${CLIPBOARD}{% endverbatim %}"
+    "body": "{% verbatim $1 %}$0${CLIPBOARD}{% endverbatim $1 %}"
   },
 
   "endverbatim": {
     "description": "{% endverbatim %}",
     "prefix": "endverbatim",
-    "body": "{% endverbatim %}"
+    "body": "{% endverbatim $1 %}"
   },
 
   "widthratio": {
