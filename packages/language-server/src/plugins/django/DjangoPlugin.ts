@@ -2,13 +2,15 @@ import { createRequire } from "node:module";
 import { dirname, isAbsolute } from "path";
 import { fileURLToPath, pathToFileURL } from "url";
 import type { Plugin } from "prettier";
-import { FormattingOptions, Range, TextEdit } from "vscode-languageserver-types";
+import type { FormattingOptions, Hover, Position } from "vscode-languageserver-types";
+import { Range, TextEdit } from "vscode-languageserver-types";
 import { importPrettier } from "../../importPackage.js";
-import { Document } from "../../lib/documents/index.js";
+import type { Document } from "../../lib/documents/index.js";
 import { Logger } from "../../logger.js";
 import { LSConfigManager } from "../../ls-config.js";
 import { isNotNullOrUndefined } from "../../utils.js";
-import type { FormattingProvider } from "../interfaces.js";
+import type { FormattingProvider, HoverProvider } from "../interfaces.js";
+import { getDjangoHoverInfo } from "./getHoverInfo.js";
 
 const require = createRequire(import.meta.url);
 const serverDirectory = dirname(fileURLToPath(import.meta.url));
@@ -16,10 +18,14 @@ const DJANGO_TEMPLATE_TAG_RE = /({%[\s\S]*?%}|{{[\s\S]*?}}|{#[\s\S]*?#})/;
 const DJANGO_HTML_PARSER = "django-html";
 const DJANGO_PRETTIER_PLUGIN = "prettier-plugin-django-templates";
 
-export class DjangoPlugin implements FormattingProvider {
+export class DjangoPlugin implements FormattingProvider, HoverProvider {
   __name = "django";
 
   constructor(private configManager: LSConfigManager) {}
+
+  doHover(document: Document, position: Position): Hover | null {
+    return getDjangoHoverInfo(document, position);
+  }
 
   async formatDocument(document: Document, options: FormattingOptions): Promise<TextEdit[]> {
     const text = document.getText();

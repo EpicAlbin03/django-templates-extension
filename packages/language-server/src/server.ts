@@ -78,6 +78,7 @@ export function startServer(options?: LSOptions) {
           change: TextDocumentSyncKind.Incremental,
           save: { includeText: false },
         },
+        hoverProvider: true,
         documentFormattingProvider: !formattingProviderHandledByClient,
       },
     };
@@ -94,6 +95,14 @@ export function startServer(options?: LSOptions) {
   connection.onDidCloseTextDocument((evt) => docManager.closeDocument(evt.textDocument.uri));
   connection.onDidChangeTextDocument((evt) => {
     docManager.updateDocument(evt.textDocument, evt.contentChanges);
+  });
+  connection.onHover((evt) => {
+    const document = docManager.get(evt.textDocument.uri);
+    if (!document) {
+      return null;
+    }
+
+    return djangoPlugin.doHover(document, evt.position);
   });
   connection.onDocumentFormatting((evt) => {
     const document = docManager.get(evt.textDocument.uri);
