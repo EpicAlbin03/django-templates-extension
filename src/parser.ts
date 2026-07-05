@@ -145,13 +145,60 @@ function createTextToken(
   };
 }
 
+function normalizeTemplateTagContent(content: string): string {
+  const trimmed = content.trim();
+  let normalized = "";
+  let pendingSpace = false;
+  let quote: '"' | "'" | undefined;
+  let escaped = false;
+
+  for (const char of trimmed) {
+    if (quote) {
+      normalized += char;
+
+      if (escaped) {
+        escaped = false;
+      } else if (char === "\\") {
+        escaped = true;
+      } else if (char === quote) {
+        quote = undefined;
+      }
+
+      continue;
+    }
+
+    if (char === '"' || char === "'") {
+      if (pendingSpace && normalized) {
+        normalized += " ";
+      }
+      pendingSpace = false;
+      quote = char;
+      normalized += char;
+      continue;
+    }
+
+    if (/\s/.test(char)) {
+      pendingSpace = normalized.length > 0;
+      continue;
+    }
+
+    if (pendingSpace && normalized) {
+      normalized += " ";
+    }
+    pendingSpace = false;
+    normalized += char;
+  }
+
+  return normalized;
+}
+
 function createTagToken(
   raw: string,
   start: number,
   end: number,
   state: { inAttribute: boolean; inTag: boolean },
 ): TagToken {
-  const content = raw.slice(2, -2).trim();
+  const content = normalizeTemplateTagContent(raw.slice(2, -2));
   const [name = "", ...rest] = content.split(/\s+/);
 
   return {

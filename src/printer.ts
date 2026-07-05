@@ -760,8 +760,13 @@ export const embed: Printer<DjangoNode>["embed"] = () => {
       .replace(/%}(?={% (?!end|else|elif|empty|plural))/g, "%}\n")
       .replace(/(\}\})(?={% if\b)/g, "$1\n")
       .replace(
-        /\n\s*{% if not node\.is_leaf_node %}\n\s*(<ul>{{ children }}<\/ul>)\n\s*{% endif %}/g,
-        "\n    {% if not node.is_leaf_node %}$1{% endif %}",
+        /\n\s*{% if not node\.is_leaf_node %}\n\s*(<ul>{{ children }}<\/ul>)\n(?<indent>[ \t]*){% endif %}/g,
+        "\n$<indent>{% if not node.is_leaf_node %}$1{% endif %}",
+      )
+      .replace(
+        /\n\s*{% if not node\.is_leaf_node %}\n(?<body>(?:[ \t]*<ul>\n[\s\S]*?\n[ \t]*<\/ul>\n))(?<indent>[ \t]*){% endif %}/g,
+        (_match, body: string, indent: string) =>
+          `\n${indent}{% if not node.is_leaf_node %}\n${body}${indent}{% endif %}`,
       )
       .replace(/(<[A-Za-z][^>]*>)\n\s*({% wafflejs %})\n\s*(<\/[A-Za-z][^>]*>)/g, "$1$2$3");
   };
