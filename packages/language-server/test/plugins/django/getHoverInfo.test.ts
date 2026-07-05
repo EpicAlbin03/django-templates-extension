@@ -32,7 +32,10 @@ describe("getDjangoHoverInfo", () => {
     const hover = hoverAt(text, "for", 1);
 
     assertHover(hover);
-    assert.match(getMarkdownValue(hover), /Loops over each item/);
+    const value = getMarkdownValue(hover);
+    assert.ok(value.startsWith("`{% for %}`"));
+    assert.match(value, /Loops over each item/);
+    assert.ok(value.includes("https://docs.djangoproject.com/en/6.0/ref/templates/builtins/#for"));
     assert.deepStrictEqual(hover.range, {
       start: { line: 0, character: 3 },
       end: { line: 0, character: 6 },
@@ -45,22 +48,36 @@ describe("getDjangoHoverInfo", () => {
     assert.strictEqual(hover, null);
   });
 
-  it("returns related for-loop docs for empty", () => {
+  it("returns branch-specific for-loop docs for empty", () => {
     const hover = hoverAt("{% for item in items %}{% empty %}{% endfor %}", "empty", 1);
 
     assertHover(hover);
     const value = getMarkdownValue(hover);
-    assert.match(value, /Loops over each item/);
-    assert.ok(value.includes("{% for item in items %}"));
+    assert.ok(value.startsWith("`{% empty %}`"));
+    assert.match(value, /fallback section of a `\{% for %\}` loop/);
+    assert.ok(value.includes("`{% for %}`"));
+    assert.ok(
+      value.includes("https://docs.djangoproject.com/en/6.0/ref/templates/builtins/#for-empty"),
+    );
   });
 
-  it("returns related for-loop docs for endfor", () => {
+  it("returns end-tag-specific for-loop docs for endfor", () => {
     const hover = hoverAt("{% for item in items %}{% empty %}{% endfor %}", "endfor", 1);
 
     assertHover(hover);
     const value = getMarkdownValue(hover);
-    assert.match(value, /Loops over each item/);
-    assert.ok(value.includes("`{% endfor %}`"));
+    assert.ok(value.startsWith("`{% endfor %}`"));
+    assert.match(value, /Closes a `\{% for %\}` loop block/);
+    assert.ok(value.includes("`{% for %}`"));
+  });
+
+  it("lists the start tag as related for end tags", () => {
+    const hover = hoverAt("{% if user %}Hello{% endif %}", "endif", 1);
+
+    assertHover(hover);
+    const value = getMarkdownValue(hover);
+    assert.ok(value.startsWith("`{% endif %}`"));
+    assert.ok(value.includes("`{% if %}`"));
   });
 
   it("returns null inside variables", () => {

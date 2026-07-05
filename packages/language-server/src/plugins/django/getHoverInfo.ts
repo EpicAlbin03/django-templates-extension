@@ -3,7 +3,10 @@ import { MarkupKind, Range } from "vscode-languageserver-types";
 import type { Document } from "../../lib/documents/index.js";
 import { djangoTagDocsByName, type DjangoTagDoc } from "./djangoTags.js";
 
-const DJANGO_TEMPLATE_BLOCK_RE = /{%[\s\S]*?%}|{{[\s\S]*?}}|{#[\s\S]*?#}/g;
+const DJANGO_TEMPLATE_BLOCK_RE = new RegExp(
+  String.raw`{%[\s\S]*?%}|{{[\s\S]*?}}|{#[\s\S]*?#}`,
+  "g",
+);
 const DJANGO_TAG_NAME_RE = /^[A-Za-z_][A-Za-z0-9_]*/;
 
 export function getDjangoHoverInfo(document: Document, position: Position): Hover | null {
@@ -83,7 +86,7 @@ function getTagNameStartInBlock(blockText: string): number {
 }
 
 function renderDjangoTagHover(tagName: string, doc: DjangoTagDoc): string {
-  const lines = [`\`{% ${formatTagSignature(tagName, doc)} %}\``, "", doc.description];
+  const lines = [`\`{% ${tagName} %}\``, "", doc.description];
 
   if (doc.load) {
     lines.push("", `**Load:** \`{% load ${doc.load} %}\``);
@@ -93,9 +96,7 @@ function renderDjangoTagHover(tagName: string, doc: DjangoTagDoc): string {
     lines.push("", `**Deprecated:** ${doc.deprecated}`);
   }
 
-  const relatedTags = [...(doc.branches ?? []), ...(doc.endTags ?? [])].filter(
-    (relatedTag) => relatedTag !== tagName,
-  );
+  const relatedTags = getRelatedTags(tagName, doc);
   if (relatedTags.length > 0) {
     lines.push("", `**Related tags:** ${relatedTags.map(formatRelatedTag).join(", ")}`);
   }
@@ -112,31 +113,17 @@ function renderDjangoTagHover(tagName: string, doc: DjangoTagDoc): string {
   return lines.join("\n");
 }
 
-function formatTagSignature(tagName: string, doc: DjangoTagDoc): string {
-  const primaryTagNames = [doc.name, ...(doc.aliases ?? [])];
-  if (!primaryTagNames.includes(tagName)) {
-    return tagName;
-  }
-
-  return getExampleTagSignature(tagName, doc.examples) ?? `${tagName} ...`;
-}
-
-function getExampleTagSignature(tagName: string, examples: string[]): string | null {
-  const tagPattern = new RegExp(`{%-?\\s*${escapeRegExp(tagName)}\\b([\\s\\S]*?)%}`);
-
-  for (const example of examples) {
-    const match = tagPattern.exec(example);
-    if (match) {
-      const argumentsText = match[1].replace(/-\s*$/, "").trim();
-      return argumentsText ? `${tagName} ${argumentsText}` : tagName;
-    }
-  }
-
-  return null;
-}
-
-function escapeRegExp(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function getRelatedTags(tagName: string, doc: DjangoTagDoc): string[] {
+  return Array.from(
+    new Set(
+      doc.relatedTags ?? [
+        doc.name,
+        ...(doc.aliases ?? []),
+        ...(doc.branches ?? []),
+        ...(doc.endTags ?? []),
+      ],
+    ),
+  ).filter((relatedTag) => relatedTag !== tagName);
 }
 
 function formatRelatedTag(tagName: string): string {

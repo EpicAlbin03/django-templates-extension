@@ -3,6 +3,11 @@ export interface DjangoTagDoc {
   aliases?: string[];
   endTags?: string[];
   branches?: string[];
+  branchDescriptions?: Record<string, string>;
+  branchReferences?: Record<string, string>;
+  endTagDescriptions?: Record<string, string>;
+  endTagReferences?: Record<string, string>;
+  relatedTags?: string[];
   load?: string;
   deprecated?: string;
   description: string;
@@ -10,31 +15,34 @@ export interface DjangoTagDoc {
   reference?: string;
 }
 
-const builtinsReference = "https://docs.djangoproject.com/en/stable/ref/templates/builtins/";
-const staticReference = "https://docs.djangoproject.com/en/stable/ref/contrib/staticfiles/";
-const i18nReference =
-  "https://docs.djangoproject.com/en/stable/topics/i18n/translation/#internationalization-in-template-code";
-const l10nReference = "https://docs.djangoproject.com/en/stable/topics/i18n/formatting/";
-const timezoneReference =
-  "https://docs.djangoproject.com/en/stable/topics/i18n/timezones/#time-zone-aware-output-in-templates";
-const cacheReference =
-  "https://docs.djangoproject.com/en/stable/topics/cache/#template-fragment-caching";
+const builtinsReference = "https://docs.djangoproject.com/en/6.0/ref/templates/builtins/";
+const translationReference = "https://docs.djangoproject.com/en/6.0/topics/i18n/translation/";
+const formattingReference = "https://docs.djangoproject.com/en/6.0/topics/i18n/formatting/";
+const timezoneReference = "https://docs.djangoproject.com/en/6.0/topics/i18n/timezones/";
+const cacheReference = "https://docs.djangoproject.com/en/6.0/topics/cache/";
 
 export const djangoTagDocs: DjangoTagDoc[] = [
   {
     name: "autoescape",
     endTags: ["endautoescape"],
+    endTagDescriptions: {
+      endautoescape:
+        "Closes an `{% autoescape %}` block and restores the previous automatic escaping behavior.",
+    },
     description: "Controls whether automatic HTML escaping is enabled inside the block.",
     examples: [
       `{% autoescape off %}
   {{ trusted_html }}
 {% endautoescape %}`,
     ],
-    reference: `${builtinsReference}autoescape`,
+    reference: `${builtinsReference}#autoescape`,
   },
   {
     name: "block",
     endTags: ["endblock"],
+    endTagDescriptions: {
+      endblock: "Closes a named `{% block %}` used by Django template inheritance.",
+    },
     description:
       "Defines a named block that child templates can override when using template inheritance.",
     examples: [
@@ -42,11 +50,14 @@ export const djangoTagDocs: DjangoTagDoc[] = [
   <h1>{{ title }}</h1>
 {% endblock %}`,
     ],
-    reference: `${builtinsReference}block`,
+    reference: `${builtinsReference}#block`,
   },
   {
     name: "comment",
     endTags: ["endcomment"],
+    endTagDescriptions: {
+      endcomment: "Closes a `{% comment %}` block whose contents are ignored during rendering.",
+    },
     description:
       "Ignores everything between the opening and closing tag during template rendering.",
     examples: [
@@ -54,7 +65,7 @@ export const djangoTagDocs: DjangoTagDoc[] = [
   This will not be rendered.
 {% endcomment %}`,
     ],
-    reference: `${builtinsReference}comment`,
+    reference: `${builtinsReference}#comment`,
   },
   {
     name: "csrf_token",
@@ -66,7 +77,7 @@ export const djangoTagDocs: DjangoTagDoc[] = [
   <button type="submit">Save</button>
 </form>`,
     ],
-    reference: `${builtinsReference}csrf-token`,
+    reference: `${builtinsReference}#csrf-token`,
   },
   {
     name: "cycle",
@@ -77,42 +88,56 @@ export const djangoTagDocs: DjangoTagDoc[] = [
   <tr class="{% cycle 'odd' 'even' %}">{{ row }}</tr>
 {% endfor %}`,
     ],
-    reference: `${builtinsReference}cycle`,
+    reference: `${builtinsReference}#cycle`,
   },
   {
     name: "debug",
     description:
       "Outputs debugging information, including the current context and imported modules.",
     examples: [`{% debug %}`],
-    reference: `${builtinsReference}debug`,
+    reference: `${builtinsReference}#debug`,
   },
   {
     name: "extends",
     description: "Makes the current template inherit from a parent template.",
     examples: [`{% extends "base.html" %}`],
-    reference: `${builtinsReference}extends`,
+    reference: `${builtinsReference}#extends`,
   },
   {
     name: "filter",
     endTags: ["endfilter"],
+    endTagDescriptions: {
+      endfilter:
+        "Closes a `{% filter %}` block after applying the configured filters to its contents.",
+    },
     description: "Applies one or more template filters to the contents of the block.",
     examples: [
       `{% filter force_escape|lower %}
   {{ user_input }}
 {% endfilter %}`,
     ],
-    reference: `${builtinsReference}filter`,
+    reference: `${builtinsReference}#filter`,
   },
   {
     name: "firstof",
     description: "Outputs the first variable or literal argument that evaluates to true.",
     examples: [`{% firstof user.get_full_name user.username "Anonymous" %}`],
-    reference: `${builtinsReference}firstof`,
+    reference: `${builtinsReference}#firstof`,
   },
   {
     name: "for",
     branches: ["empty"],
     endTags: ["endfor"],
+    branchDescriptions: {
+      empty:
+        "Marks the fallback section of a `{% for %}` loop, rendered only when the iterable is empty.",
+    },
+    branchReferences: {
+      empty: `${builtinsReference}#for-empty`,
+    },
+    endTagDescriptions: {
+      endfor: "Closes a `{% for %}` loop block.",
+    },
     description: "Loops over each item in an iterable and renders the block for every item.",
     examples: [
       `{% for item in items %}
@@ -121,12 +146,19 @@ export const djangoTagDocs: DjangoTagDoc[] = [
   No items.
 {% endfor %}`,
     ],
-    reference: `${builtinsReference}for`,
+    reference: `${builtinsReference}#for`,
   },
   {
     name: "if",
     branches: ["elif", "else"],
     endTags: ["endif"],
+    branchDescriptions: {
+      elif: "Adds another condition to an `{% if %}` block when previous conditions did not match.",
+      else: "Marks the fallback section of a conditional block when no previous condition matched.",
+    },
+    endTagDescriptions: {
+      endif: "Closes an `{% if %}` conditional block.",
+    },
     description: "Conditionally renders a block when an expression evaluates to true.",
     examples: [
       `{% if user.is_authenticated %}
@@ -137,12 +169,18 @@ export const djangoTagDocs: DjangoTagDoc[] = [
   Please sign in.
 {% endif %}`,
     ],
-    reference: `${builtinsReference}if`,
+    reference: `${builtinsReference}#if`,
   },
   {
     name: "ifchanged",
     branches: ["else"],
     endTags: ["endifchanged"],
+    branchDescriptions: {
+      else: "Marks the fallback section of an `{% ifchanged %}` block, rendered when the tracked value has not changed.",
+    },
+    endTagDescriptions: {
+      endifchanged: "Closes an `{% ifchanged %}` block.",
+    },
     description:
       "Renders its block only when one or more values have changed since the previous loop iteration.",
     examples: [
@@ -153,33 +191,33 @@ export const djangoTagDocs: DjangoTagDoc[] = [
   {{ article.title }}
 {% endfor %}`,
     ],
-    reference: `${builtinsReference}ifchanged`,
+    reference: `${builtinsReference}#ifchanged`,
   },
   {
     name: "include",
     description:
       "Loads another template and renders it with the current context or an explicit context.",
     examples: [`{% include "partials/card.html" with item=item only %}`],
-    reference: `${builtinsReference}include`,
+    reference: `${builtinsReference}#include`,
   },
   {
     name: "load",
     description: "Loads custom template tag and filter libraries for use in the current template.",
     examples: [`{% load static i18n %}`],
-    reference: `${builtinsReference}load`,
+    reference: `${builtinsReference}#load`,
   },
   {
     name: "lorem",
     description: "Outputs random Latin placeholder text.",
     examples: [`{% lorem 2 p random %}`],
-    reference: `${builtinsReference}lorem`,
+    reference: `${builtinsReference}#lorem`,
   },
   {
     name: "now",
     description:
       "Displays the current date or time using a format string or predefined date format.",
     examples: [`{% now "Y-m-d H:i" %}`],
-    reference: `${builtinsReference}now`,
+    reference: `${builtinsReference}#now`,
   },
   {
     name: "regroup",
@@ -192,7 +230,7 @@ export const djangoTagDocs: DjangoTagDoc[] = [
   {% for city in country.list %}{{ city.name }}{% endfor %}
 {% endfor %}`,
     ],
-    reference: `${builtinsReference}regroup`,
+    reference: `${builtinsReference}#regroup`,
   },
   {
     name: "resetcycle",
@@ -202,11 +240,14 @@ export const djangoTagDocs: DjangoTagDoc[] = [
       `{% cycle 'odd' 'even' as row_class %}
 {% resetcycle row_class %}`,
     ],
-    reference: `${builtinsReference}resetcycle`,
+    reference: `${builtinsReference}#resetcycle`,
   },
   {
     name: "spaceless",
     endTags: ["endspaceless"],
+    endTagDescriptions: {
+      endspaceless: "Closes a `{% spaceless %}` block whose inter-tag whitespace is removed.",
+    },
     description: "Removes whitespace between HTML tags inside the block.",
     examples: [
       `{% spaceless %}
@@ -215,48 +256,54 @@ export const djangoTagDocs: DjangoTagDoc[] = [
   </p>
 {% endspaceless %}`,
     ],
-    reference: `${builtinsReference}spaceless`,
+    reference: `${builtinsReference}#spaceless`,
   },
   {
     name: "templatetag",
     description: "Outputs one of Django's template syntax characters as literal text.",
     examples: [`{% templatetag openblock %} comment {% templatetag closeblock %}`],
-    reference: `${builtinsReference}templatetag`,
+    reference: `${builtinsReference}#templatetag`,
   },
   {
     name: "url",
     description:
       "Resolves a URL path from a named URL pattern and optional positional or keyword arguments.",
     examples: [`<a href="{% url 'article-detail' article.pk %}">{{ article.title }}</a>`],
-    reference: `${builtinsReference}url`,
+    reference: `${builtinsReference}#url`,
   },
   {
     name: "verbatim",
     endTags: ["endverbatim"],
+    endTagDescriptions: {
+      endverbatim: "Closes a `{% verbatim %}` block and resumes normal Django template parsing.",
+    },
     description: "Prevents Django from interpreting template syntax inside the block.",
     examples: [
       `{% verbatim %}
   {{ handled_by_client_framework }}
 {% endverbatim %}`,
     ],
-    reference: `${builtinsReference}verbatim`,
+    reference: `${builtinsReference}#verbatim`,
   },
   {
     name: "widthratio",
     description: "Calculates the ratio of one value to another and scales it to a maximum value.",
     examples: [`{% widthratio current max 100 %}`],
-    reference: `${builtinsReference}widthratio`,
+    reference: `${builtinsReference}#widthratio`,
   },
   {
     name: "with",
     endTags: ["endwith"],
+    endTagDescriptions: {
+      endwith: "Closes a `{% with %}` block and discards variables assigned only for that block.",
+    },
     description: "Caches one or more values under simpler variable names within the block.",
     examples: [
       `{% with total=cart.items.count %}
   {{ total }} item{{ total|pluralize }}
 {% endwith %}`,
     ],
-    reference: `${builtinsReference}with`,
+    reference: `${builtinsReference}#with`,
   },
   {
     name: "static",
@@ -267,7 +314,7 @@ export const djangoTagDocs: DjangoTagDoc[] = [
       `{% load static %}
 <link rel="stylesheet" href="{% static 'css/site.css' %}">`,
     ],
-    reference: `${staticReference}static-template-tag`,
+    reference: `${builtinsReference}#static`,
   },
   {
     name: "get_static_prefix",
@@ -278,7 +325,7 @@ export const djangoTagDocs: DjangoTagDoc[] = [
 {% get_static_prefix as STATIC_PREFIX %}
 <img src="{{ STATIC_PREFIX }}images/logo.svg" alt="">`,
     ],
-    reference: `${builtinsReference}get-static-prefix`,
+    reference: `${builtinsReference}#get-static-prefix`,
   },
   {
     name: "get_media_prefix",
@@ -289,7 +336,7 @@ export const djangoTagDocs: DjangoTagDoc[] = [
 {% get_media_prefix as MEDIA_PREFIX %}
 <img src="{{ MEDIA_PREFIX }}{{ user.avatar }}" alt="">`,
     ],
-    reference: `${builtinsReference}get-media-prefix`,
+    reference: `${builtinsReference}#get-media-prefix`,
   },
   {
     name: "translate",
@@ -299,7 +346,7 @@ export const djangoTagDocs: DjangoTagDoc[] = [
       `{% load i18n %}
 {% translate "Welcome" %}`,
     ],
-    reference: i18nReference,
+    reference: `${translationReference}#translate-template-tag`,
   },
   {
     name: "trans",
@@ -310,13 +357,20 @@ export const djangoTagDocs: DjangoTagDoc[] = [
       `{% load i18n %}
 {% trans "Welcome" %}`,
     ],
-    reference: i18nReference,
+    reference: `${translationReference}#translate-template-tag`,
   },
   {
     name: "blocktranslate",
     load: "i18n",
     branches: ["plural"],
     endTags: ["endblocktranslate"],
+    branchDescriptions: {
+      plural:
+        "Separates singular and plural text inside a `{% blocktranslate %}` translation block.",
+    },
+    endTagDescriptions: {
+      endblocktranslate: "Closes a `{% blocktranslate %}` translation block.",
+    },
     description:
       "Marks a template block for translation, with support for variables and plural forms.",
     examples: [
@@ -327,13 +381,19 @@ export const djangoTagDocs: DjangoTagDoc[] = [
   There are {{ count }} items.
 {% endblocktranslate %}`,
     ],
-    reference: i18nReference,
+    reference: `${translationReference}#blocktranslate-template-tag`,
   },
   {
     name: "blocktrans",
     load: "i18n",
     branches: ["plural"],
     endTags: ["endblocktrans"],
+    branchDescriptions: {
+      plural: "Separates singular and plural text inside a deprecated `{% blocktrans %}` block.",
+    },
+    endTagDescriptions: {
+      endblocktrans: "Closes a deprecated `{% blocktrans %}` translation block.",
+    },
     deprecated: "Use `{% blocktranslate %}` instead.",
     description:
       "Deprecated alias for translating a template block with variables or plural forms.",
@@ -341,7 +401,7 @@ export const djangoTagDocs: DjangoTagDoc[] = [
       `{% load i18n %}
 {% blocktrans %}Hello {{ name }}{% endblocktrans %}`,
     ],
-    reference: i18nReference,
+    reference: `${translationReference}#blocktranslate-template-tag`,
   },
   {
     name: "get_available_languages",
@@ -351,7 +411,7 @@ export const djangoTagDocs: DjangoTagDoc[] = [
       `{% load i18n %}
 {% get_available_languages as LANGUAGES %}`,
     ],
-    reference: i18nReference,
+    reference: `${translationReference}#get-available-languages`,
   },
   {
     name: "get_current_language",
@@ -361,7 +421,7 @@ export const djangoTagDocs: DjangoTagDoc[] = [
       `{% load i18n %}
 {% get_current_language as LANGUAGE_CODE %}`,
     ],
-    reference: i18nReference,
+    reference: `${translationReference}#get-current-language`,
   },
   {
     name: "get_current_language_bidi",
@@ -372,7 +432,7 @@ export const djangoTagDocs: DjangoTagDoc[] = [
       `{% load i18n %}
 {% get_current_language_bidi as LANGUAGE_BIDI %}`,
     ],
-    reference: i18nReference,
+    reference: `${translationReference}#get-current-language-bidi`,
   },
   {
     name: "get_language_info",
@@ -383,7 +443,7 @@ export const djangoTagDocs: DjangoTagDoc[] = [
 {% get_language_info for LANGUAGE_CODE as language %}
 {{ language.name_local }}`,
     ],
-    reference: i18nReference,
+    reference: `${translationReference}#get-language-info`,
   },
   {
     name: "get_language_info_list",
@@ -393,12 +453,16 @@ export const djangoTagDocs: DjangoTagDoc[] = [
       `{% load i18n %}
 {% get_language_info_list for LANGUAGES as languages %}`,
     ],
-    reference: i18nReference,
+    reference: `${translationReference}#get-language-info-list`,
   },
   {
     name: "localize",
     load: "l10n",
     endTags: ["endlocalize"],
+    endTagDescriptions: {
+      endlocalize:
+        "Closes a `{% localize %}` block and restores the previous localization behavior.",
+    },
     description: "Enables or disables localized formatting for values rendered inside the block.",
     examples: [
       `{% load l10n %}
@@ -406,12 +470,16 @@ export const djangoTagDocs: DjangoTagDoc[] = [
   {{ value }}
 {% endlocalize %}`,
     ],
-    reference: l10nReference,
+    reference: `${formattingReference}#localize`,
   },
   {
     name: "localtime",
     load: "tz",
     endTags: ["endlocaltime"],
+    endTagDescriptions: {
+      endlocaltime:
+        "Closes a `{% localtime %}` block and restores the previous local-time conversion behavior.",
+    },
     description:
       "Enables or disables conversion of aware datetimes to the current time zone in the block.",
     examples: [
@@ -420,12 +488,15 @@ export const djangoTagDocs: DjangoTagDoc[] = [
   {{ value }}
 {% endlocaltime %}`,
     ],
-    reference: timezoneReference,
+    reference: `${timezoneReference}#localtime`,
   },
   {
     name: "timezone",
     load: "tz",
     endTags: ["endtimezone"],
+    endTagDescriptions: {
+      endtimezone: "Closes a `{% timezone %}` block and restores the previous active time zone.",
+    },
     description: "Sets the active time zone for datetimes rendered inside the block.",
     examples: [
       `{% load tz %}
@@ -433,7 +504,7 @@ export const djangoTagDocs: DjangoTagDoc[] = [
   {{ value }}
 {% endtimezone %}`,
     ],
-    reference: timezoneReference,
+    reference: `${timezoneReference}#timezone`,
   },
   {
     name: "get_current_timezone",
@@ -443,12 +514,15 @@ export const djangoTagDocs: DjangoTagDoc[] = [
       `{% load tz %}
 {% get_current_timezone as TIME_ZONE %}`,
     ],
-    reference: timezoneReference,
+    reference: `${timezoneReference}#get-current-timezone`,
   },
   {
     name: "cache",
     load: "cache",
     endTags: ["endcache"],
+    endTagDescriptions: {
+      endcache: "Closes a `{% cache %}` template fragment caching block.",
+    },
     description: "Caches the rendered contents of a template fragment for a specified timeout.",
     examples: [
       `{% load cache %}
@@ -456,21 +530,66 @@ export const djangoTagDocs: DjangoTagDoc[] = [
   ... expensive sidebar ...
 {% endcache %}`,
     ],
-    reference: cacheReference,
+    reference: `${cacheReference}#template-fragment-caching`,
   },
 ];
 
 export const djangoTagDocsByName = new Map<string, DjangoTagDoc>();
 
 for (const doc of djangoTagDocs) {
-  for (const name of [
+  const relatedTags = [
     doc.name,
     ...(doc.aliases ?? []),
     ...(doc.branches ?? []),
     ...(doc.endTags ?? []),
-  ]) {
-    if (!djangoTagDocsByName.has(name)) {
-      djangoTagDocsByName.set(name, doc);
-    }
+  ];
+
+  registerTagDoc(doc.name, doc, relatedTags);
+
+  for (const alias of doc.aliases ?? []) {
+    registerTagDoc(alias, doc, relatedTags);
   }
+
+  for (const branch of doc.branches ?? []) {
+    registerTagDoc(branch, doc, relatedTags, {
+      description: doc.branchDescriptions?.[branch],
+      reference: doc.branchReferences?.[branch],
+    });
+  }
+
+  for (const endTag of doc.endTags ?? []) {
+    registerTagDoc(endTag, doc, relatedTags, {
+      description: doc.endTagDescriptions?.[endTag],
+      reference: doc.endTagReferences?.[endTag],
+    });
+  }
+}
+
+function registerTagDoc(
+  name: string,
+  doc: DjangoTagDoc,
+  relatedTags: string[],
+  overrides: Partial<Pick<DjangoTagDoc, "description" | "reference">> = {},
+): void {
+  const lookupDoc: DjangoTagDoc = {
+    ...doc,
+    ...overrides,
+    name,
+    description: overrides.description ?? doc.description,
+    reference: overrides.reference ?? doc.reference,
+    relatedTags: relatedTags.filter((relatedTag) => relatedTag !== name),
+  };
+  const existingDoc = djangoTagDocsByName.get(name);
+
+  if (!existingDoc) {
+    djangoTagDocsByName.set(name, lookupDoc);
+    return;
+  }
+
+  djangoTagDocsByName.set(name, {
+    ...existingDoc,
+    relatedTags: Array.from(
+      new Set([...(existingDoc.relatedTags ?? []), ...(lookupDoc.relatedTags ?? [])]),
+    ),
+  });
 }
