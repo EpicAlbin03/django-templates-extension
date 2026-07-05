@@ -3,6 +3,7 @@ import type { Hover } from "vscode-languageserver-types";
 import { MarkupKind } from "vscode-languageserver-types";
 import { describe, it } from "vite-plus/test";
 import { Document } from "../../../src/lib/documents/index.js";
+import { djangoTagDocsByName } from "../../../src/plugins/django/djangoTags.js";
 import { getDjangoHoverInfo } from "../../../src/plugins/django/getHoverInfo.js";
 
 function createDocument(text: string): Document {
@@ -96,6 +97,105 @@ describe("getDjangoHoverInfo", () => {
     const hover = hoverAt("{% custom_tag value %}", "custom_tag", 1);
 
     assert.strictEqual(hover, null);
+  });
+
+  it("returns docs for supported third-party tags", () => {
+    const hover = hoverAt(
+      `{% thumbnail photo.image "300x200" as im %}<img src="{{ im.url }}">{% endthumbnail %}`,
+      "thumbnail",
+      1,
+    );
+
+    assertHover(hover);
+    const value = getMarkdownValue(hover);
+    assert.ok(value.startsWith("`{% thumbnail %}`"));
+    assert.match(value, /sorl-thumbnail/);
+    assert.ok(value.includes("`{% endthumbnail %}`"));
+  });
+
+  it("has documentation for every supported non-core tag from prettier-plugin-django-templates", () => {
+    const supportedNonCoreTags = [
+      "language",
+      "endlanguage",
+      "partialdef",
+      "endpartialdef",
+      "partial",
+      "querystring",
+      "csp_nonce_attr",
+      "ifequal",
+      "endifequal",
+      "ifnotequal",
+      "endifnotequal",
+      "thumbnail",
+      "endthumbnail",
+      "component",
+      "endcomponent",
+      "component_block",
+      "endcomponent_block",
+      "fill",
+      "endfill",
+      "slot",
+      "endslot",
+      "provide",
+      "endprovide",
+      "html_attrs",
+      "component_css_dependencies",
+      "component_js_dependencies",
+      "compress",
+      "endcompress",
+      "addtoblock",
+      "endaddtoblock",
+      "with_data",
+      "endwith_data",
+      "render_block",
+      "add_data",
+      "flag",
+      "endflag",
+      "switch",
+      "endswitch",
+      "sample",
+      "endsample",
+      "wafflejs",
+      "recursetree",
+      "endrecursetree",
+      "drilldown_tree_for_node",
+      "full_tree_for_model",
+      "placeholder",
+      "endplaceholder",
+      "static_placeholder",
+      "endstatic_placeholder",
+      "render_model_block",
+      "endrender_model_block",
+      "render_model_add_block",
+      "endrender_model_add_block",
+      "render_plugin_block",
+      "endrender_plugin_block",
+      "cms_admin_url",
+      "page_attribute",
+      "page_url",
+      "page_id_url",
+      "page_language_url",
+      "render_model",
+      "render_model_icon",
+      "render_model_add",
+      "render_placeholder",
+      "render_uncached_placeholder",
+      "render_plugin",
+      "show_placeholder",
+      "static_alias",
+      "cms_toolbar",
+      "element",
+      "endelement",
+      "crispy",
+      "crispy_field",
+      "crispy_addon",
+      "endcrispy_addon",
+    ];
+
+    assert.deepStrictEqual(
+      supportedNonCoreTags.filter((tagName) => !djangoTagDocsByName.has(tagName)),
+      [],
+    );
   });
 
   it("supports whitespace-control syntax", () => {

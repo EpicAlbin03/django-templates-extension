@@ -3,7 +3,9 @@
   <head>
     <meta charset="utf-8" />
     <title>Django template tag hover test</title>
-    {% load static i18n l10n tz cache %} {% extends "base.html" %}
+    {% load static i18n l10n tz cache thumbnail component_tags compress sekizai_tags waffle_tags
+    mptt_tags cms_tags allauth crispy_forms_tags csp %} {% extends "base.html" %} {%
+    component_css_dependencies %}
   </head>
   <body>
     {% block content %}
@@ -35,7 +37,15 @@
     <p>{% trans "Welcome back" %}.</p>
     {% else %}
     <p>{% translate "Please sign in" %}.</p>
-    {% endif %} {% for article in articles %} {% ifchanged article.category %}
+    {% endif %} {% ifequal user.pk owner.pk %}
+    <p>Owner</p>
+    {% else %}
+    <p>Visitor</p>
+    {% endifequal %} {% ifnotequal user.pk owner.pk %}
+    <p>Visitor</p>
+    {% else %}
+    <p>Owner</p>
+    {% endifnotequal %} {% for article in articles %} {% ifchanged article.category %}
     <h2>{{ article.category }}</h2>
     {% else %}
     <span class="same-category">Same category</span>
@@ -65,8 +75,15 @@
     as percent_done %}
     <progress value="{{ percent_done }}" max="100"></progress>
 
-    {% with total=cart.items.count %} {{ total }} item{{ total|pluralize }} {% endwith %}
+    {% with total=cart.items.count %} {{ total }} item{{ total|pluralize }} {% endwith %} {%
+    partialdef card %}
+    <article>{{ title }}</article>
+    {% endpartialdef %} {% partial card %}
+    <a href="{% querystring page=page.next_page_number %}">Next page</a>
 
+    <script {% csp_nonce_attr %}>
+      window.appReady = true;
+    </script>
     <link rel="stylesheet" href="{% static 'css/site.css' %}" />
     {% get_static_prefix as STATIC_PREFIX %} {% get_media_prefix as MEDIA_PREFIX %}
     <img src="{{ STATIC_PREFIX }}images/logo.svg" alt="" />
@@ -74,13 +91,69 @@
 
     {% blocktranslate count count=items|length %} There is {{ count }} item. {% plural %} There are
     {{ count }} items. {% endblocktranslate %} {% blocktrans with name=user.get_full_name %}Hello {{
-    name }}{% endblocktrans %} {% get_available_languages as LANGUAGES %} {% get_current_language as
-    LANGUAGE_CODE %} {% get_current_language_bidi as LANGUAGE_BIDI %} {% get_language_info for
-    LANGUAGE_CODE as language %} {% get_language_info_list for LANGUAGES as languages %} {% localize
-    off %} {{ decimal_value }} {% endlocalize %} {% localtime on %} {{ event.starts_at }} {%
-    endlocaltime %} {% timezone "Europe/Paris" %} {{ event.starts_at }} {% endtimezone %} {%
-    get_current_timezone as TIME_ZONE %} {% cache 500 sidebar request.user.username %}
+    name }}{% endblocktrans %} {% language "fr" %} {% translate "Welcome" %} {% endlanguage %} {%
+    get_available_languages as LANGUAGES %} {% get_current_language as LANGUAGE_CODE %} {%
+    get_current_language_bidi as LANGUAGE_BIDI %} {% get_language_info for LANGUAGE_CODE as language
+    %} {% get_language_info_list for LANGUAGES as languages %} {% localize off %} {{ decimal_value
+    }} {% endlocalize %} {% localtime on %} {{ event.starts_at }} {% endlocaltime %} {% timezone
+    "Europe/Paris" %} {{ event.starts_at }} {% endtimezone %} {% get_current_timezone as TIME_ZONE
+    %} {% cache 500 sidebar request.user.username %}
     <aside>Cached sidebar</aside>
-    {% endcache %} {% debug %} {% endblock %}
+    {% endcache %} {% thumbnail photo.image "300x200" crop="center" as im %}
+    <img src="{{ im.url }}" width="{{ im.width }}" height="{{ im.height }}" alt="" />
+    {% endthumbnail %} {% component "card" title=title %} {% fill "body" %}
+    <p data-attrs="{% html_attrs class='copy' data_id=item.id %}">{{ body }}</p>
+    {% endfill %} {% fill "footer" %}
+    <button>Save</button>
+    {% endfill %} {% endcomponent %} {% component_block "legacy_card" title=title %}
+    <p>Legacy component block.</p>
+    {% endcomponent_block %} {% slot "footer" %} Default footer {% endslot %} {% provide "theme"
+    value="dark" %} {% component "card" / %} {% endprovide %} {% component_js_dependencies %} {%
+    compress css %}
+    <link rel="stylesheet" href="{% static 'css/app.css' %}" />
+    {% endcompress %} {% addtoblock "js" %}
+    <script src="/static/app.js"></script>
+    {% endaddtoblock %} {% with_data "nav" items=items %}
+    <nav>{{ items|length }}</nav>
+    {% endwith_data %} {% render_block "js" %} {% add_data "body-class" "dashboard" %} {% flag
+    "new_nav" %}
+    <nav>New navigation</nav>
+    {% else %}
+    <nav>Old navigation</nav>
+    {% endflag %} {% switch "beta_checkout" %}
+    <button>Checkout</button>
+    {% endswitch %} {% sample "hero_test" %}
+    <h1>Variant A</h1>
+    {% endsample %} {% wafflejs %} {% recursetree nodes %}
+    <li>
+      {{ node.name }}{% if not node.is_leaf_node %}
+      <ul>
+        {{ children }}
+      </ul>
+      {% endif %}
+    </li>
+    {% endrecursetree %} {% drilldown_tree_for_node node as drilldown %} {% full_tree_for_model
+    app.Model as tree %} {% placeholder "content" %}
+    <section>{{ content }}</section>
+    {% endplaceholder %} {% static_placeholder "footer" %}
+    <footer>Footer</footer>
+    {% endstatic_placeholder %} {% render_model_block object "title" %}
+    <h1>{{ object.title }}</h1>
+    {% endrender_model_block %} {% render_model_add_block object %}
+    <span>Add</span>
+    {% endrender_model_add_block %} {% render_plugin_block plugin %}
+    <article>{{ plugin }}</article>
+    {% endrender_plugin_block %}
+    <a href="{% cms_admin_url object 'change' %}">Edit in CMS</a>
+    {% page_attribute "page_title" %}
+    <a href="{% page_url 'home' %}">Home</a>
+    <a href="{% page_id_url 1 %}">Home by ID</a>
+    <a href="{% page_language_url 'de' %}">Deutsch</a>
+    {% render_model object "title" %} {% render_model_icon object "title" %} {% render_model_add
+    object %} {% render_placeholder page "content" %} {% render_uncached_placeholder page "content"
+    %} {% render_plugin plugin %} {% show_placeholder "content" "home" %} {% static_alias "footer"
+    %} {% cms_toolbar %} {% element button type="submit" %} Continue {% endelement %} {% crispy form
+    %} {% crispy_field form.email %} {% crispy_addon form.email append="@example.com" %} {{
+    form.email }} {% endcrispy_addon %} {% debug %} {% endblock %}
   </body>
 </html>
