@@ -9,8 +9,9 @@ Django template support for HTML files in VS Code. Templates keep the built-in `
 - **Tooltips** with examples and reference links
 - **Snippets** for common tags and filters
 - **Formatting** with Prettier
+- **3rd-party package support** for popular Django libraries
 
-### Syntax highlighting
+### Syntax Highlighting
 
 Highlights Django tags, variables, filters, and comments alongside normal HTML.
 
@@ -328,6 +329,20 @@ Type an abbreviation and select the matching snippet from the completion list.
 ### Language Server
 
 Use the `Django Templates: Restart Language Server` command to restart the language server.
+
+### 3rd-party Support
+
+Completions, tooltips, and snippets include template tags and filters from popular packages:
+
+- [sorl-thumbnail](https://github.com/jazzband/sorl-thumbnail)
+- [django-components](https://github.com/django-components/django-components)
+- [django-compressor](https://github.com/django-compressor/django-compressor)
+- [django-sekizai](https://github.com/ojii/django-sekizai)
+- [django-waffle](https://github.com/django-waffle/django-waffle)
+- [django-mptt](https://github.com/django-mptt/django-mptt)
+- [django CMS](https://github.com/django-cms/django-cms)
+- [django-allauth](https://github.com/pennersr/django-allauth)
+- [django-crispy-forms](https://github.com/django-crispy-forms/django-crispy-forms)
 
 ## Credits
 
