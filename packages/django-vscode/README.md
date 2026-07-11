@@ -1,4 +1,4 @@
-# Django Templates for VS Code
+# Django HTML Templates
 
 Django template support for HTML files in VS Code. Templates keep the built-in `html` language mode while gaining Django-specific features.
 
