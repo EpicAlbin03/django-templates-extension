@@ -1,6 +1,6 @@
 {
   "name": "django-templates-ext",
-  "displayName": "Django Templates",
+  "displayName": "Django HTML Templates",
   "version": "0.0.0",
   "private": true,
   "description": "Django template language support for VS Code",
