@@ -8,6 +8,29 @@
     "Formatters",
     "Programming Languages"
   ],
+  "keywords": [
+    "django",
+    "django templates",
+    "formatter",
+    "html",
+    "language server",
+    "prettier",
+    "snippets",
+    "syntax highlighting",
+    "templates",
+    "vscode"
+  ],
+  "homepage": "https://github.com/EpicAlbin03/django-templates-extension#readme",
+  "bugs": {
+    "url": "https://github.com/EpicAlbin03/django-templates-extension/issues"
+  },
+  "license": "MIT",
+  "author": "Albin Carlsson <inquires@albincarlsson.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/EpicAlbin03/django-templates-extension.git"
+  },
+  "publisher": "EpicAlbin03",
   "type": "module",
   "main": "dist/extension.cjs",
   "scripts": {
@@ -106,6 +129,11 @@
     "onCommand:django.restartLanguageServer",
     "onLanguage:html"
   ],
+  "icon": "icons/logo.png",
+  "galleryBanner": {
+    "color": "#092E20",
+    "theme": "dark"
+  },
   "engines": {
     "vscode": "^1.125.0"
   },
