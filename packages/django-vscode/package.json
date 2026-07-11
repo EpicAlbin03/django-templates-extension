@@ -31,6 +31,15 @@
     "url": "https://github.com/EpicAlbin03/django-templates-extension.git"
   },
   "publisher": "EpicAlbin03",
+  "files": [
+    "dist",
+    "img",
+    "snippets",
+    "syntaxes",
+    "CHANGELOG.md",
+    "LICENSE",
+    "README.md"
+  ],
   "type": "module",
   "main": "dist/extension.cjs",
   "scripts": {
