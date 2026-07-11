@@ -15,7 +15,7 @@ Django template support for HTML files in VS Code. Templates keep the built-in `
 
 Highlights Django tags, variables, filters, and comments alongside normal HTML.
 
-<img src="./img/formatting-syntax.png" alt="Syntax highlighting and formatting" width="800">
+<img src="https://github.com/EpicAlbin03/django-templates-extension/raw/main/packages/django-vscode/img/formatting-syntax.png" alt="Syntax highlighting and formatting" width="800">
 
 ### Formatting
 
@@ -37,19 +37,19 @@ Then use **Format Document** or enable `editor.formatOnSave`.
 
 Provides LSP completions for Django template tags and filters as you type.
 
-<img src="./img/completion-tag.png" alt="Tag completions" width="400"> <img src="./img/completion-filter.png" alt="Filter completions" width="500">
+<img src="https://github.com/EpicAlbin03/django-templates-extension/raw/main/packages/django-vscode/img/completion-tag.png" alt="Tag completions" width="400"> <img src="https://github.com/EpicAlbin03/django-templates-extension/raw/main/packages/django-vscode/img/completion-filter.png" alt="Filter completions" width="500">
 
 ### Tooltips
 
 Shows documentation, examples, and reference links when hovering over supported tags and filters.
 
-<img src="./img/tooltip.png" alt="tooltip" width="500">
+<img src="https://github.com/EpicAlbin03/django-templates-extension/raw/main/packages/django-vscode/img/tooltip.png" alt="tooltip" width="500">
 
 ### Snippets
 
 Type an abbreviation and select the matching snippet from the completion list.
 
-<img src="./img/snippets.png" alt="snippets" width="500">
+<img src="https://github.com/EpicAlbin03/django-templates-extension/raw/main/packages/django-vscode/img/snippets.png" alt="snippets" width="500">
 
 #### Tags
 
@@ -346,7 +346,7 @@ Completions, tooltips, and snippets include template tags and filters from popul
 
 ## Credits
 
-- [Django Template Language Server](../language-server/README.md) (LSP)
+- [Django Template Language Server](https://github.com/EpicAlbin03/django-templates-extension/blob/main/packages/language-server/README.md) (LSP)
 - [Svelte for VS Code](https://github.com/sveltejs/language-tools/tree/master/packages/svelte-vscode) (repo blueprint)
 - [django-template-extension](https://github.com/jraylan/django-template-extension) (django)
 - [vscode-django](https://github.com/vscode-django/vscode-django) (django)
@@ -355,4 +355,4 @@ Completions, tooltips, and snippets include template tags and filters from popul
 
 ## License
 
-Licensed under the [MIT license](./LICENSE).
+Licensed under the [MIT license](https://github.com/EpicAlbin03/django-templates-extension/blob/main/packages/django-vscode/LICENSE).

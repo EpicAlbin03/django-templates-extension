@@ -33,7 +33,7 @@
   "publisher": "EpicAlbin03",
   "files": [
     "dist",
-    "img",
+    "img/logo.png",
     "snippets",
     "syntaxes",
     "CHANGELOG.md",
