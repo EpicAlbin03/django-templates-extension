@@ -3,14 +3,14 @@ name: Release
 on:
   push:
     branches:
-      - master
+      - main
 
 permissions: {}
 
 jobs:
   release:
     # prevents this action from running on forks
-    if: github.repository == 'sveltejs/language-tools'
+    if: github.repository == 'EpicAlbin03/django-templates-extension'
     permissions:
       contents: write # to create release (changesets/action)
       id-token: write # OpenID Connect token needed for provenance
@@ -23,21 +23,19 @@ jobs:
         with:
           # This makes Actions fetch all Git history so that Changesets can generate changelogs with the correct commits
           fetch-depth: 0
-      - uses: pnpm/action-setup@v4.1.0
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: voidzero-dev/setup-vp@v1
         with:
-          node-version: 24.x
-          cache: pnpm
+          node-version: "24.x"
+          cache: true
 
-      - run: pnpm install --frozen-lockfile
+      - run: vp install --frozen-lockfile
 
       - name: Create Release Pull Request or Publish to npm
         id: changesets
         uses: changesets/action@v1
         with:
-          version: pnpm changeset:version
-          publish: pnpm changeset:publish
+          version: vp run changeset:version
+          publish: vp run changeset:publish
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_CONFIG_PROVENANCE: true

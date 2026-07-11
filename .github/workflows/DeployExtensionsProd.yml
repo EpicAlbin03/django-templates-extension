@@ -3,52 +3,48 @@ name: Tagged Production Deploys for VS Code
 on:
   push:
     tags:
-      - "extensions-*"
+      - "django-vscode-*"
 
 permissions: {}
 
 jobs:
   deploy:
     # prevents this action from running on forks
-    if: github.repository == 'sveltejs/language-tools'
+    if: github.repository == 'EpicAlbin03/django-templates-extension'
     permissions:
-      contents: write # to create release (adjust package.json etc)
+      contents: read # to fetch code for packaging
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: voidzero-dev/setup-vp@v1
         with:
-          node-version: "22.x"
-          registry-url: "https://registry.npmjs.org"
-          cache: pnpm
+          node-version: "24.x"
+          cache: true
 
       # Ensure everything is compiling
-      - run: "pnpm install"
-      - run: "pnpm build"
-      - run: "pnpm bootstrap"
+      - run: "vp install --frozen-lockfile"
+      - run: "vp run build"
 
-      # Lets us use one-liner JSON manipulations the package.json files
-      - run: "npm install -g json"
+      # Lets us use one-liner JSON manipulations in the package.json files
+      - run: "vp install -g json"
 
       # Setup the environment
-      - run: json -I -f packages/svelte-vscode/package.json -e "this.version=\`${{ github.ref }}\`.split(\`-\`).pop()"
+      - run: json -I -f packages/django-vscode/package.json -e "this.version=process.env.GITHUB_REF_NAME.replace(/^django-vscode-/, '')"
 
       # To deploy we need isolated node_modules folders which pnpm won't do because it is a workspace
       # So, remove the workspace
       - run: "rm package.json pnpm-workspace.yaml pnpm-lock.yaml"
-      - run: "rm -rf packages/svelte-vscode/node_modules" # pnpm version of stuff, needs to be removed
+      - run: "rm -rf packages/django-vscode/node_modules" # pnpm version of stuff, needs to be removed
       # ... and remove the workspace:* references
-      - run: json -I -f packages/svelte-vscode/package.json -e 'this.dependencies["svelte-language-server"]="*"'
-      - run: json -I -f packages/svelte-vscode/package.json -e 'this.dependencies["typescript-svelte-plugin"]="*"'
+      - run: json -I -f packages/django-vscode/package.json -e 'this.dependencies["django-template-language-server"]="*"'
 
       - run: |
-          cd packages/svelte-vscode
+          cd packages/django-vscode
           npm install
 
-          # Just a hard constraint from the vscode marketplace's usage of azure tokens
-          echo "Once a year this expires, tell Orta to access https://dev.azure.com/ortatherox0608/_usersSettings/tokens (logging in with GitHub) to get a new one"
+          # Just a hard constraint from the vscode marketplace's usage of Azure tokens
+          echo "VS Code Marketplace tokens expire once a year, renew AZURE_PAN_TOKEN by logging in to Azure: https://dev.azure.com"
 
           # Ship it
           npx vsce publish -p $VSCE_TOKEN

@@ -10,45 +10,40 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: voidzero-dev/setup-vp@v1
         with:
-          node-version: "20.x"
-          cache: pnpm
+          node-version: "24.x"
+          cache: true
 
       # Get projects set up
-      - run: pnpm install
-      - run: pnpm bootstrap
-      - run: pnpm build
+      - run: vp install --frozen-lockfile
+      - run: vp run build
 
       # Run any tests
-      - run: pnpm test
+      - run: vp test
         env:
           CI: true
 
-  test-svelte5:
+  test-supported-node:
     permissions: {}
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: voidzero-dev/setup-vp@v1
         with:
-          node-version: "20.x"
-          cache: pnpm
+          node-version: "22.18.x"
+          cache: true
 
-      # Lets us use one-liner JSON manipulations the package.json files
-      - run: "npm install -g json"
+      # Exercise the minimum Node.js version supported by this repository
+      - run: node --version
 
       # Get projects set up
-      - run: json -I -f package.json -e 'this.pnpm={"overrides":{"svelte":"^5.0.0-next.100"}}'
-      - run: pnpm install --no-frozen-lockfile
-      - run: pnpm bootstrap
-      - run: pnpm build
+      - run: vp install --frozen-lockfile
+      - run: vp run build
 
       # Run any tests
-      - run: pnpm test
+      - run: vp test
         env:
           CI: true
 
@@ -58,12 +53,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: voidzero-dev/setup-vp@v1
         with:
-          node-version: "20.x"
-          cache: pnpm
+          node-version: "24.x"
+          cache: true
 
       # Get projects set up
-      - run: pnpm install
-      - run: pnpm lint
+      - run: vp install --frozen-lockfile
+      - run: vp check
