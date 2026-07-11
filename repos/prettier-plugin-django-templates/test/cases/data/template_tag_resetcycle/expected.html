@@ -1,0 +1,6 @@
+<ul>
+  {% cycle 'odd' 'even' as rowcolors %}
+  <li class="{% cycle rowcolors %}">{{ value }}</li>
+  {% resetcycle %}
+  <li class="{% cycle rowcolors %}">{{ value }}</li>
+</ul>

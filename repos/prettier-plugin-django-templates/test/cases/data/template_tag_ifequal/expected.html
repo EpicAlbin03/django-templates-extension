@@ -1,0 +1,5 @@
+{% ifequal user.role 'admin' %}
+  <strong>{{ label }}</strong>
+{% else %}
+  <span>{{ label }}</span>
+{% endifequal %}
