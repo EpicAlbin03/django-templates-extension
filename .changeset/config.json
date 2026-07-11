@@ -9,5 +9,6 @@
     "linked": [],
     "access": "public",
     "baseBranch": "main",
-    "bumpVersionsWithWorkspaceProtocolOnly": true
+    "bumpVersionsWithWorkspaceProtocolOnly": true,
+    "ignore": ["django-vscode"]
 }
