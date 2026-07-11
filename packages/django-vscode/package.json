@@ -47,7 +47,7 @@
     "dev": "vp pack --watch",
     "test": "vp test --passWithNoTests",
     "check": "vp check",
-    "vscode:prepublish": "pnpm install && pnpm run build && pnpm prune --production"
+    "vscode:prepublish": "vp install && vp run build && vp pm prune --prod"
   },
   "dependencies": {
     "django-template-language-server": "workspace:*",
