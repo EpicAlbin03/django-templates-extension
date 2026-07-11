@@ -13,8 +13,8 @@ Django template support for HTML files in VS Code. Templates keep the built-in `
 
 ## Packages
 
-- [django-vscode](./packages/django-vscode) - VS Code extension
-- [django-template-language-server](./packages/language-server) - language server (LSP)
+- VS Code extension: [django-vscode](./packages/django-vscode) / [TODO]()
+- Language server (LSP): [django-template-language-server](./packages/language-server) / [npm](https://www.npmjs.com/package/django-template-language-server)
 
 ## Development
 
