@@ -9,11 +9,12 @@ Django template support for HTML files in VS Code. Templates keep the built-in `
 - **Tooltips** with examples and reference links
 - **Snippets** for common tags and filters
 - **Formatting** with Prettier
-- **Django Templates: Restart Language Server** command
 
 ### Syntax highlighting
 
 Highlights Django tags, variables, filters, and comments alongside normal HTML.
+
+![demo](./img/formatting-syntax.png)
 
 ### Formatting
 
@@ -35,13 +36,20 @@ Then use **Format Document** or enable `editor.formatOnSave`.
 
 Provides LSP completions for Django template tags and filters as you type.
 
+![completion tag](./img/completion-tag.png)
+![completion filter](./img/completion-filter.png)
+
 ### Tooltips
 
 Shows documentation, examples, and reference links when hovering over supported tags and filters.
 
+![tooltips](./img/tooltip.png)
+
 ### Snippets
 
 Type an abbreviation and select the matching snippet from the completion list.
+
+![snippets](./img/snippets.png)
 
 #### Tags
 

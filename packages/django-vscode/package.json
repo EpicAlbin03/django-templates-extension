@@ -129,7 +129,7 @@
     "onCommand:django.restartLanguageServer",
     "onLanguage:html"
   ],
-  "icon": "icons/logo.png",
+  "icon": "img/logo.png",
   "galleryBanner": {
     "color": "#092E20",
     "theme": "dark"

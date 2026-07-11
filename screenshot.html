@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+  <main class="container">
+    {# Welcome the current user #}
+    {% if user.is_authenticated %}
+      <h1>Welcome back, {{ user.first_name|default:user.username }}!</h1>
+    {% else %}
+      <h1>Latest articles</h1>
+    {% endif %}
+
+    <section class="article-grid">
+      {% for article in articles %}
+        <article class="card">
+          <img src="{% static article.image %}" alt="{{ article.title }}" />
+          <h2>
+            <a href="{% url 'article-detail' article.slug %}">{{ article.title|title }}</a>
+          </h2>
+          <p>{{ article.summary|truncatewords:24 }}</p>
+          <time datetime="{{ article.published_at|date:'c' }}">
+            {{ article.published_at|date:"F j, Y" }}
+          </time>
+        </article>
+      {% empty %}
+        <p>No articles have been published yet.</p>
+      {% endfor %}
+    </section>
+
+    {% include "partials/pagination.html" with page=articles %}
+  </main>
+{% endblock %}
