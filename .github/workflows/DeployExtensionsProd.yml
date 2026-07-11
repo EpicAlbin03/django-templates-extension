@@ -41,6 +41,8 @@ jobs:
       - run: "rm -rf packages/django-vscode/node_modules" # pnpm version of stuff, needs to be removed
       # ... and remove the workspace:* references
       - run: json -I -f packages/django-vscode/package.json -e 'this.dependencies["django-template-language-server"]="*"'
+      # The extension is already built, so remove workspace-only development metadata before npm reads the package.
+      - run: json -I -f packages/django-vscode/package.json -e 'delete this.devDependencies; delete this.scripts["vscode:prepublish"]'
 
       # Exchange GitHub's OIDC token for a short-lived Microsoft Entra token.
       - name: Log in to Azure with workload identity federation
@@ -52,7 +54,7 @@ jobs:
 
       - run: |
           cd packages/django-vscode
-          npm install
+          npm install --omit=dev
 
           # Just a hard constraint from the vscode marketplace's usage of Azure tokens
           # Ship it
