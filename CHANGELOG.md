@@ -1,5 +1,13 @@
 # prettier-plugin-django-templates changelog
 
+## 0.1.4
+
+### Patch Changes
+
+- [#13](https://github.com/EpicAlbin03/prettier-plugin-django-templates/pull/13) [`10b0668`](https://github.com/EpicAlbin03/prettier-plugin-django-templates/commit/10b0668bd99ba4521d015ab48e368f4a975ff2b0) Thanks [@EpicAlbin03](https://github.com/EpicAlbin03)! - updated to typescript 7 + migrated CI to vite+
+
+- [#13](https://github.com/EpicAlbin03/prettier-plugin-django-templates/pull/13) [`9b6ca06`](https://github.com/EpicAlbin03/prettier-plugin-django-templates/commit/9b6ca06384807bff506787a9797c824173be7f9f) Thanks [@EpicAlbin03](https://github.com/EpicAlbin03)! - fix: incorrect line breaks
+
 ## 0.1.3
 
 ### Patch Changes
