@@ -12,7 +12,9 @@
     "watch": "vp run -r --parallel dev",
     "format": "vp check --fix",
     "lint": "vp check",
-    "prepare": "vp config"
+    "prepare": "vp config",
+    "changeset:version": "changeset version && git add --all",
+    "changeset:publish": "changeset publish"
   },
   "dependencies": {
     "@typescript/native-preview": "7.0.0-dev.20260509.2",
