@@ -326,10 +326,6 @@ Type an abbreviation and select the matching snippet from the completion list.
 - `markdown_thumbnails`
 - `html_thumbnails`
 
-### Language Server
-
-Use the `Django Templates: Restart Language Server` command to restart the language server.
-
 ### 3rd-party Support
 
 Completions, tooltips, and snippets include template tags and filters from popular packages:
@@ -343,6 +339,22 @@ Completions, tooltips, and snippets include template tags and filters from popul
 - [django CMS](https://github.com/django-cms/django-cms)
 - [django-allauth](https://github.com/pennersr/django-allauth)
 - [django-crispy-forms](https://github.com/django-crispy-forms/django-crispy-forms)
+
+### Troubleshooting
+
+You may want to force the html language if you are using other extensions that defaults to "django-html" (ex: "batisteo.vscode-django").
+
+```json
+{
+  "files.associations": {
+    "**/templates/**/*.html": "html"
+  }
+}
+```
+
+Other extensions may also intefer with the syntax highlighting (ex: "vue.volar").
+
+Use the `Django Templates: Restart Language Server` command to restart the language server.
 
 ## Credits
 
