@@ -46,15 +46,9 @@ importers:
 
   packages/django-vscode:
     dependencies:
-      bumpp:
-        specifier: ^11.1.0
-        version: 11.1.0
       django-template-language-server:
         specifier: workspace:*
         version: link:../language-server
-      vite-plus:
-        specifier: 'catalog:'
-        version: 0.2.4(@types/node@25.9.4)(jiti@2.7.0)(typescript@6.0.3)(vite@8.0.16(@types/node@25.9.4)(jiti@2.7.0)(yaml@2.9.0))(yaml@2.9.0)
       vscode-languageclient:
         specifier: ^10.0.0
         version: 10.0.0
@@ -68,9 +62,15 @@ importers:
       '@typescript/native-preview':
         specifier: 7.0.0-dev.20260509.2
         version: 7.0.0-dev.20260509.2
+      bumpp:
+        specifier: ^11.1.0
+        version: 11.1.0
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
+      vite-plus:
+        specifier: 'catalog:'
+        version: 0.2.4(@types/node@25.9.4)(jiti@2.7.0)(typescript@6.0.3)(vite@8.0.16(@types/node@25.9.4)(jiti@2.7.0)(yaml@2.9.0))(yaml@2.9.0)
       vscode-oniguruma:
         specifier: ^2.0.1
         version: 2.0.1
