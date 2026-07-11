@@ -11,8 +11,11 @@ jobs:
   deploy:
     # prevents this action from running on forks
     if: github.repository == 'EpicAlbin03/django-templates-extension'
+    # The environment name is part of the Entra federated credential subject.
+    environment: vscode-marketplace
     permissions:
       contents: read # to fetch code for packaging
+      id-token: write # to exchange GitHub's OIDC token for a short-lived Entra token
     runs-on: ubuntu-latest
 
     steps:
@@ -39,17 +42,22 @@ jobs:
       # ... and remove the workspace:* references
       - run: json -I -f packages/django-vscode/package.json -e 'this.dependencies["django-template-language-server"]="*"'
 
+      # Exchange GitHub's OIDC token for a short-lived Microsoft Entra token.
+      - name: Log in to Azure with workload identity federation
+        uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43 # v3.0.0
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          allow-no-subscriptions: true
+
       - run: |
           cd packages/django-vscode
           npm install
 
           # Just a hard constraint from the vscode marketplace's usage of Azure tokens
-          echo "VS Code Marketplace tokens expire once a year, renew AZURE_PAN_TOKEN by logging in to Azure: https://dev.azure.com"
-
           # Ship it
-          npx vsce publish -p $VSCE_TOKEN
+          npx --yes @vscode/vsce@3.9.2 publish --azure-credential
           npx ovsx publish -p $OVSX_TOKEN
 
         env:
-          VSCE_TOKEN: ${{ secrets.AZURE_PAN_TOKEN }}
           OVSX_TOKEN: ${{ secrets.OVSX_TOKEN }}
