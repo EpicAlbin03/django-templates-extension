@@ -10,5 +10,5 @@
     "access": "public",
     "baseBranch": "main",
     "bumpVersionsWithWorkspaceProtocolOnly": true,
-    "ignore": ["django-vscode"]
+    "ignore": ["django-templates-ext"]
 }
