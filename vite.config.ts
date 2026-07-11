@@ -16,9 +16,7 @@ export default defineConfig({
       },
       format: "cjs",
       sourcemap: true,
-      dts: {
-        tsgo: true,
-      },
+      dts: true,
       deps: {
         neverBundle: [externalPrettier],
       },

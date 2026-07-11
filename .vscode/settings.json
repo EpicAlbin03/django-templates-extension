@@ -18,9 +18,9 @@
   // vendored repositories
   "typescript.preferences.autoImportFileExcludePatterns": ["repos/**"],
   "javascript.preferences.autoImportFileExcludePatterns": ["repos/**"],
-  "files.exclude": {
-    "repos/**": true
-  },
+  // "files.exclude": {
+  //   "repos/**": true
+  // },
   "files.watcherExclude": {
     "repos/**": true
   },
