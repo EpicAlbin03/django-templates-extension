@@ -13,6 +13,8 @@ export default defineConfig({
       ".changeset",
       ".vite-hooks",
       "**/test/syntax/manual/**",
+      "test.html",
+      "screenshot.html",
     ],
     useTabs: false,
     printWidth: 100,

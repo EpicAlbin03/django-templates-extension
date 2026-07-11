@@ -84,8 +84,8 @@ importers:
         specifier: ~3.3.3
         version: 3.3.3
       prettier-plugin-django-templates:
-        specifier: ^0.1.3
-        version: 0.1.3(prettier@3.3.3)
+        specifier: ^0.1.4
+        version: 0.1.4(prettier@3.3.3)
       vscode-languageserver:
         specifier: 10.0.0
         version: 10.0.0
@@ -1438,8 +1438,8 @@ packages:
     resolution: {integrity: sha512-FfR8sjd4em2T6fb3I2MwAJU7HWVMr9zba+enmQeeWFfCbm+UOC/0X4DS8XtpUTMwWMGbjKYP7xjfNekzyGmB3A==}
     engines: {node: ^10 || ^12 || >=14}
 
-  prettier-plugin-django-templates@0.1.3:
-    resolution: {integrity: sha512-pXbZFRPbPBdCedbLLoQkau2KnuDq7XTUvMSG6UxgIRGamWRJj97BghAWGShyd15aNYuSSYSxqP7HfwnG4K2ocQ==}
+  prettier-plugin-django-templates@0.1.4:
+    resolution: {integrity: sha512-QBWVuD3hJ7J23UFbSvSdR8489jT8cA1LNsO+d/wTkVE0bkwHi9pLVDR9Rbyk85ZOU1aDWvKEQXv15shONVK/tw==}
     engines: {node: '>=22'}
     peerDependencies:
       prettier: ^3.0.0
@@ -2864,7 +2864,7 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
-  prettier-plugin-django-templates@0.1.3(prettier@3.3.3):
+  prettier-plugin-django-templates@0.1.4(prettier@3.3.3):
     dependencies:
       prettier: 3.3.3
 
