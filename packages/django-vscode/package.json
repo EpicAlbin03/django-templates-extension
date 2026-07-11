@@ -1,5 +1,5 @@
 {
-  "name": "django-templates-vscode",
+  "name": "django-templates-ext",
   "displayName": "Django Templates",
   "version": "0.0.0",
   "private": true,

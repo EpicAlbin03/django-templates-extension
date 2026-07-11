@@ -26,7 +26,7 @@ Set Django Templates as the formatter for HTML files:
 ```json
 {
   "[html]": {
-    "editor.defaultFormatter": "EpicAlbin03.django-templates-vscode"
+    "editor.defaultFormatter": "EpicAlbin03.django-templates-ext"
   }
 }
 ```
