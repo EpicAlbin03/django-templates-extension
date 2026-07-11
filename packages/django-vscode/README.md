@@ -355,4 +355,4 @@ Completions, tooltips, and snippets include template tags and filters from popul
 
 ## License
 
-Licensed under the [MIT license](../../LICENSE).
+Licensed under the [MIT license](./LICENSE).

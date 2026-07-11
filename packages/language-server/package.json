@@ -13,9 +13,21 @@
     "vscode"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/EpicAlbin03/django-templates-extension.git",
+    "directory": "packages/language-server"
+  },
   "bin": {
     "djangotemplateserver": "bin/server.js"
   },
+  "files": [
+    "bin",
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
   "type": "module",
   "main": "dist/index.mjs",
   "types": "dist/index.d.mts",
@@ -26,6 +38,9 @@
     },
     "./bin/server.js": "./bin/server.js",
     "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "build": "vp pack",
