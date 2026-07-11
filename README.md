@@ -1,15 +1,20 @@
 # Django Templates
 
-TODO
+Django template support for HTML files in VS Code. Templates keep the built-in `html` language mode while gaining Django-specific features.
 
 ## Features
 
-TODO
+- **Syntax highlighting** for tags, variables, filters, and comments
+- **Completions** for Django tags and filters
+- **Tooltips** with examples and reference links
+- **Snippets** for common tags and filters
+- **Formatting** with Prettier
+- **3rd-party package support** for popular Django libraries
 
 ## Packages
 
-- [`django-vscode`](packages/django-vscode) - VS Code extension
-- [`django-template-language-server`](packages/language-server) - language server (LSP)
+- [django-vscode](./packages/django-vscode) - VS Code extension
+- [django-template-language-server](./packages/language-server) - language server (LSP)
 
 ## Development
 
