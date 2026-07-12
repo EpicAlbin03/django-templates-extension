@@ -41,4 +41,4 @@ vp run ready
 
 ## License
 
-Licensed under the [MIT license](../../LICENSE).
+Licensed under the [MIT license](https://github.com/EpicAlbin03/django-templates-extension/blob/main/packages/language-server/LICENSE).
