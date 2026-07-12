@@ -51,7 +51,7 @@
   },
   "dependencies": {
     "prettier": "~3.3.3",
-    "prettier-plugin-django-templates": "^0.1.4",
+    "prettier-plugin-django-templates": "^0.2.0",
     "vscode-languageserver": "10.0.0",
     "vscode-languageserver-types": "3.18.0",
     "vscode-uri": "~3.1.0"

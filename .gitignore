@@ -60,5 +60,8 @@ dist-ssr
 
 # AI agent worktrees
 .claude/worktrees/
+.pi-subagents/
 
 repos
+plan.md
+plans/
