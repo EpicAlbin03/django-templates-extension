@@ -35,13 +35,6 @@ jobs:
       - name: Build
         run: vp run build
 
-      # Changesets selects pnpm from the workspace. pnpm 10 delegates publishing to
-      # npm, whose trusted-publishing implementation is known to work with this setup.
-      - name: Install OIDC-compatible publish client
-        run: |
-          npm install --prefix "$RUNNER_TEMP/pnpm10" pnpm@10.30.2
-          echo "$RUNNER_TEMP/pnpm10/node_modules/.bin" >> "$GITHUB_PATH"
-
       - name: Create Release Pull Request or Publish to npm
         id: changesets
         uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
@@ -51,4 +44,3 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
-          npm_config_manage_package_manager_versions: "false"
