@@ -25,14 +25,15 @@ jobs:
           # This makes Actions fetch all Git history so that Changesets can generate changelogs with the correct commits
           fetch-depth: 0
       - name: Setup Vite+
-      - uses: voidzero-dev/setup-vp@250f29ce396baf5e8f24498e17c0dfdebabc26eb # v1.15.0
+        uses: voidzero-dev/setup-vp@250f29ce396baf5e8f24498e17c0dfdebabc26eb # v1.15.0
         with:
-          node-version: "24.x"
+          node-version: "22.x"
           cache: true
 
-      - name: Install & Build
-      - run: vp install --frozen-lockfile
-      - run: vp run build
+      - name: Install
+        run: vp install --frozen-lockfile
+      - name: Build
+        run: vp run build
 
       - name: Create Release Pull Request or Publish to npm
         id: changesets
