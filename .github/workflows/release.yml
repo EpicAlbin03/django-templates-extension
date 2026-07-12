@@ -27,13 +27,20 @@ jobs:
       - name: Setup Vite+
         uses: voidzero-dev/setup-vp@250f29ce396baf5e8f24498e17c0dfdebabc26eb # v1.15.0
         with:
-          node-version: "22.x"
+          node-version: "24.x"
           cache: true
 
       - name: Install
         run: vp install --frozen-lockfile
       - name: Build
         run: vp run build
+
+      # Changesets selects pnpm from the workspace. pnpm 10 delegates publishing to
+      # npm, whose trusted-publishing implementation is known to work with this setup.
+      - name: Install OIDC-compatible publish client
+        run: |
+          npm install --prefix "$RUNNER_TEMP/pnpm10" pnpm@10.30.2
+          echo "$RUNNER_TEMP/pnpm10/node_modules/.bin" >> "$GITHUB_PATH"
 
       - name: Create Release Pull Request or Publish to npm
         id: changesets
@@ -44,3 +51,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
+          npm_config_manage_package_manager_versions: "false"
