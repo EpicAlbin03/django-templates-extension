@@ -46,8 +46,7 @@
     "build": "vp pack",
     "dev": "vp pack --watch",
     "test": "vp test",
-    "check": "vp check",
-    "prepublishOnly": "vp run build"
+    "check": "vp check"
   },
   "dependencies": {
     "prettier": "~3.3.3",
