@@ -36,7 +36,7 @@
   "scripts": {
     "build": "vp pack",
     "dev": "vp pack --watch",
-    "test": "vp test --passWithNoTests",
+    "test": "vp test",
     "check": "vp check",
     "vscode:prepublish": "vp install && vp run build && vp pm prune --prod"
   },
