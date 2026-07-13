@@ -46,7 +46,7 @@
   },
   "devDependencies": {
     "@types/node": "catalog:",
-    "@types/vscode": "^1.125.0",
+    "@types/vscode": "1.104.0",
     "@typescript/native": "npm:typescript@^7.0.2",
     "bumpp": "^11.1.0",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
@@ -150,7 +150,7 @@
     "theme": "dark"
   },
   "engines": {
-    "vscode": "^1.125.0"
+    "vscode": "^1.120.0"
   },
   "capabilities": {
     "untrustedWorkspaces": {
