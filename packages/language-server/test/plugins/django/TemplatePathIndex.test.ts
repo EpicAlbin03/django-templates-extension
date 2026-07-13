@@ -1,10 +1,15 @@
 import * as assert from "node:assert";
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
+import { readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
 import { pathToFileURL } from "node:url";
 import { describe, it } from "vite-plus/test";
-import { TemplatePathIndex } from "../../../src/plugins/django/TemplatePathIndex.js";
+import { isUseCaseSensitiveFileNames } from "../../../src/lib/documents/isFileSystemCaseSensitive.js";
+import {
+  DEFAULT_TEMPLATE_SCAN_CONCURRENCY,
+  TemplatePathIndex,
+} from "../../../src/plugins/django/TemplatePathIndex.js";
 
 function temporaryWorkspace(): string {
   return mkdtempSync(join(tmpdir(), "django-template-index-"));
@@ -28,6 +33,15 @@ describe("TemplatePathIndex", () => {
       createFile(join(workspace, "blog", "templates", "emails", "welcome.txt"));
       createFile(join(workspace, "node_modules", "package", "templates", "ignored.html"));
       createFile(join(workspace, "coverage", "templates", "ignored.txt"));
+      for (const generatedDirectory of [
+        ".tox",
+        ".nox",
+        ".mypy_cache",
+        ".pytest_cache",
+        ".ruff_cache",
+      ]) {
+        createFile(join(workspace, generatedDirectory, "templates", `${generatedDirectory}.html`));
+      }
 
       const index = new TemplatePathIndex({ workspaceFolders: [workspace] });
       const result = await index.getCandidates(join(workspace, "blog", "views.py"), "");
@@ -36,6 +50,45 @@ describe("TemplatePathIndex", () => {
       assert.strictEqual(result.isIncomplete, false);
     } finally {
       rmSync(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it("bounds concurrent directory reads across all workspaces", async () => {
+    const parent = temporaryWorkspace();
+    const firstWorkspace = join(parent, "first");
+    const secondWorkspace = join(parent, "second");
+    let activeReads = 0;
+    let maximumActiveReads = 0;
+    try {
+      for (const [label, workspace] of [
+        ["first", firstWorkspace],
+        ["second", secondWorkspace],
+      ] as const) {
+        for (let app = 0; app < DEFAULT_TEMPLATE_SCAN_CONCURRENCY * 2; app++) {
+          createFile(join(workspace, `app-${app}`, "templates", `${label}-${app}`, "page.html"));
+        }
+      }
+      const index = new TemplatePathIndex({
+        workspaceFolders: [firstWorkspace, secondWorkspace],
+        async readDirectory(directory) {
+          activeReads++;
+          maximumActiveReads = Math.max(maximumActiveReads, activeReads);
+          await Promise.resolve();
+          try {
+            return await readdir(directory, { withFileTypes: true });
+          } finally {
+            activeReads--;
+          }
+        },
+      });
+
+      const result = await index.getCandidates(null, "");
+
+      assert.strictEqual(result.candidates.length, DEFAULT_TEMPLATE_SCAN_CONCURRENCY * 4);
+      assert.ok(maximumActiveReads > 1);
+      assert.ok(maximumActiveReads <= DEFAULT_TEMPLATE_SCAN_CONCURRENCY);
+    } finally {
+      rmSync(parent, { recursive: true, force: true });
     }
   });
 
@@ -303,6 +356,122 @@ describe("TemplatePathIndex", () => {
     }
   });
 
+  it("keeps a duplicate logical name when one physical source is deleted", async () => {
+    const workspace = temporaryWorkspace();
+    let scans = 0;
+    try {
+      const appSource = join(workspace, "app", "templates", "same.html");
+      const projectSource = join(workspace, "templates", "same.html");
+      createFile(appSource);
+      createFile(projectSource);
+      const index = new TemplatePathIndex({
+        workspaceFolders: [workspace],
+        async scanWorkspace(_folder, scan) {
+          scans++;
+          return scan();
+        },
+      });
+      assert.strictEqual(
+        (await index.getCandidates(null, "same")).candidates[0].sourcePath,
+        appSource,
+      );
+
+      unlinkSync(appSource);
+      await index.applyFileEvents([{ uri: pathToFileURL(appSource).toString(), type: 3 }]);
+      const result = await index.getCandidates(null, "same");
+
+      assert.deepStrictEqual(names(result), ["same.html"]);
+      assert.strictEqual(result.candidates[0].sourcePath, projectSource);
+      assert.strictEqual(scans, 1);
+    } finally {
+      rmSync(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it("treats differently cased watcher paths as one source on case-insensitive filesystems", async () => {
+    if (isUseCaseSensitiveFileNames) {
+      return;
+    }
+
+    const workspace = temporaryWorkspace();
+    let scans = 0;
+    try {
+      const sourcePath = join(workspace, "templates", "Case.html");
+      const watcherPath = sourcePath.toLowerCase();
+      createFile(sourcePath);
+      const index = new TemplatePathIndex({
+        workspaceFolders: [workspace],
+        async scanWorkspace(_folder, scan) {
+          scans++;
+          return scan();
+        },
+      });
+      assert.deepStrictEqual(names(await index.getCandidates(null, "")), ["Case.html"]);
+
+      await index.applyFileEvents([{ uri: pathToFileURL(watcherPath).toString(), type: 1 }]);
+      unlinkSync(sourcePath);
+      await index.applyFileEvents([{ uri: pathToFileURL(watcherPath).toString(), type: 3 }]);
+
+      assert.deepStrictEqual(names(await index.getCandidates(null, "")), []);
+      assert.strictEqual(scans, 1);
+    } finally {
+      rmSync(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it("rescans once when a deleted directory may contain indexed descendants", async () => {
+    const workspace = temporaryWorkspace();
+    let scans = 0;
+    try {
+      const directory = join(workspace, "templates", "group");
+      createFile(join(directory, "first.html"));
+      createFile(join(directory, "second.html"));
+      const index = new TemplatePathIndex({
+        workspaceFolders: [workspace],
+        async scanWorkspace(_folder, scan) {
+          scans++;
+          return scan();
+        },
+      });
+      assert.deepStrictEqual(names(await index.getCandidates(null, "group/")), [
+        "group/first.html",
+        "group/second.html",
+      ]);
+
+      rmSync(directory, { recursive: true });
+      await index.applyFileEvents([{ uri: pathToFileURL(directory).toString(), type: 3 }]);
+
+      assert.deepStrictEqual(names(await index.getCandidates(null, "group/")), []);
+      assert.strictEqual(scans, 2);
+    } finally {
+      rmSync(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it("makes queued file events visible to an immediately following candidate request", async () => {
+    const workspace = temporaryWorkspace();
+    try {
+      createFile(join(workspace, "templates", "before.html"));
+      const index = new TemplatePathIndex({ workspaceFolders: [workspace] });
+      assert.deepStrictEqual(names(await index.getCandidates(null, "")), ["before.html"]);
+
+      const firstCreatedPath = join(workspace, "templates", "after.html");
+      const secondCreatedPath = join(workspace, "templates", "last.html");
+      createFile(firstCreatedPath);
+      createFile(secondCreatedPath);
+      void index.applyFileEvents([{ uri: pathToFileURL(firstCreatedPath).toString(), type: 1 }]);
+      void index.applyFileEvents([{ uri: pathToFileURL(secondCreatedPath).toString(), type: 1 }]);
+
+      assert.deepStrictEqual(names(await index.getCandidates(null, "")), [
+        "after.html",
+        "before.html",
+        "last.html",
+      ]);
+    } finally {
+      rmSync(workspace, { recursive: true, force: true });
+    }
+  });
+
   it("activates a configured root created after the initial scan", async () => {
     const workspace = temporaryWorkspace();
     try {
@@ -322,14 +491,19 @@ describe("TemplatePathIndex", () => {
     }
   });
 
-  it("keeps incremental creates consistent across overlapping roots", async () => {
+  it("keeps incremental creates and deletes consistent across overlapping roots", async () => {
     const workspace = temporaryWorkspace();
+    let scans = 0;
     try {
       const nestedRoot = join(workspace, "templates", "nested");
       createFile(join(nestedRoot, "initial.html"));
       const index = new TemplatePathIndex({
         workspaceFolders: [workspace],
         settings: { autoDiscover: true, roots: ["templates/nested"] },
+        async scanWorkspace(_folder, scan) {
+          scans++;
+          return scan();
+        },
       });
       assert.deepStrictEqual(names(await index.getCandidates(null, "")), [
         "initial.html",
@@ -345,6 +519,14 @@ describe("TemplatePathIndex", () => {
         "nested/added.html",
         "nested/initial.html",
       ]);
+
+      unlinkSync(addedPath);
+      await index.applyFileEvents([{ uri: pathToFileURL(addedPath).toString(), type: 3 }]);
+      assert.deepStrictEqual(names(await index.getCandidates(null, "")), [
+        "initial.html",
+        "nested/initial.html",
+      ]);
+      assert.strictEqual(scans, 1);
     } finally {
       rmSync(workspace, { recursive: true, force: true });
     }

@@ -1,3 +1,4 @@
+import type { CancellationToken } from "vscode-languageserver";
 import type {
   CompletionItem,
   CompletionList,
@@ -22,5 +23,6 @@ export interface CompletionProvider {
   getCompletions(
     document: Document,
     position: Position,
+    cancellationToken?: CancellationToken,
   ): Resolvable<CompletionList | CompletionItem[] | null>;
 }

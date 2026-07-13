@@ -1,7 +1,13 @@
 import * as assert from "node:assert";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { WatchKind, type Connection, type InitializeParams } from "vscode-languageserver/node";
+import {
+  CancellationTokenSource,
+  WatchKind,
+  type CancellationToken,
+  type Connection,
+  type InitializeParams,
+} from "vscode-languageserver/node";
 import { describe, it } from "vite-plus/test";
 import {
   getFileWorkspaceFolders,
@@ -20,6 +26,13 @@ interface ServerCallbacks {
   initialized?: () => unknown;
   configuration?: (params: { settings: unknown }) => unknown;
   watchedFiles?: (params: { changes: TemplateFileEvent[] }) => unknown;
+  open?: (params: {
+    textDocument: { uri: string; languageId: string; version: number; text: string };
+  }) => unknown;
+  completion?: (
+    params: { textDocument: { uri: string }; position: { line: number; character: number } },
+    cancellationToken: CancellationToken,
+  ) => unknown;
   shutdown?: () => unknown;
   exit?: () => unknown;
 }
@@ -33,6 +46,7 @@ class FakeTemplatePathIndex implements TemplatePathIndexController {
   eventBatches: TemplateFileEvent[][] = [];
   expiryModes: boolean[] = [];
   disposed = 0;
+  candidateRequests = 0;
 
   constructor(readonly patterns: TemplateWatchPattern[]) {}
 
@@ -45,6 +59,7 @@ class FakeTemplatePathIndex implements TemplatePathIndexController {
   }
 
   async getCandidates(): Promise<TemplatePathResult> {
+    this.candidateRequests++;
     return { candidates: [], isIncomplete: false };
   }
 
@@ -90,11 +105,15 @@ function createFakeConnection() {
     onExit(handler: unknown) {
       callbacks.exit = handler as ServerCallbacks["exit"];
     },
-    onDidOpenTextDocument() {},
+    onDidOpenTextDocument(handler: unknown) {
+      callbacks.open = handler as ServerCallbacks["open"];
+    },
     onDidCloseTextDocument() {},
     onDidChangeTextDocument() {},
     onHover() {},
-    onCompletion() {},
+    onCompletion(handler: unknown) {
+      callbacks.completion = handler as ServerCallbacks["completion"];
+    },
     onDocumentFormatting() {},
     client: {
       async register(_type: unknown, options: unknown) {
@@ -211,6 +230,39 @@ describe("language server template-path wiring", () => {
     fake.callbacks.exit!();
     assert.strictEqual(fake.registrationDisposals, 2);
     assert.strictEqual(index.disposed, 1);
+  });
+
+  it("forwards completion cancellation to template-path discovery", async () => {
+    const workspaceUri = pathToFileURL(join(process.cwd(), "workspace")).toString();
+    const documentUri = pathToFileURL(join(process.cwd(), "workspace", "page.html")).toString();
+    const index = new FakeTemplatePathIndex([]);
+    const fake = createFakeConnection();
+    const cancellation = new CancellationTokenSource();
+
+    try {
+      startServer({ connection: fake.connection, templatePathIndex: index });
+      await fake.callbacks.initialize!(initializeParams(workspaceUri, {}));
+      fake.callbacks.open!({
+        textDocument: {
+          uri: documentUri,
+          languageId: "html",
+          version: 1,
+          text: '{% include "',
+        },
+      });
+
+      cancellation.cancel();
+      const completion = await fake.callbacks.completion!(
+        { textDocument: { uri: documentUri }, position: { line: 0, character: 12 } },
+        cancellation.token,
+      );
+
+      assert.strictEqual(completion, null);
+      assert.strictEqual(index.candidateRequests, 0);
+    } finally {
+      cancellation.dispose();
+      await fake.callbacks.shutdown!();
+    }
   });
 
   it("uses request-driven expiry without registering a background watcher when unsupported", async () => {

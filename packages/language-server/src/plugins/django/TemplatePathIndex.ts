@@ -1,10 +1,13 @@
 import { lstat, readdir, realpath } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { isUseCaseSensitiveFileNames } from "../../lib/documents/isFileSystemCaseSensitive.js";
 
 export const DEFAULT_TEMPLATE_PATH_LIMIT = 200;
 export const DEFAULT_TEMPLATE_CACHE_TTL_MS = 5 * 60 * 1000;
+export const DEFAULT_TEMPLATE_SCAN_CONCURRENCY = 16;
 
+const SORTED_NAME_BATCH_THRESHOLD = 16;
 const IGNORED_DIRECTORIES = new Set([
   ".git",
   ".hg",
@@ -12,7 +15,12 @@ const IGNORED_DIRECTORIES = new Set([
   "node_modules",
   ".venv",
   "venv",
+  ".tox",
+  ".nox",
   "__pycache__",
+  ".mypy_cache",
+  ".pytest_cache",
+  ".ruff_cache",
   "dist",
   "build",
   "coverage",
@@ -60,6 +68,13 @@ export interface TemplatePathScanResult {
   candidates: TemplatePathCandidate[];
 }
 
+interface TemplateDirectoryEntry {
+  name: string;
+  isDirectory(): boolean;
+  isFile(): boolean;
+  isSymbolicLink(): boolean;
+}
+
 export interface TemplatePathIndexOptions {
   workspaceFolders: Array<string | TemplateWorkspaceFolder>;
   isTrusted?: boolean;
@@ -67,6 +82,7 @@ export interface TemplatePathIndexOptions {
   limit?: number;
   cacheTtlMs?: number;
   now?: () => number;
+  readDirectory?: (directory: string) => Promise<TemplateDirectoryEntry[]>;
   scanWorkspace?: (
     workspace: TemplateWorkspaceFolder,
     scan: () => Promise<TemplatePathScanResult>,
@@ -83,6 +99,7 @@ interface WorkspaceState {
   roots: string[];
   activeRoots: string[];
   candidates: Map<string, CandidateSources>;
+  sourceNames: Map<string, Set<string>>;
   sortedNames: string[];
   inFlight: Promise<void> | null;
 }
@@ -97,9 +114,12 @@ export class TemplatePathIndex implements TemplatePathProvider {
   private readonly limit: number;
   private readonly cacheTtlMs: number;
   private readonly now: () => number;
+  private readonly readDirectory: (directory: string) => Promise<TemplateDirectoryEntry[]>;
   private readonly scanWorkspaceDependency?: TemplatePathIndexOptions["scanWorkspace"];
   private useCacheExpiry = true;
   private disposed = false;
+  // Watch notifications are fire-and-forget, so candidate requests synchronize through this FIFO.
+  private pendingFileEvents: Promise<void> = Promise.resolve();
 
   constructor(options: TemplatePathIndexOptions) {
     this.states = normalizeWorkspaceFolders(options.workspaceFolders).map(createWorkspaceState);
@@ -108,6 +128,10 @@ export class TemplatePathIndex implements TemplatePathProvider {
     this.limit = Math.max(1, options.limit ?? DEFAULT_TEMPLATE_PATH_LIMIT);
     this.cacheTtlMs = Math.max(0, options.cacheTtlMs ?? DEFAULT_TEMPLATE_CACHE_TTL_MS);
     this.now = options.now ?? Date.now;
+    this.readDirectory = limitConcurrency(
+      options.readDirectory ?? readDirectory,
+      DEFAULT_TEMPLATE_SCAN_CONCURRENCY,
+    );
     this.scanWorkspaceDependency = options.scanWorkspace;
   }
 
@@ -149,6 +173,10 @@ export class TemplatePathIndex implements TemplatePathProvider {
       return { candidates: [], isIncomplete: false };
     }
 
+    await this.pendingFileEvents;
+    if (this.disposed) {
+      return { candidates: [], isIncomplete: false };
+    }
     const states = this.selectStates(documentPath);
     await Promise.all(states.map((state) => this.ensureFresh(state)));
 
@@ -197,11 +225,19 @@ export class TemplatePathIndex implements TemplatePathProvider {
     this.useCacheExpiry = enabled;
   }
 
-  async applyFileEvents(events: TemplateFileEvent[]): Promise<void> {
+  applyFileEvents(events: TemplateFileEvent[]): Promise<void> {
+    const operation = this.pendingFileEvents.then(() => this.processFileEvents(events));
+    this.pendingFileEvents = operation.catch(() => {});
+    return operation;
+  }
+
+  private async processFileEvents(events: TemplateFileEvent[]): Promise<void> {
     if (this.disposed) {
       return;
     }
 
+    const deferSortedNames = events.length >= SORTED_NAME_BATCH_THRESHOLD;
+    const statesNeedingSort = new Set<WorkspaceState>();
     for (const event of events) {
       if (event.type === 2) {
         // Template contents do not affect logical template names.
@@ -223,11 +259,21 @@ export class TemplatePathIndex implements TemplatePathProvider {
           continue;
         }
 
+        let namesChanged = false;
         if (event.type === 3) {
-          this.applyDelete(state, eventPath);
+          namesChanged = this.applyDelete(state, eventPath, deferSortedNames);
         } else if (event.type === 1) {
-          await this.applyCreate(state, eventPath);
+          namesChanged = await this.applyCreate(state, eventPath, deferSortedNames);
         }
+        if (deferSortedNames && namesChanged) {
+          statesNeedingSort.add(state);
+        }
+      }
+    }
+
+    for (const state of statesNeedingSort) {
+      if (!state.dirty) {
+        state.sortedNames = [...state.candidates.keys()].sort(comparePaths);
       }
     }
   }
@@ -252,6 +298,7 @@ export class TemplatePathIndex implements TemplatePathProvider {
     this.disposed = true;
     for (const state of this.states) {
       state.candidates.clear();
+      state.sourceNames.clear();
       state.sortedNames = [];
       state.roots = [];
       state.activeRoots = [];
@@ -301,7 +348,9 @@ export class TemplatePathIndex implements TemplatePathProvider {
       }
       state.roots = result.roots;
       state.activeRoots = result.activeRoots ?? result.roots;
-      state.candidates = candidateMap(result.candidates);
+      const indexes = candidateIndexes(result.candidates);
+      state.candidates = indexes.byName;
+      state.sourceNames = indexes.namesBySource;
       state.sortedNames = [...state.candidates.keys()].sort(comparePaths);
       state.scannedAt = this.now();
       state.dirty = false;
@@ -319,7 +368,7 @@ export class TemplatePathIndex implements TemplatePathProvider {
   private async scanState(state: WorkspaceState): Promise<TemplatePathScanResult> {
     const rootPaths = new Set<string>();
     if (this.settings.autoDiscover) {
-      for (const root of await discoverConventionalRoots(state.folder.path)) {
+      for (const root of await discoverConventionalRoots(state.folder.path, this.readDirectory)) {
         rootPaths.add(root);
       }
     }
@@ -331,26 +380,40 @@ export class TemplatePathIndex implements TemplatePathProvider {
     const candidates: TemplatePathCandidate[] = [];
     const activeRoots: string[] = [];
     const realWorkspacePath = this.isTrusted ? null : await safeRealpath(state.folder.path);
-    for (const root of roots) {
-      const rootInfo = await safeLstat(root);
-      if (!rootInfo?.isDirectory() || rootInfo.isSymbolicLink()) {
-        continue;
-      }
-      if (
-        isPathInside(root, state.folder.path) &&
-        !(await isPathReachableWithoutSymlink(state.folder.path, root))
-      ) {
-        continue;
-      }
-      if (!this.isTrusted) {
-        const realRootPath = await safeRealpath(root);
-        if (!realRootPath || !realWorkspacePath || !isPathInside(realRootPath, realWorkspacePath)) {
-          continue;
+    for (let cursor = 0; cursor < roots.length; cursor += DEFAULT_TEMPLATE_SCAN_CONCURRENCY) {
+      const batch = roots.slice(cursor, cursor + DEFAULT_TEMPLATE_SCAN_CONCURRENCY);
+      const accepted = await Promise.all(
+        batch.map(async (root) => {
+          const rootInfo = await safeLstat(root);
+          if (!rootInfo?.isDirectory() || rootInfo.isSymbolicLink()) {
+            return false;
+          }
+          if (
+            isPathInside(root, state.folder.path) &&
+            !(await isPathReachableWithoutSymlink(state.folder.path, root))
+          ) {
+            return false;
+          }
+          if (!this.isTrusted) {
+            const realRootPath = await safeRealpath(root);
+            if (
+              !realRootPath ||
+              !realWorkspacePath ||
+              !isPathInside(realRootPath, realWorkspacePath)
+            ) {
+              return false;
+            }
+          }
+          return true;
+        }),
+      );
+      for (let index = 0; index < batch.length; index++) {
+        if (accepted[index]) {
+          activeRoots.push(batch[index]);
         }
       }
-      activeRoots.push(root);
-      await scanTemplateRoot(root, root, candidates);
     }
+    await scanTemplateRoots(activeRoots, candidates, this.readDirectory);
 
     return { roots, activeRoots, candidates };
   }
@@ -383,39 +446,46 @@ export class TemplatePathIndex implements TemplatePathProvider {
     );
   }
 
-  private applyDelete(state: WorkspaceState, deletedPath: string): void {
-    let exactSourceRemoved = false;
-    let descendantSourceFound = false;
-
-    for (const [name, sources] of state.candidates) {
-      if (sources.delete(deletedPath)) {
-        exactSourceRemoved = true;
+  private applyDelete(
+    state: WorkspaceState,
+    deletedPath: string,
+    deferSortedNames: boolean,
+  ): boolean {
+    let namesChanged = false;
+    const sourceKey = canonicalSourcePath(deletedPath);
+    const exactNames = state.sourceNames.get(sourceKey);
+    if (exactNames) {
+      for (const name of exactNames) {
+        const sources = state.candidates.get(name);
+        sources?.delete(sourceKey);
+        if (sources?.size === 0) {
+          state.candidates.delete(name);
+          namesChanged = true;
+          if (!deferSortedNames) {
+            removeSortedName(state.sortedNames, name);
+          }
+        }
       }
-      if ([...sources.keys()].some((sourcePath) => isPathInside(sourcePath, deletedPath))) {
-        descendantSourceFound = true;
-      }
-      if (sources.size === 0) {
-        state.candidates.delete(name);
-        removeSortedName(state.sortedNames, name);
-      }
+      state.sourceNames.delete(sourceKey);
     }
 
     const changesRootTopology = state.roots.some(
       (root) => root === deletedPath || isPathInside(root, deletedPath),
     );
-    if (
-      (!exactSourceRemoved && this.isInsideKnownRoot(state, deletedPath)) ||
-      descendantSourceFound ||
-      changesRootTopology
-    ) {
+    if ((!exactNames && this.isInsideKnownRoot(state, deletedPath)) || changesRootTopology) {
       state.dirty = true;
     }
+    return namesChanged;
   }
 
-  private async applyCreate(state: WorkspaceState, createdPath: string): Promise<void> {
+  private async applyCreate(
+    state: WorkspaceState,
+    createdPath: string,
+    deferSortedNames: boolean,
+  ): Promise<boolean> {
     const info = await safeLstat(createdPath);
     if (!info || info.isSymbolicLink()) {
-      return;
+      return false;
     }
     if (info.isDirectory()) {
       if (
@@ -424,12 +494,16 @@ export class TemplatePathIndex implements TemplatePathProvider {
       ) {
         state.dirty = true;
       }
-      return;
+      return false;
     }
     if (!info.isFile()) {
-      return;
+      return false;
     }
 
+    const sourceKey = canonicalSourcePath(createdPath);
+    if (state.sourceNames.has(sourceKey)) {
+      return false;
+    }
     const roots = state.activeRoots.filter(
       (root) => isPathInside(createdPath, root) && createdPath !== root,
     );
@@ -440,9 +514,10 @@ export class TemplatePathIndex implements TemplatePathProvider {
       ) {
         state.dirty = true;
       }
-      return;
+      return false;
     }
 
+    let namesChanged = false;
     for (const root of roots) {
       if (!(await isPathReachableWithoutSymlink(root, createdPath))) {
         continue;
@@ -456,10 +531,20 @@ export class TemplatePathIndex implements TemplatePathProvider {
       if (!sources) {
         sources = new Map();
         state.candidates.set(name, sources);
-        insertSortedName(state.sortedNames, name);
+        namesChanged = true;
+        if (!deferSortedNames) {
+          insertSortedName(state.sortedNames, name);
+        }
       }
-      sources.set(createdPath, { name, sourcePath: createdPath, rootPath: root });
+      sources.set(sourceKey, { name, sourcePath: createdPath, rootPath: root });
+      let sourceNames = state.sourceNames.get(sourceKey);
+      if (!sourceNames) {
+        sourceNames = new Set();
+        state.sourceNames.set(sourceKey, sourceNames);
+      }
+      sourceNames.add(name);
     }
+    return namesChanged;
   }
 
   private isInsideKnownRoot(state: WorkspaceState, filePath: string): boolean {
@@ -505,6 +590,7 @@ function createWorkspaceState(folder: TemplateWorkspaceFolder): WorkspaceState {
     roots: [],
     activeRoots: [],
     candidates: new Map(),
+    sourceNames: new Map(),
     sortedNames: [],
     inFlight: null,
   };
@@ -549,65 +635,119 @@ function normalizeWorkspaceFolders(
   return normalized;
 }
 
-async function discoverConventionalRoots(workspacePath: string): Promise<string[]> {
-  const roots: string[] = [];
+async function discoverConventionalRoots(
+  workspacePath: string,
+  readDirectory: (directory: string) => Promise<TemplateDirectoryEntry[]>,
+): Promise<string[]> {
   if (workspacePath.split(sep).at(-1) === "templates") {
-    roots.push(workspacePath);
-    return roots;
+    return [workspacePath];
   }
-  await visit(workspacePath);
-  return roots;
 
-  async function visit(directory: string): Promise<void> {
-    const entries = await safeReadDirectory(directory);
-    for (const entry of entries) {
+  const roots: string[] = [];
+  await walkDirectoryQueue(
+    [workspacePath],
+    (directory) => directory,
+    (directory, entry) => {
       if (!entry.isDirectory() || entry.isSymbolicLink() || IGNORED_DIRECTORIES.has(entry.name)) {
-        continue;
+        return;
       }
       const childPath = normalizeFilePath(resolve(directory, entry.name));
       if (entry.name === "templates") {
         roots.push(childPath);
-      } else {
-        await visit(childPath);
+        return;
       }
-    }
-  }
+      return childPath;
+    },
+    readDirectory,
+  );
+  return roots;
 }
 
-async function scanTemplateRoot(
-  rootPath: string,
-  directory: string,
+interface TemplateRootWork {
+  rootPath: string;
+  directory: string;
+}
+
+async function scanTemplateRoots(
+  roots: string[],
   candidates: TemplatePathCandidate[],
+  readDirectory: (directory: string) => Promise<TemplateDirectoryEntry[]>,
 ): Promise<void> {
-  for (const entry of await safeReadDirectory(directory)) {
-    const entryPath = normalizeFilePath(resolve(directory, entry.name));
-    if (entry.isSymbolicLink()) {
-      continue;
-    }
-    if (entry.isDirectory()) {
-      if (!IGNORED_DIRECTORIES.has(entry.name)) {
-        await scanTemplateRoot(rootPath, entryPath, candidates);
+  await walkDirectoryQueue<TemplateRootWork>(
+    roots.map((rootPath) => ({ rootPath, directory: rootPath })),
+    (work) => work.directory,
+    (work, entry) => {
+      const entryPath = normalizeFilePath(resolve(work.directory, entry.name));
+      if (entry.isSymbolicLink()) {
+        return;
       }
-    } else if (entry.isFile()) {
-      const name = logicalName(rootPath, entryPath);
-      if (name) {
-        candidates.push({ name, sourcePath: entryPath, rootPath });
+      if (entry.isDirectory()) {
+        return IGNORED_DIRECTORIES.has(entry.name)
+          ? undefined
+          : { rootPath: work.rootPath, directory: entryPath };
+      }
+      if (entry.isFile()) {
+        const name = logicalName(work.rootPath, entryPath);
+        if (name) {
+          candidates.push({ name, sourcePath: entryPath, rootPath: work.rootPath });
+        }
+      }
+    },
+    readDirectory,
+  );
+}
+
+async function walkDirectoryQueue<Work>(
+  initialWork: Work[],
+  getDirectory: (work: Work) => string,
+  visitEntry: (work: Work, entry: TemplateDirectoryEntry) => Work | undefined,
+  readDirectory: (directory: string) => Promise<TemplateDirectoryEntry[]>,
+): Promise<void> {
+  const pending = [...initialWork];
+
+  while (pending.length > 0) {
+    const batchStart = Math.max(0, pending.length - DEFAULT_TEMPLATE_SCAN_CONCURRENCY);
+    const batch = pending.splice(batchStart, DEFAULT_TEMPLATE_SCAN_CONCURRENCY);
+    const entriesByWork = await Promise.all(
+      batch.map(async (work) => ({
+        work,
+        entries: await safeReadDirectory(getDirectory(work), readDirectory),
+      })),
+    );
+    for (const { work, entries } of entriesByWork) {
+      for (const entry of entries) {
+        const child = visitEntry(work, entry);
+        if (child !== undefined) {
+          pending.push(child);
+        }
       }
     }
   }
 }
 
-function candidateMap(candidates: TemplatePathCandidate[]): Map<string, CandidateSources> {
+function candidateIndexes(candidates: TemplatePathCandidate[]): {
+  byName: Map<string, CandidateSources>;
+  namesBySource: Map<string, Set<string>>;
+} {
   const byName = new Map<string, CandidateSources>();
+  const namesBySource = new Map<string, Set<string>>();
   for (const candidate of candidates) {
     let sources = byName.get(candidate.name);
     if (!sources) {
       sources = new Map();
       byName.set(candidate.name, sources);
     }
-    sources.set(candidate.sourcePath, candidate);
+    const sourceKey = canonicalSourcePath(candidate.sourcePath);
+    sources.set(sourceKey, candidate);
+
+    let names = namesBySource.get(sourceKey);
+    if (!names) {
+      names = new Set();
+      namesBySource.set(sourceKey, names);
+    }
+    names.add(candidate.name);
   }
-  return byName;
+  return { byName, namesBySource };
 }
 
 function firstSortedSource(
@@ -635,6 +775,10 @@ function isPathInside(filePath: string, directory: string): boolean {
 
 function normalizeFilePath(filePath: string): string {
   return resolve(filePath.replace(/[\\/]/g, sep));
+}
+
+function canonicalSourcePath(sourcePath: string): string {
+  return isUseCaseSensitiveFileNames ? sourcePath : sourcePath.toLowerCase();
 }
 
 function uriToFilePath(uri: string): string | null {
@@ -687,12 +831,53 @@ function addWatchPattern(
   }
 }
 
-async function safeReadDirectory(directory: string) {
+async function readDirectory(directory: string): Promise<TemplateDirectoryEntry[]> {
+  return readdir(directory, { withFileTypes: true });
+}
+
+async function safeReadDirectory(
+  directory: string,
+  readDirectory: (directory: string) => Promise<TemplateDirectoryEntry[]>,
+): Promise<TemplateDirectoryEntry[]> {
   try {
-    return await readdir(directory, { withFileTypes: true });
+    return await readDirectory(directory);
   } catch {
     return [];
   }
+}
+
+function limitConcurrency<Arguments extends unknown[], Result>(
+  operation: (...args: Arguments) => Promise<Result>,
+  concurrency: number,
+): (...args: Arguments) => Promise<Result> {
+  let active = 0;
+  const waiters: Array<() => void> = [];
+
+  async function acquire(): Promise<void> {
+    if (active < concurrency) {
+      active++;
+      return;
+    }
+    await new Promise<void>((resolve) => waiters.push(resolve));
+  }
+
+  function release(): void {
+    const next = waiters.shift();
+    if (next) {
+      next();
+    } else {
+      active--;
+    }
+  }
+
+  return async (...args) => {
+    await acquire();
+    try {
+      return await operation(...args);
+    } finally {
+      release();
+    }
+  };
 }
 
 async function safeLstat(filePath: string) {

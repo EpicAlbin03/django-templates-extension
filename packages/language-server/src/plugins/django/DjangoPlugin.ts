@@ -2,6 +2,7 @@ import { createRequire } from "node:module";
 import { dirname, isAbsolute } from "path";
 import { fileURLToPath, pathToFileURL } from "url";
 import type { Options, Plugin } from "prettier";
+import type { CancellationToken } from "vscode-languageserver";
 import type { FormattingOptions, Hover, Position } from "vscode-languageserver-types";
 import { CompletionItemKind, CompletionList, Range, TextEdit } from "vscode-languageserver-types";
 import { importPrettier } from "../../importPackage.js";
@@ -24,6 +25,7 @@ const serverDirectory = dirname(fileURLToPath(import.meta.url));
 const DJANGO_TEMPLATE_TAG_RE = /({%[\s\S]*?%}|{{[\s\S]*?}}|{#[\s\S]*?#})/;
 const DJANGO_HTML_PARSER = "django-html";
 const DJANGO_PRETTIER_PLUGIN = "prettier-plugin-django-templates";
+const CANCELLED = Symbol("cancelled");
 
 const EMPTY_TEMPLATE_PATH_PROVIDER: TemplatePathProvider = {
   async getCandidates() {
@@ -43,7 +45,14 @@ export class DjangoPlugin implements CompletionProvider, FormattingProvider, Hov
     return getDjangoHoverInfo(document, position);
   }
 
-  getCompletions(document: Document, position: Position): Resolvable<CompletionList | null> {
+  getCompletions(
+    document: Document,
+    position: Position,
+    cancellationToken?: CancellationToken,
+  ): Resolvable<CompletionList | null> {
+    if (cancellationToken?.isCancellationRequested) {
+      return null;
+    }
     const context = getDjangoCompletionContext(document, position);
 
     if (context.type === "tag") {
@@ -55,19 +64,24 @@ export class DjangoPlugin implements CompletionProvider, FormattingProvider, Hov
     }
 
     if (context.type === "template-path") {
-      return this.templatePathProvider
-        .getCandidates(document.getFilePath(), context.prefix)
-        .then(({ candidates, isIncomplete }) =>
-          CompletionList.create(
-            candidates.map((candidate) => ({
-              label: candidate.name,
-              kind: CompletionItemKind.File,
-              detail: `Template root: ${candidate.rootPath}`,
-              textEdit: TextEdit.replace(context.replacementRange, candidate.name),
-            })),
-            isIncomplete,
-          ),
+      const candidates = this.templatePathProvider.getCandidates(
+        document.getFilePath(),
+        context.prefix,
+      );
+      return waitForPromise(candidates, cancellationToken).then((result) => {
+        if (result === CANCELLED || cancellationToken?.isCancellationRequested) {
+          return null;
+        }
+        return CompletionList.create(
+          result.candidates.map((candidate) => ({
+            label: candidate.name,
+            kind: CompletionItemKind.File,
+            detail: `Template root: ${candidate.rootPath}`,
+            textEdit: TextEdit.replace(context.replacementRange, candidate.name),
+          })),
+          result.isIncomplete,
         );
+      });
     }
 
     return null;
@@ -172,6 +186,28 @@ export class DjangoPlugin implements CompletionProvider, FormattingProvider, Hov
       typeof plugin !== "string" &&
       !!plugin?.languages?.find((language) => hasDjangoParser(language.parsers))
     );
+  }
+}
+
+async function waitForPromise<Result>(
+  promise: Promise<Result>,
+  cancellationToken: CancellationToken | undefined,
+): Promise<Result | typeof CANCELLED> {
+  if (!cancellationToken) {
+    return promise;
+  }
+  if (cancellationToken.isCancellationRequested) {
+    return CANCELLED;
+  }
+
+  let cancellationListener: { dispose(): void } | undefined;
+  const cancellation = new Promise<typeof CANCELLED>((resolve) => {
+    cancellationListener = cancellationToken.onCancellationRequested(() => resolve(CANCELLED));
+  });
+  try {
+    return await Promise.race([promise, cancellation]);
+  } finally {
+    cancellationListener?.dispose();
   }
 }
 

@@ -162,13 +162,13 @@ export function startServer(options?: LSOptions) {
 
     return djangoPlugin.doHover(document, evt.position);
   });
-  connection.onCompletion((evt) => {
+  connection.onCompletion((evt, cancellationToken) => {
     const document = docManager.get(evt.textDocument.uri);
     if (!document) {
       return null;
     }
 
-    return djangoPlugin.getCompletions(document, evt.position);
+    return djangoPlugin.getCompletions(document, evt.position, cancellationToken);
   });
   connection.onDocumentFormatting((evt) => {
     const document = docManager.get(evt.textDocument.uri);

@@ -1,8 +1,9 @@
 import { createRequire } from "node:module";
 import { dirname, resolve } from "path";
 import { fileURLToPath } from "url";
-import * as prettier from "prettier";
 import { Logger } from "./logger.js";
+
+type Prettier = typeof import("prettier");
 
 const require = createRequire(import.meta.url);
 const serverDirectory = dirname(fileURLToPath(import.meta.url));
@@ -57,7 +58,7 @@ export function getPackageInfo(packageName: string, fromPath: string, useFallbac
   };
 }
 
-export function importPrettier(fromPath: string): typeof prettier {
+export function importPrettier(fromPath: string): Prettier {
   const pkg = getPackageInfo("prettier", fromPath);
   const main = resolve(pkg.path);
   Logger.debug("Using Prettier v" + pkg.version.full, "from", main);
@@ -68,7 +69,7 @@ export function importPrettier(fromPath: string): typeof prettier {
   return importedPrettier;
 }
 
-function isPrettier(value: unknown): value is typeof prettier {
+function isPrettier(value: unknown): value is Prettier {
   return (
     isRecord(value) &&
     typeof value.format === "function" &&

@@ -2,12 +2,18 @@ import * as assert from "assert";
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { setImmediate as nextTurn } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
+import { CancellationTokenSource, type CancellationToken } from "vscode-languageserver";
 import { CompletionItemKind, MarkupKind, type CompletionList } from "vscode-languageserver-types";
 import { describe, it } from "vite-plus/test";
 import { Document } from "../../../src/lib/documents/index.js";
 import { LSConfigManager } from "../../../src/ls-config.js";
-import { DjangoPlugin, type TemplatePathProvider } from "../../../src/plugins/index.js";
+import {
+  DjangoPlugin,
+  TemplatePathIndex,
+  type TemplatePathProvider,
+} from "../../../src/plugins/index.js";
 
 const CURSOR = "█";
 
@@ -21,6 +27,7 @@ function writeSentinelModule(filePath: string, markerPath: string): void {
 async function completionListAt(
   textWithCursor: string,
   templatePathProvider?: TemplatePathProvider,
+  cancellationToken?: CancellationToken,
 ): Promise<CompletionList | null> {
   const cursorOffset = textWithCursor.indexOf(CURSOR);
   assert.notStrictEqual(cursorOffset, -1);
@@ -28,7 +35,11 @@ async function completionListAt(
   const text = textWithCursor.slice(0, cursorOffset) + textWithCursor.slice(cursorOffset + 1);
   const document = Document.createForTest("file:///template.html", text);
   const plugin = new DjangoPlugin(new LSConfigManager(), templatePathProvider);
-  return await plugin.getCompletions(document, document.positionAt(cursorOffset));
+  return await plugin.getCompletions(
+    document,
+    document.positionAt(cursorOffset),
+    cancellationToken,
+  );
 }
 
 function assertCompletionList(
@@ -111,6 +122,92 @@ describe("DjangoPlugin", () => {
     await completionListAt("<div █>", provider);
 
     assert.strictEqual(calls, 0);
+  });
+
+  it("does not start template-path discovery for a cancelled completion", async () => {
+    const cancellation = new CancellationTokenSource();
+    let calls = 0;
+    const provider: TemplatePathProvider = {
+      async getCandidates() {
+        calls++;
+        return { candidates: [], isIncomplete: false };
+      },
+    };
+
+    cancellation.cancel();
+    const completions = await completionListAt(
+      '{% include "partials/█" %}',
+      provider,
+      cancellation.token,
+    );
+
+    assert.strictEqual(completions, null);
+    assert.strictEqual(calls, 0);
+    cancellation.dispose();
+  });
+
+  it("releases a cancelled completion while another request shares its discovery", async () => {
+    const cancellation = new CancellationTokenSource();
+    let scans = 0;
+    let releaseScan!: () => void;
+    let markScanStarted!: () => void;
+    const scanStarted = new Promise<void>((resolve) => {
+      markScanStarted = resolve;
+    });
+    const scanPause = new Promise<void>((resolve) => {
+      releaseScan = resolve;
+    });
+    const provider = new TemplatePathIndex({
+      workspaceFolders: ["/workspace"],
+      async scanWorkspace() {
+        scans++;
+        markScanStarted();
+        await scanPause;
+        return {
+          roots: ["/workspace/templates"],
+          candidates: [
+            {
+              name: "partials/card.html",
+              sourcePath: "/workspace/templates/partials/card.html",
+              rootPath: "/workspace/templates",
+            },
+          ],
+        };
+      },
+    });
+
+    try {
+      const cancelledCompletion = completionListAt(
+        '{% include "partials/█" %}',
+        provider,
+        cancellation.token,
+      );
+      await scanStarted;
+      const survivingCompletion = completionListAt('{% include "partials/█" %}', provider);
+      let settled = false;
+      let cancelledResult: CompletionList | null | undefined;
+      void cancelledCompletion.then((value) => {
+        settled = true;
+        cancelledResult = value;
+      });
+      cancellation.cancel();
+      await nextTurn();
+
+      assert.strictEqual(settled, true);
+      assert.strictEqual(cancelledResult, null);
+      releaseScan();
+      const survivingResult = await survivingCompletion;
+      assertCompletionList(survivingResult);
+      assert.deepStrictEqual(
+        survivingResult.items.map((item) => item.label),
+        ["partials/card.html"],
+      );
+      assert.strictEqual(scans, 1);
+    } finally {
+      releaseScan?.();
+      provider.dispose();
+      cancellation.dispose();
+    }
   });
 
   it("returns filesystem template-path completions with explicit replacement edits", async () => {
