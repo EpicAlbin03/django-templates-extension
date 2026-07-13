@@ -7,7 +7,7 @@ import { CompletionItemKind, MarkupKind, type CompletionList } from "vscode-lang
 import { describe, it } from "vite-plus/test";
 import { Document } from "../../../src/lib/documents/index.js";
 import { LSConfigManager } from "../../../src/ls-config.js";
-import { DjangoPlugin } from "../../../src/plugins/index.js";
+import { DjangoPlugin, type TemplatePathProvider } from "../../../src/plugins/index.js";
 
 const CURSOR = "█";
 
@@ -18,14 +18,17 @@ function writeSentinelModule(filePath: string, markerPath: string): void {
   );
 }
 
-function completionListAt(textWithCursor: string): CompletionList | null {
+async function completionListAt(
+  textWithCursor: string,
+  templatePathProvider?: TemplatePathProvider,
+): Promise<CompletionList | null> {
   const cursorOffset = textWithCursor.indexOf(CURSOR);
   assert.notStrictEqual(cursorOffset, -1);
 
   const text = textWithCursor.slice(0, cursorOffset) + textWithCursor.slice(cursorOffset + 1);
   const document = Document.createForTest("file:///template.html", text);
-  const plugin = new DjangoPlugin(new LSConfigManager());
-  return plugin.getCompletions(document, document.positionAt(cursorOffset));
+  const plugin = new DjangoPlugin(new LSConfigManager(), templatePathProvider);
+  return await plugin.getCompletions(document, document.positionAt(cursorOffset));
 }
 
 function assertCompletionList(
@@ -62,8 +65,8 @@ describe("DjangoPlugin", () => {
     assert.match(contents.value, /\[Documentation\]\(.*#std-templatefilter-lower\)/);
   });
 
-  it("returns Django tag completions inside tag blocks", () => {
-    const completions = completionListAt("{% bl█ %}");
+  it("returns Django tag completions inside tag blocks", async () => {
+    const completions = await completionListAt("{% bl█ %}");
 
     assertCompletionList(completions);
     assert.strictEqual(completions.isIncomplete, false);
@@ -72,8 +75,8 @@ describe("DjangoPlugin", () => {
     assert.strictEqual(blockCompletion!.kind, CompletionItemKind.Keyword);
   });
 
-  it("returns Django filter completions after pipes", () => {
-    const completions = completionListAt("{{ value|def█ }}");
+  it("returns Django filter completions after pipes", async () => {
+    const completions = await completionListAt("{{ value|def█ }}");
 
     assertCompletionList(completions);
     assert.strictEqual(completions.isIncomplete, false);
@@ -82,21 +85,89 @@ describe("DjangoPlugin", () => {
     assert.strictEqual(defaultCompletion!.kind, CompletionItemKind.Function);
   });
 
-  it("returns no completions outside Django contexts", () => {
-    const completions = completionListAt("<div █>");
+  it("returns no completions outside Django contexts", async () => {
+    const completions = await completionListAt("<div █>");
 
     assert.strictEqual(completions, null);
   });
 
-  it("returns no completions inside Django comments", () => {
-    const completions = completionListAt("{# █ #}");
+  it("returns no completions inside Django comments", async () => {
+    const completions = await completionListAt("{# █ #}");
 
     assert.strictEqual(completions, null);
   });
 
-  it("returns no unsupported completions for quoted tag arguments", () => {
-    assert.strictEqual(completionListAt('{% include "partials/█" %}'), null);
-    assert.strictEqual(completionListAt("{% extends 'base█' %}"), null);
+  it("does not query template paths for tag, filter, or ordinary HTML contexts", async () => {
+    let calls = 0;
+    const provider: TemplatePathProvider = {
+      async getCandidates() {
+        calls++;
+        return { candidates: [], isIncomplete: false };
+      },
+    };
+
+    await completionListAt("{% bl█ %}", provider);
+    await completionListAt("{{ value|def█ }}", provider);
+    await completionListAt("<div █>", provider);
+
+    assert.strictEqual(calls, 0);
+  });
+
+  it("returns filesystem template-path completions with explicit replacement edits", async () => {
+    const calls: Array<{ documentPath: string | null; prefix: string }> = [];
+    const provider: TemplatePathProvider = {
+      async getCandidates(documentPath, prefix) {
+        calls.push({ documentPath, prefix });
+        return {
+          candidates: [
+            {
+              name: "partials/card.html",
+              sourcePath: "/workspace/templates/partials/card.html",
+              rootPath: "/workspace/templates",
+            },
+          ],
+          isIncomplete: true,
+        };
+      },
+    };
+
+    const completions = await completionListAt('{% include "partials/ca█" %}', provider);
+
+    assertCompletionList(completions);
+    assert.deepStrictEqual(calls, [{ documentPath: "/template.html", prefix: "partials/ca" }]);
+    assert.strictEqual(completions.isIncomplete, true);
+    assert.deepStrictEqual(completions.items, [
+      {
+        label: "partials/card.html",
+        kind: CompletionItemKind.File,
+        detail: "Template root: /workspace/templates",
+        textEdit: {
+          range: {
+            start: { line: 0, character: 12 },
+            end: { line: 0, character: 23 },
+          },
+          newText: "partials/card.html",
+        },
+      },
+    ]);
+  });
+
+  it("preserves either quote style and returns an empty list when no path matches", async () => {
+    const provider: TemplatePathProvider = {
+      async getCandidates() {
+        return { candidates: [], isIncomplete: false };
+      },
+    };
+
+    const doubleQuoted = await completionListAt('{% extends "no-match█" %}', provider);
+    const singleQuoted = await completionListAt("{% include 'no-match█' %}", provider);
+
+    assertCompletionList(doubleQuoted);
+    assertCompletionList(singleQuoted);
+    assert.deepStrictEqual(doubleQuoted.items, []);
+    assert.deepStrictEqual(singleQuoted.items, []);
+    assert.strictEqual(doubleQuoted.isIncomplete, false);
+    assert.strictEqual(singleQuoted.isIncomplete, false);
   });
 
   it("formats Django template tags with the bundled Prettier plugin", async () => {

@@ -80,6 +80,21 @@
           "description": "Port to use for debugging the language server. Negative values use the default inspector port 6009, non-negative values set an explicit inspector port for debug launches only.",
           "default": -1
         },
+        "django.templates.autoDiscover": {
+          "type": "boolean",
+          "title": "Auto-discover Template Directories",
+          "description": "Discover conventional directories named templates inside each workspace folder. Discovery is lazy and never executes Python or Django settings.",
+          "default": true
+        },
+        "django.templates.roots": {
+          "type": "array",
+          "title": "Additional Template Roots",
+          "description": "Additional Django template roots. Relative paths are resolved against each workspace folder, absolute paths require a trusted workspace.",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
         "django.trace.server": {
           "type": "string",
           "enum": [

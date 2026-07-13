@@ -8,6 +8,10 @@ export interface DjangoSettings {
   "language-server"?: {
     debug: boolean;
   };
+  templates: {
+    autoDiscover: boolean;
+    roots: string[];
+  };
 }
 
 export interface ServerConfiguration {
@@ -62,14 +66,25 @@ function parseDjangoSettings(value: unknown): DjangoSettings {
   const languageServer = isRecord(django["language-server"])
     ? django["language-server"]
     : undefined;
+  const templates = isRecord(django.templates) ? django.templates : {};
+  const roots =
+    Array.isArray(templates.roots) && templates.roots.every((root) => typeof root === "string")
+      ? templates.roots
+      : [];
 
-  return languageServer
-    ? {
-        "language-server": {
-          debug: languageServer.debug === true,
-        },
-      }
-    : {};
+  return {
+    ...(languageServer
+      ? {
+          "language-server": {
+            debug: languageServer.debug === true,
+          },
+        }
+      : {}),
+    templates: {
+      autoDiscover: typeof templates.autoDiscover === "boolean" ? templates.autoDiscover : true,
+      roots,
+    },
+  };
 }
 
 function parsePrettierConfig(value: unknown): PrettierEditorConfig {

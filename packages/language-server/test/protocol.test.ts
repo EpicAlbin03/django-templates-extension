@@ -9,7 +9,10 @@ describe("protocol configuration parsing", () => {
         isTrusted: false,
         handledCapabilities: { documentFormattingProvider: true },
         configuration: {
-          django: { "language-server": { debug: true } },
+          django: {
+            "language-server": { debug: true },
+            templates: { autoDiscover: false, roots: ["theme/templates"] },
+          },
           prettier: { printWidth: 100, useEditorConfig: false },
         },
       }),
@@ -17,7 +20,10 @@ describe("protocol configuration parsing", () => {
         isTrusted: false,
         handledCapabilities: { documentFormattingProvider: true },
         configuration: {
-          django: { "language-server": { debug: true } },
+          django: {
+            "language-server": { debug: true },
+            templates: { autoDiscover: false, roots: ["theme/templates"] },
+          },
           prettier: { printWidth: 100, useEditorConfig: false },
         },
       },
@@ -38,7 +44,10 @@ describe("protocol configuration parsing", () => {
         isTrusted: false,
         handledCapabilities: { documentFormattingProvider: false },
         configuration: {
-          django: { "language-server": { debug: false } },
+          django: {
+            "language-server": { debug: false },
+            templates: { autoDiscover: true, roots: [] },
+          },
           prettier: {},
         },
       },
@@ -59,13 +68,33 @@ describe("protocol configuration parsing", () => {
         prettier: { printWidth: 90, ignorePath: 42 },
       }),
       {
-        django: {},
+        django: { templates: { autoDiscover: true, roots: [] } },
         prettier: { printWidth: 90 },
       },
     );
     assert.deepStrictEqual(parseConfigurationChange(undefined), {
-      django: {},
+      django: { templates: { autoDiscover: true, roots: [] } },
       prettier: {},
     });
+  });
+
+  it("rejects malformed template settings while preserving safe defaults", () => {
+    assert.deepStrictEqual(
+      parseConfigurationChange({
+        django: {
+          templates: {
+            autoDiscover: "no",
+            roots: ["valid", 42],
+          },
+        },
+      }).django.templates,
+      { autoDiscover: true, roots: [] },
+    );
+    assert.deepStrictEqual(
+      parseConfigurationChange({
+        django: { templates: { autoDiscover: false, roots: ["one", "two"] } },
+      }).django.templates,
+      { autoDiscover: false, roots: ["one", "two"] },
+    );
   });
 });

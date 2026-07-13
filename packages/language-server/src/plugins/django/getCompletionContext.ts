@@ -2,7 +2,7 @@ import type { Position } from "vscode-languageserver-types";
 import type { Document } from "../../lib/documents/index.js";
 
 export type DjangoBlockKind = "tag" | "variable" | "comment";
-export type DjangoCompletionContextType = "tag" | "filter" | "none";
+export type DjangoCompletionContextType = "tag" | "filter" | "template-path" | "none";
 export type DjangoCompletionContextReason =
   | "outside"
   | "comment"
@@ -22,6 +22,18 @@ export type DjangoCompletionContext =
       kind: "filter";
       blockKind: "tag" | "variable";
       prefix: string;
+    }
+  | {
+      type: "template-path";
+      kind: "template-path";
+      blockKind: "tag";
+      tagName: "extends" | "include";
+      prefix: string;
+      quote: "'" | '"';
+      replacementRange: {
+        start: Position;
+        end: Position;
+      };
     }
   | {
       type: "none";
@@ -65,6 +77,16 @@ export function getDjangoCompletionContext(
   const quoteState = getQuoteState(contentBeforeCursor);
 
   if (quoteState.quote) {
+    if (block.kind === "tag") {
+      const templatePath = getTemplatePathContext(document, offset, block, contentBeforeCursor, {
+        quote: quoteState.quote,
+        start: quoteState.start,
+      });
+      if (templatePath) {
+        return templatePath;
+      }
+    }
+
     return none("string", block.kind);
   }
 
@@ -148,6 +170,34 @@ function getOpeningDelimiterAt(
 function getTagPrefix(contentBeforeCursor: string): string | null {
   const match = TAG_NAME_ONLY_RE.exec(contentBeforeCursor);
   return match ? (match[1] ?? "") : null;
+}
+
+function getTemplatePathContext(
+  document: Document,
+  offset: number,
+  block: DjangoBlockAtOffset,
+  contentBeforeCursor: string,
+  quoteState: QuoteState & { quote: "'" | '"' },
+): Extract<DjangoCompletionContext, { type: "template-path" }> | null {
+  const beforeQuote = contentBeforeCursor.slice(0, quoteState.start);
+  const tagMatch = /^\s*(extends|include)\s+$/.exec(beforeQuote);
+  if (!tagMatch) {
+    return null;
+  }
+
+  const prefixStart = block.contentStart + quoteState.start + 1;
+  return {
+    type: "template-path",
+    kind: "template-path",
+    blockKind: "tag",
+    tagName: tagMatch[1] as "extends" | "include",
+    prefix: contentBeforeCursor.slice(quoteState.start + 1),
+    quote: quoteState.quote,
+    replacementRange: {
+      start: document.positionAt(prefixStart),
+      end: document.positionAt(offset),
+    },
+  };
 }
 
 function getFilterPrefix(contentBeforeCursor: string): string | null {

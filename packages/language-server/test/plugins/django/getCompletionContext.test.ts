@@ -66,14 +66,73 @@ describe("getDjangoCompletionContext", () => {
     assert.strictEqual(context.reason, "comment");
   });
 
-  it("returns no context for quoted tag arguments", () => {
-    const includeContext = contextAt('{% include "partials/█" %}');
-    const extendsContext = contextAt("{% extends 'base█' %}");
+  it("recognizes empty and partial template paths with exact replacement ranges", () => {
+    const empty = contextAt('{% include "█" %}');
+    const partial = contextAt("prefix\n{%- extends 'base layouts/ma█' -%}");
 
-    assert.strictEqual(includeContext.type, "none");
-    assert.strictEqual(includeContext.reason, "string");
-    assert.strictEqual(extendsContext.type, "none");
-    assert.strictEqual(extendsContext.reason, "string");
+    assert.deepStrictEqual(empty, {
+      type: "template-path",
+      kind: "template-path",
+      blockKind: "tag",
+      tagName: "include",
+      prefix: "",
+      quote: '"',
+      replacementRange: {
+        start: { line: 0, character: 12 },
+        end: { line: 0, character: 12 },
+      },
+    });
+    assert.deepStrictEqual(partial, {
+      type: "template-path",
+      kind: "template-path",
+      blockKind: "tag",
+      tagName: "extends",
+      prefix: "base layouts/ma",
+      quote: "'",
+      replacementRange: {
+        start: { line: 1, character: 13 },
+        end: { line: 1, character: 28 },
+      },
+    });
+  });
+
+  it("keeps escaped quotes inside the first template path", () => {
+    const context = contextAt('{% include "partials/\\\"quoted/ca█" %}');
+
+    assert.strictEqual(context.type, "template-path");
+    assert.strictEqual(context.prefix, 'partials/\\"quoted/ca');
+  });
+
+  it("returns no template-path context after the first argument closes", () => {
+    const closed = contextAt('{% include "partials/card.html" █with item=item %}');
+    const laterString = contextAt('{% include "partials/card.html" with label="he█llo" %}');
+
+    assert.strictEqual(closed.type, "none");
+    assert.strictEqual(closed.reason, "tag-arguments");
+    assert.strictEqual(laterString.type, "none");
+    assert.strictEqual(laterString.reason, "string");
+  });
+
+  it("rejects unrelated strings and variable template arguments", () => {
+    const unrelated = contextAt('{% url "account:de█tail" %}');
+    const variable = contextAt("{% include template_█name %}");
+
+    assert.strictEqual(unrelated.type, "none");
+    assert.strictEqual(unrelated.reason, "string");
+    assert.strictEqual(variable.type, "none");
+    assert.strictEqual(variable.reason, "tag-arguments");
+  });
+
+  it("recognizes an incomplete supported tag but not comments or malformed argument order", () => {
+    const incomplete = contextAt('{% extends "layouts/█');
+    const comment = contextAt('{# include "partials/█" #}');
+    const malformed = contextAt('{% include extra "partials/█" %}');
+
+    assert.strictEqual(incomplete.type, "template-path");
+    assert.strictEqual(comment.type, "none");
+    assert.strictEqual(comment.reason, "comment");
+    assert.strictEqual(malformed.type, "none");
+    assert.strictEqual(malformed.reason, "string");
   });
 
   it("returns no tag context for tag arguments", () => {

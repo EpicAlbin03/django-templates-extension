@@ -3,15 +3,21 @@ import { dirname, isAbsolute } from "path";
 import { fileURLToPath, pathToFileURL } from "url";
 import type { Options, Plugin } from "prettier";
 import type { FormattingOptions, Hover, Position } from "vscode-languageserver-types";
-import { CompletionList, Range, TextEdit } from "vscode-languageserver-types";
+import { CompletionItemKind, CompletionList, Range, TextEdit } from "vscode-languageserver-types";
 import { importPrettier } from "../../importPackage.js";
 import type { Document } from "../../lib/documents/index.js";
 import { Logger } from "../../logger.js";
 import { LSConfigManager } from "../../ls-config.js";
-import type { CompletionProvider, FormattingProvider, HoverProvider } from "../interfaces.js";
+import type {
+  CompletionProvider,
+  FormattingProvider,
+  HoverProvider,
+  Resolvable,
+} from "../interfaces.js";
 import { djangoFilterCompletionItems, djangoTagCompletionItems } from "./djangoCompletions.js";
 import { getDjangoCompletionContext } from "./getCompletionContext.js";
 import { getDjangoHoverInfo } from "./getHoverInfo.js";
+import type { TemplatePathProvider } from "./TemplatePathIndex.js";
 
 const require = createRequire(import.meta.url);
 const serverDirectory = dirname(fileURLToPath(import.meta.url));
@@ -19,16 +25,25 @@ const DJANGO_TEMPLATE_TAG_RE = /({%[\s\S]*?%}|{{[\s\S]*?}}|{#[\s\S]*?#})/;
 const DJANGO_HTML_PARSER = "django-html";
 const DJANGO_PRETTIER_PLUGIN = "prettier-plugin-django-templates";
 
+const EMPTY_TEMPLATE_PATH_PROVIDER: TemplatePathProvider = {
+  async getCandidates() {
+    return { candidates: [], isIncomplete: false };
+  },
+};
+
 export class DjangoPlugin implements CompletionProvider, FormattingProvider, HoverProvider {
   __name = "django";
 
-  constructor(private configManager: LSConfigManager) {}
+  constructor(
+    private configManager: LSConfigManager,
+    private templatePathProvider: TemplatePathProvider = EMPTY_TEMPLATE_PATH_PROVIDER,
+  ) {}
 
   doHover(document: Document, position: Position): Hover | null {
     return getDjangoHoverInfo(document, position);
   }
 
-  getCompletions(document: Document, position: Position): CompletionList | null {
+  getCompletions(document: Document, position: Position): Resolvable<CompletionList | null> {
     const context = getDjangoCompletionContext(document, position);
 
     if (context.type === "tag") {
@@ -37,6 +52,22 @@ export class DjangoPlugin implements CompletionProvider, FormattingProvider, Hov
 
     if (context.type === "filter") {
       return CompletionList.create(djangoFilterCompletionItems, false);
+    }
+
+    if (context.type === "template-path") {
+      return this.templatePathProvider
+        .getCandidates(document.getFilePath(), context.prefix)
+        .then(({ candidates, isIncomplete }) =>
+          CompletionList.create(
+            candidates.map((candidate) => ({
+              label: candidate.name,
+              kind: CompletionItemKind.File,
+              detail: `Template root: ${candidate.rootPath}`,
+              textEdit: TextEdit.replace(context.replacementRange, candidate.name),
+            })),
+            isIncomplete,
+          ),
+        );
     }
 
     return null;
