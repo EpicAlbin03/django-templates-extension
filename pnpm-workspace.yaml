@@ -8,13 +8,24 @@ catalogMode: prefer
 catalog:
   "@types/node": ^24
   vite: npm:@voidzero-dev/vite-plus-core@latest
-  vitest: 4.1.9
+  vitest: 4.1.10
   vite-plus: latest
   "@changesets/cli": ^2.31.0
   "@changesets/changelog-github": ^0.7.0
+  "@vitest/coverage-v8": 4.1.10
+  vscode-jsonrpc: 8.2.1
+  "@vscode/vsce": 3.9.2
+  tslib: 2.8.1
+  ovsx: 1.0.2
+  tar: 7.5.19
+  yauzl: 3.4.0
 overrides:
   vite: "catalog:"
   vitest: "catalog:"
+packageExtensions:
+  "@azure/identity":
+    dependencies:
+      tslib: ^2.8.1
 peerDependencyRules:
   allowAny:
     - vite
@@ -25,3 +36,6 @@ peerDependencyRules:
 minimumReleaseAge: 2880
 minimumReleaseAgeExclude:
   - prettier-plugin-django-templates
+allowBuilds:
+  "@vscode/vsce-sign": false
+  keytar: false

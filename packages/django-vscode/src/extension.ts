@@ -5,6 +5,8 @@ import type { LanguageClientOptions } from "vscode-languageclient";
 import { LanguageClient, TransportKind } from "vscode-languageclient/node";
 import type { ServerOptions } from "vscode-languageclient/node";
 import { versions } from "node:process";
+import { createFormattingProvider, type ProtocolTextEdit } from "./formattingProvider.ts";
+import { buildInitializationOptions } from "./initializationOptions.ts";
 import {
   createLanguageServerLifecycle,
   type LanguageServerLifecycle,
@@ -29,14 +31,6 @@ const addExperimentalStripTypesFlag =
 
 const djangoDocumentSelector = [{ language: "html" }];
 
-type ProtocolTextEdit = {
-  range: {
-    start: { line: number; character: number };
-    end: { line: number; character: number };
-  };
-  newText: string;
-};
-
 type DjangoLanguageServer = LanguageServerLifecycle<LanguageClient>;
 
 let lsApi: DjangoLanguageServer | undefined;
@@ -51,35 +45,16 @@ export function activate(context: ExtensionContext) {
   startLanguageServer(true);
 
   context.subscriptions.push(
-    languages.registerDocumentFormattingEditProvider(djangoDocumentSelector, {
-      async provideDocumentFormattingEdits(document, options, token) {
-        const client = lsApi?.getLS();
-        if (!client) {
-          return [];
-        }
-
-        try {
-          await client.start();
-          const edits = await client.sendRequest<ProtocolTextEdit[] | null>(
-            "textDocument/formatting",
-            {
-              textDocument: { uri: document.uri.toString() },
-              options: {
-                tabSize: options.tabSize,
-                insertSpaces: options.insertSpaces,
-              },
-            },
-            token,
-          );
-          return edits?.map(protocolTextEditToVsCodeTextEdit) ?? [];
-        } catch {
-          void window.showErrorMessage(
-            "Django Templates formatter failed. See the Django Templates output for details.",
-          );
-          return [];
-        }
-      },
-    }),
+    languages.registerDocumentFormattingEditProvider(
+      djangoDocumentSelector,
+      createFormattingProvider({
+        getClient: () => lsApi?.getLS(),
+        convertEdit: protocolTextEditToVsCodeTextEdit,
+        reportError(message) {
+          void window.showErrorMessage(message);
+        },
+      }),
+    ),
     commands.registerCommand("django.restartLanguageServer", async () => {
       try {
         await lsApi?.restartLS(true);
@@ -205,16 +180,11 @@ function activateDjangoLanguageServer(): LanguageServerActivation {
       // TODO deprecated upstream, rework this when the minimum VS Code version allows it.
       configurationSection: ["django", "prettier"],
     },
-    initializationOptions: {
-      configuration: {
-        django: workspace.getConfiguration("django"),
-        prettier: workspace.getConfiguration("prettier"),
-      },
+    initializationOptions: buildInitializationOptions({
+      django: workspace.getConfiguration("django"),
+      prettier: workspace.getConfiguration("prettier"),
       isTrusted: workspace.isTrusted,
-      handledCapabilities: {
-        documentFormattingProvider: true,
-      },
-    },
+    }),
   };
 
   const ls = new LanguageClient("django", "Django Templates", serverOptions, clientOptions);

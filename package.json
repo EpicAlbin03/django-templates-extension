@@ -9,6 +9,8 @@
     "ready": "vp check && vp run -r test && vp run -r build",
     "build": "vp run -r build",
     "test": "vp run -r test",
+    "test:coverage": "vp test --coverage",
+    "package:extension": "node tools/package-extension.mjs",
     "watch": "vp run -r --parallel dev",
     "format": "vp check --fix",
     "lint": "vp check",
@@ -23,8 +25,14 @@
   "devDependencies": {
     "@changesets/changelog-github": "catalog:",
     "@changesets/cli": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "@vscode/vsce": "catalog:",
     "cross-env": "^7.0.2",
-    "vite-plus": "catalog:"
+    "ovsx": "catalog:",
+    "tar": "catalog:",
+    "tslib": "catalog:",
+    "vite-plus": "catalog:",
+    "yauzl": "catalog:"
   },
   "engines": {
     "node": ">=22.18.0"
