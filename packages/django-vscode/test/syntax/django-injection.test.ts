@@ -592,13 +592,4 @@ describe("Django injection TextMate grammar", () => {
       "text.html.derivative",
     ]);
   });
-
-  it("disables editor document-link underlines for HTML templates", () => {
-    const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8"));
-
-    assert.strictEqual(
-      packageJson.contributes.configurationDefaults["[html]"]["editor.links"],
-      false,
-    );
-  });
 });

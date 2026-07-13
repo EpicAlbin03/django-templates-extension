@@ -28,7 +28,7 @@ export abstract class ReadableDocument implements TextDocument {
   /**
    * Current version of the document.
    */
-  public version = 0;
+  abstract version: number;
 
   /**
    * Should be cleared when there's an update to the text
@@ -88,12 +88,12 @@ export abstract class WritableDocument extends ReadableDocument {
    * Implementers should set `lineOffsets` to `undefined` here.
    * @param text The new text content
    */
-  abstract setText(text: string): void;
+  abstract setText(text: string, version?: number): void;
 
   /**
    * Batch update the document with the LSP change events.
    */
-  update(changes: TextDocumentContentChangeEvent[]): void {
+  update(changes: TextDocumentContentChangeEvent[], version = this.version + 1): void {
     let newText = this.getText();
     for (const change of changes) {
       if ("range" in change) {
@@ -105,6 +105,6 @@ export abstract class WritableDocument extends ReadableDocument {
         newText = change.text;
       }
     }
-    this.setText(newText);
+    this.setText(newText, version);
   }
 }

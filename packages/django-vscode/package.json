@@ -34,23 +34,25 @@
   "type": "module",
   "main": "dist/extension.cjs",
   "scripts": {
-    "build": "vp pack",
+    "build": "vp pack && node scripts/copy-language-server.mjs",
     "dev": "vp pack --watch",
-    "test": "vp test --passWithNoTests",
+    "test": "vp test",
     "check": "vp check",
-    "vscode:prepublish": "vp install && vp run build && vp pm prune --prod"
+    "vscode:prepublish": "vp run django-template-language-server#build && vp run build"
   },
   "dependencies": {
-    "django-template-language-server": "workspace:*",
-    "vscode-languageclient": "^10.0.0"
+    "prettier": "~3.3.3",
+    "prettier-plugin-django-templates": "^0.2.0"
   },
   "devDependencies": {
-    "@types/node": "^25.6.2",
-    "@types/vscode": "^1.125.0",
+    "@types/node": "catalog:",
+    "@types/vscode": "1.104.0",
     "@typescript/native": "npm:typescript@^7.0.2",
     "bumpp": "^11.1.0",
+    "django-template-language-server": "workspace:*",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
     "vite-plus": "catalog:",
+    "vscode-languageclient": "^10.0.0",
     "vscode-oniguruma": "^2.0.1",
     "vscode-textmate": "^9.2.1"
   },
@@ -67,7 +69,7 @@
         "django.language-server.ls-path": {
           "type": "string",
           "title": "Language Server Path",
-          "description": "Path to the language server entrypoint. Can be relative to the workspace root or absolute."
+          "description": "Path to the language server entrypoint. Can be relative to the workspace or absolute."
         },
         "django.language-server.runtime-args": {
           "type": "array",
@@ -77,8 +79,23 @@
         "django.language-server.port": {
           "type": "number",
           "title": "Language Server Port",
-          "description": "Port to use for debugging the language server. -1 uses the default behavior.",
+          "description": "Port to use for debugging the language server. Negative values use the default inspector port 6009, non-negative values set an explicit inspector port for debug launches only.",
           "default": -1
+        },
+        "django.templates.autoDiscover": {
+          "type": "boolean",
+          "title": "Auto-discover Template Directories",
+          "description": "Discover conventional directories named templates inside each workspace folder. Discovery is lazy and never executes Python or Django settings.",
+          "default": true
+        },
+        "django.templates.roots": {
+          "type": "array",
+          "title": "Additional Template Roots",
+          "description": "Additional Django template roots. Relative paths are resolved against each workspace folder, absolute paths require a trusted workspace.",
+          "items": {
+            "type": "string"
+          },
+          "default": []
         },
         "django.trace.server": {
           "type": "string",
@@ -90,11 +107,6 @@
           "default": "off",
           "description": "Trace communication between VS Code and the language server."
         }
-      }
-    },
-    "configurationDefaults": {
-      "[html]": {
-        "editor.links": false
       }
     },
     "grammars": [
@@ -135,7 +147,7 @@
     "theme": "dark"
   },
   "engines": {
-    "vscode": "^1.125.0"
+    "vscode": "^1.104.0"
   },
   "capabilities": {
     "untrustedWorkspaces": {

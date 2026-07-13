@@ -4,7 +4,7 @@ A [Language Server Protocol](https://microsoft.github.io/language-server-protoco
 
 ## Features
 
-- Completions for Django template tags and filters
+- Completions for Django template tags, filters, and template paths
 - Tooltips with examples and reference links
 - Formatting with Prettier (`prettier-plugin-django-templates`)
 

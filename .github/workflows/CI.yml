@@ -24,6 +24,38 @@ jobs:
         env:
           CI: true
 
+      - name: Check VSIX package budgets
+        shell: bash
+        run: |
+          set -euo pipefail
+          stage="$RUNNER_TEMP/django-vscode"
+          vsix="$RUNNER_TEMP/django-templates.vsix"
+          mkdir -p "$stage"
+          tar -C packages/django-vscode --exclude=node_modules -cf - . | tar -C "$stage" -xf -
+          node - "$stage/package.json" <<'NODE'
+          const fs = require("node:fs");
+          const path = process.argv[2];
+          const manifest = JSON.parse(fs.readFileSync(path, "utf8"));
+          delete manifest.devDependencies;
+          delete manifest.scripts["vscode:prepublish"];
+          fs.writeFileSync(path, `${JSON.stringify(manifest, null, 2)}\n`);
+          NODE
+          npm install --prefix "$stage" --omit=dev --ignore-scripts --no-package-lock
+          (cd "$stage" && npx --yes @vscode/vsce@3.9.2 package --out "$vsix")
+
+          listing="$RUNNER_TEMP/vsix-files.txt"
+          unzip -Z1 "$vsix" > "$listing"
+          bytes=$(stat --format=%s "$vsix")
+          files=$(grep -vc '/$' "$listing")
+          max_bytes=2600000
+          max_files=90
+          echo "VSIX: $bytes bytes, $files files"
+          test "$bytes" -le "$max_bytes"
+          test "$files" -le "$max_files"
+          grep -qx 'extension/dist/extension.cjs' "$listing"
+          grep -qx 'extension/dist/server/bin/server.js' "$listing"
+          grep -qx 'extension/dist/server/dist/index.mjs' "$listing"
+
   test-supported-node:
     permissions: {}
     runs-on: ubuntu-latest

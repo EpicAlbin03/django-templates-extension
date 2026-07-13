@@ -5,7 +5,7 @@ Django template support for HTML files in VS Code. Templates keep the built-in `
 ## Features
 
 - **Syntax highlighting** for tags, variables, filters, and comments
-- **Completions** for Django tags and filters
+- **Completions** for Django tags, filters, and template paths
 - **Tooltips** with examples and reference links
 - **Snippets** for common tags and filters
 - **Formatting** with Prettier

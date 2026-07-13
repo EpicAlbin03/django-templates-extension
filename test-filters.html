@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Django template filter hover test</title>
+    {% load i18n l10n tz humanize mptt_tags crispy_forms_tags thumbnail %}
+  </head>
+  <body>
+    <h1>Django template filter hover test</h1>
+
+    {# String and sequence filters #}
+    <p>{{ values|join:", " }}</p>
+    <p>{{ quoted_text|addslashes }}</p>
+    <p>{{ heading|capfirst }}</p>
+    <p>{{ javascript_value|escapejs }}</p>
+    <p>{{ price|floatformat:"2" }}</p>
+    <p>{{ international_url|iriencode }}</p>
+    <p>{{ multiline_text|linenumbers }}</p>
+    <p>{{ heading|lower }}</p>
+    <p>{{ value|make_list }}</p>
+    <p>{{ heading|slugify }}</p>
+    <p>{{ scientific_value|stringformat:"E" }}</p>
+    <p>{{ heading|title }}</p>
+    <p>{{ summary|truncatechars:80 }}</p>
+    <p>{{ article_html|truncatechars_html:200 }}</p>
+    <p>{{ summary|truncatewords:20 }}</p>
+    <p>{{ article_html|truncatewords_html:20 }}</p>
+    <p>{{ heading|upper }}</p>
+    <p>{{ path|urlencode:"" }}</p>
+    <p>{{ message|urlize }}</p>
+    <p>{{ message|urlizetrunc:30 }}</p>
+    <p>{{ message|wordcount }}</p>
+    <p>{{ message|wordwrap:80 }}</p>
+    <p>{{ label|ljust:20 }}</p>
+    <p>{{ label|rjust:20 }}</p>
+    <p>{{ heading|center:40 }}</p>
+    <p>{{ value|cut:" " }}</p>
+
+    {# HTML safety filters #}
+    <p>{{ user_html|escape }}</p>
+    <p>{{ user_html|force_escape }}</p>
+    <p>{{ plain_text|linebreaks }}</p>
+    <p>{{ plain_text|linebreaksbr }}</p>
+    <p>{{ trusted_html|safe }}</p>
+    <p>{{ trusted_values|safeseq }}</p>
+    <p>{{ html|striptags }}</p>
+    <p>{{ untrusted_values|escapeseq }}</p>
+
+    {# Collection filters #}
+    <p>{{ items|dictsort:"name" }}</p>
+    <p>{{ items|dictsortreversed:"name" }}</p>
+    <p>{{ items|first }}</p>
+    <p>{{ items|last }}</p>
+    <p>{{ items|length }}</p>
+    <p>{{ items|length_is:3 }}</p>
+    <p>{{ items|random }}</p>
+    <p>{{ items|slice:":5" }}</p>
+    <p>{{ nested_items|unordered_list }}</p>
+
+    {# Number, date, and fallback filters #}
+    <p>{{ value|add:"2" }}</p>
+    <p>{{ value|get_digit:"2" }}</p>
+    <p>{{ published_at|date:"Y-m-d" }}</p>
+    <p>{{ starts_at|time:"H:i" }}</p>
+    <p>{{ published_at|timesince }}</p>
+    <p>{{ event.starts_at|timeuntil }}</p>
+    <p>{{ value|default:"Nothing to display" }}</p>
+    <p>{{ value|default_if_none:"Not provided" }}</p>
+    <p>{{ row_number|divisibleby:"2" }}</p>
+    <p>{{ is_published|yesno:"Published,Draft,Unknown" }}</p>
+    <p>{{ file_size|filesizeformat }}</p>
+    <p>{{ count|pluralize }}</p>
+    <p>{{ phone_number|phone2numeric }}</p>
+    <p>{{ debug_value|pprint }}</p>
+    <p>{{ payload|json_script:"page-data" }}</p>
+
+    {# Internationalization, localization, and timezone filters #}
+    <p>{{ language_code|language_name }}</p>
+    <p>{{ language_code|language_name_local }}</p>
+    <p>{{ language_code|language_bidi }}</p>
+    <p>{{ language_code|language_name_translated }}</p>
+    <p>{{ amount|localize }}</p>
+    <p>{{ amount|unlocalize }}</p>
+    <p>{{ event.starts_at|localtime }}</p>
+    <p>{{ event.starts_at|utc }}</p>
+    <p>{{ event.starts_at|timezone:"Europe/Paris" }}</p>
+
+    {# Humanize filters #}
+    <p>{{ position|apnumber }}</p>
+    <p>{{ population|intcomma }}</p>
+    <p>{{ population|intword }}</p>
+    <p>{{ event.date|naturalday }}</p>
+    <p>{{ event.starts_at|naturaltime }}</p>
+    <p>{{ position|ordinal }}</p>
+
+    {# django-mptt filters #}
+    <p>{{ nodes|tree_info }}</p>
+    <p>{{ node.get_ancestors|tree_path:" > " }}</p>
+
+    {# django-crispy-forms filters #}
+    <p>{{ form|crispy }}</p>
+    <p>{{ form|as_crispy_errors }}</p>
+    <p>{{ form.email|as_crispy_field }}</p>
+    <p>{{ attrs|flatatt }}</p>
+    <p>{{ field|optgroups }}</p>
+
+    {# sorl-thumbnail filters #}
+    <p>{{ thumbnail.url|resolution:"2x" }}</p>
+    <p>{{ image|is_portrait }}</p>
+    <p>{{ image|margin:"100x100" }}</p>
+    <p>{{ image|background_margin:"100x100" }}</p>
+    <p>{{ markdown|markdown_thumbnails }}</p>
+    <p>{{ html|html_thumbnails }}</p>
+  </body>
+</html>

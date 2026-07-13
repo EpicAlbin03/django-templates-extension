@@ -39,8 +39,7 @@ jobs:
       # So, remove the workspace
       - run: "rm package.json pnpm-workspace.yaml pnpm-lock.yaml"
       - run: "rm -rf packages/django-vscode/node_modules" # pnpm version of stuff, needs to be removed
-      # ... and remove the workspace:* references
-      - run: json -I -f packages/django-vscode/package.json -e 'this.dependencies["django-template-language-server"]="*"'
+      # No workspace:* references remain in the extension's production dependencies.
       # The extension is already built, so remove workspace-only development metadata before npm reads the package.
       - run: json -I -f packages/django-vscode/package.json -e 'delete this.devDependencies; delete this.scripts["vscode:prepublish"]'
 

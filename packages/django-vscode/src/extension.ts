@@ -1,11 +1,25 @@
-import * as path from "path";
-import { commands, languages, Range, TextEdit, window, workspace } from "vscode";
+import { commands, ExtensionMode, languages, Range, TextEdit, window, workspace } from "vscode";
 import type { ExtensionContext } from "vscode";
 import { RevealOutputChannelOn } from "vscode-languageclient";
 import type { LanguageClientOptions } from "vscode-languageclient";
 import { LanguageClient, TransportKind } from "vscode-languageclient/node";
 import type { ServerOptions } from "vscode-languageclient/node";
 import { versions } from "node:process";
+import {
+  createLanguageServerLifecycle,
+  type LanguageServerLifecycle,
+} from "./languageServerLifecycle.ts";
+import {
+  createDisposableResourceOwner,
+  createResourceOwnership,
+  type AsyncResourceOwner,
+  type ResourceOwnership,
+} from "./resourceOwnership.ts";
+import {
+  buildServerLaunchOptions,
+  resolveServerModule,
+  type ServerConfigurationError,
+} from "./serverOptions.ts";
 
 const [nodeMajor, nodeMinor] = (versions?.node ?? "0.0.0-unknown").split(".", 3).map(Number);
 
@@ -23,16 +37,18 @@ type ProtocolTextEdit = {
   newText: string;
 };
 
-let lsApi:
-  | {
-      getLS(): LanguageClient;
-      restartLS(showNotification: boolean): Promise<void>;
-    }
-  | undefined;
+type DjangoLanguageServer = LanguageServerLifecycle<LanguageClient>;
+
+let lsApi: DjangoLanguageServer | undefined;
+let resourceOwnership: ResourceOwnership | undefined;
 
 export function activate(context: ExtensionContext) {
+  resourceOwnership = createResourceOwnership((disposable) => {
+    context.subscriptions.push(disposable);
+  });
+
   // Start immediately because this extension only targets Django template support.
-  lsApi = activateDjangoLanguageServer();
+  startLanguageServer(context, true);
 
   context.subscriptions.push(
     languages.registerDocumentFormattingEditProvider(djangoDocumentSelector, {
@@ -56,17 +72,20 @@ export function activate(context: ExtensionContext) {
             token,
           );
           return edits?.map(protocolTextEditToVsCodeTextEdit) ?? [];
-        } catch (error) {
+        } catch {
           void window.showErrorMessage(
-            `Django Templates formatter failed. See the Django Templates output for details.`,
+            "Django Templates formatter failed. See the Django Templates output for details.",
           );
-          client.error("Django Templates formatter failed", error, false);
           return [];
         }
       },
     }),
     commands.registerCommand("django.restartLanguageServer", async () => {
-      await lsApi?.restartLS(true);
+      try {
+        await lsApi?.restartLS(true);
+      } catch {
+        // The lifecycle reports restart failures with output details and a concise notification.
+      }
     }),
   );
 
@@ -78,7 +97,10 @@ export function activate(context: ExtensionContext) {
      */
     getLanguageServer() {
       if (!lsApi) {
-        lsApi = activateDjangoLanguageServer();
+        startLanguageServer(context, false);
+      }
+      if (!lsApi) {
+        throw new Error("Django Templates language server configuration is invalid.");
       }
 
       return lsApi.getLS();
@@ -87,9 +109,10 @@ export function activate(context: ExtensionContext) {
 }
 
 export function deactivate() {
-  const stop = lsApi?.getLS().stop();
+  const ownership = resourceOwnership;
   lsApi = undefined;
-  return stop;
+  resourceOwnership = undefined;
+  return ownership?.release();
 }
 
 function protocolTextEditToVsCodeTextEdit(edit: ProtocolTextEdit): TextEdit {
@@ -104,58 +127,78 @@ function protocolTextEditToVsCodeTextEdit(edit: ProtocolTextEdit): TextEdit {
   );
 }
 
-function activateDjangoLanguageServer() {
+type LanguageServerActivation =
+  | { ok: true; api: DjangoLanguageServer }
+  | { ok: false; error: ServerConfigurationError };
+
+function startLanguageServer(context: ExtensionContext, showConfigurationError: boolean): void {
+  const activation = activateDjangoLanguageServer(context);
+  if (!activation.ok) {
+    lsApi = undefined;
+    const outputChannel = window.createOutputChannel("Django Templates", { log: true });
+    outputChannel.appendLine(activation.error.message);
+    registerLanguageServerOwner(createDisposableResourceOwner(outputChannel));
+    if (showConfigurationError) {
+      void window.showErrorMessage(
+        "Django Templates cannot use a relative language server path without an open workspace folder.",
+      );
+    }
+    return;
+  }
+
+  lsApi = activation.api;
+  registerLanguageServerOwner(activation.api);
+}
+
+function registerLanguageServerOwner(owner: AsyncResourceOwner): void {
+  if (!resourceOwnership) {
+    throw new Error("Django Templates language server ownership is not initialized.");
+  }
+  resourceOwnership.register(owner);
+}
+
+function activateDjangoLanguageServer(context: ExtensionContext): LanguageServerActivation {
   const runtimeConfig = workspace.getConfiguration("django.language-server");
   const { workspaceFolders } = workspace;
   const rootPath = Array.isArray(workspaceFolders) ? workspaceFolders[0]?.uri.fsPath : undefined;
-
-  const configuredLsPath = runtimeConfig.get<string>("ls-path");
-  // Returns undefined if the setting is empty.
-  // Resolves relative paths against the first workspace folder.
-  const lsPath =
-    configuredLsPath && configuredLsPath.trim() !== ""
-      ? path.isAbsolute(configuredLsPath)
-        ? configuredLsPath
-        : path.join(rootPath as string, configuredLsPath)
-      : undefined;
-
-  const serverModule = require.resolve(lsPath || "django-template-language-server/bin/server.js");
-  const serverRuntime = runtimeConfig.get<string>("runtime");
-
-  const runExecArgv: string[] = [];
-  if (!serverRuntime && addExperimentalStripTypesFlag) {
-    runExecArgv.push("--experimental-strip-types");
+  const defaultServerModule = context.asAbsolutePath(
+    context.extensionMode === ExtensionMode.Development
+      ? "../language-server/bin/server.js"
+      : "dist/server/bin/server.js",
+  );
+  const moduleResolution = resolveServerModule({
+    configuredPath: runtimeConfig.get<string>("ls-path"),
+    defaultServerModule,
+    workspaceRoot: rootPath,
+    resolveModule: (request) => require.resolve(request),
+  });
+  if (!moduleResolution.ok) {
+    return moduleResolution;
   }
 
-  const runtimeArgs = runtimeConfig.get<string[]>("runtime-args");
-  if (runtimeArgs) {
-    runExecArgv.push(...runtimeArgs);
-  }
-
-  const debugArgs = ["--nolazy", ...runExecArgv];
-  const port = runtimeConfig.get<number>("port") ?? -1;
-  if (port < 0) {
-    debugArgs.push("--inspect=6009");
-  } else {
-    runExecArgv.push(`--inspect=${port}`);
-  }
-
+  const serverModule = moduleResolution.serverModule;
+  const launchOptions = buildServerLaunchOptions({
+    serverModule,
+    runtime: runtimeConfig.get<string>("runtime"),
+    runtimeArgs: runtimeConfig.get<string[]>("runtime-args"),
+    debugPort: runtimeConfig.get<number>("port"),
+    addExperimentalStripTypesFlag,
+  });
   const serverOptions: ServerOptions = {
     run: {
-      module: serverModule,
+      module: launchOptions.run.module,
       transport: TransportKind.ipc,
-      options: { execArgv: runExecArgv },
+      options: { execArgv: launchOptions.run.execArgv },
     },
     debug: {
-      module: serverModule,
+      module: launchOptions.debug.module,
       transport: TransportKind.ipc,
-      options: { execArgv: debugArgs },
+      options: { execArgv: launchOptions.debug.execArgv },
     },
   };
-
-  if (serverRuntime) {
-    serverOptions.run.runtime = serverRuntime;
-    serverOptions.debug.runtime = serverRuntime;
+  if (launchOptions.run.runtime) {
+    serverOptions.run.runtime = launchOptions.run.runtime;
+    serverOptions.debug.runtime = launchOptions.run.runtime;
   }
 
   // Manually create the output channel so it is reused across restarts and does not steal focus.
@@ -191,23 +234,21 @@ function activateDjangoLanguageServer() {
     },
   );
 
-  let restartingLs = false;
-  async function restartLS(showNotification: boolean) {
-    if (restartingLs) {
-      return;
-    }
+  const api = createLanguageServerLifecycle({
+    client: ls,
+    output: outputChannel,
+    notifyRestarted() {
+      void window.showInformationMessage("Django Templates language server restarted.");
+    },
+    reportRestartFailure(error) {
+      outputChannel.appendLine(
+        `Failed to restart Django Templates language server: ${String(error)}`,
+      );
+      void window.showErrorMessage(
+        "Django Templates language server restart failed. See the Django Templates output for details.",
+      );
+    },
+  });
 
-    restartingLs = true;
-    outputChannel.clear();
-    await ls.restart();
-    if (showNotification) {
-      window.showInformationMessage("Django Templates language server restarted.");
-    }
-    restartingLs = false;
-  }
-
-  return {
-    getLS: () => ls,
-    restartLS,
-  };
+  return { ok: true, api };
 }

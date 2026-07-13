@@ -1,143 +1,65 @@
-import { EventEmitter } from "events";
-import {
+import type {
   TextDocumentContentChangeEvent,
   TextDocumentItem,
   VersionedTextDocumentIdentifier,
 } from "vscode-languageserver";
-import { Document } from "./Document.js";
 import { normalizeUri } from "../../utils.js";
-import { FileMap, FileSet } from "./fileCollection.js";
+import { Document } from "./Document.js";
+import { FileMap } from "./fileCollection.js";
 import { isUseCaseSensitiveFileNames } from "./isFileSystemCaseSensitive.js";
-
-export type DocumentEvent = "documentOpen" | "documentChange" | "documentClose";
 
 /**
  * Manages open documents.
  */
 export class DocumentManager {
-  private emitter = new EventEmitter();
   private documents: FileMap<Document>;
-  private locked: FileSet;
-  private deleteCandidates: FileSet;
 
   constructor(
-    private createDocument: (textDocument: Pick<TextDocumentItem, "text" | "uri">) => Document,
     options: { useCaseSensitiveFileNames: boolean } = {
       useCaseSensitiveFileNames: isUseCaseSensitiveFileNames,
     },
   ) {
     this.documents = new FileMap(options.useCaseSensitiveFileNames);
-    this.locked = new FileSet(options.useCaseSensitiveFileNames);
-    this.deleteCandidates = new FileSet(options.useCaseSensitiveFileNames);
   }
 
-  openClientDocument(textDocument: Pick<TextDocumentItem, "text" | "uri">): Document {
-    return this.openDocument(textDocument, /**openedByClient */ true);
-  }
-
-  openDocument(
-    textDocument: Pick<TextDocumentItem, "text" | "uri">,
-    openedByClient: boolean,
-  ): Document {
-    textDocument = {
-      ...textDocument,
-      uri: normalizeUri(textDocument.uri),
-    };
-
-    let document: Document;
-    if (this.documents.has(textDocument.uri)) {
-      document = this.documents.get(textDocument.uri)!;
-      // open state should only be updated when the document is closed
-      document.openedByClient ||= openedByClient;
-      document.setText(textDocument.text);
-      this.notify("documentChange", document);
-    } else {
-      document = this.createDocument(textDocument);
-      document.openedByClient = openedByClient;
-      this.documents.set(textDocument.uri, document);
-      this.notify("documentOpen", document);
-    }
-
+  openClientDocument(textDocument: TextDocumentItem): Document {
+    const uri = normalizeUri(textDocument.uri);
+    const document = new Document(
+      uri,
+      textDocument.text,
+      textDocument.languageId,
+      textDocument.version,
+    );
+    this.documents.set(uri, document);
     return document;
   }
 
-  lockDocument(uri: string): void {
-    this.locked.add(normalizeUri(uri));
-  }
-
-  markAsOpenedInClient(uri: string): void {
-    const document = this.documents.get(normalizeUri(uri));
-    if (document) {
-      document.openedByClient = true;
-    }
-  }
-
-  getAllOpenedByClient() {
-    return Array.from(this.documents.entries()).filter((doc) => doc[1].openedByClient);
-  }
-
-  isOpenedInClient(uri: string) {
-    const document = this.documents.get(normalizeUri(uri));
-    return !!document?.openedByClient;
-  }
-
-  releaseDocument(uri: string): void {
+  closeDocument(uri: string): void {
     uri = normalizeUri(uri);
-
-    this.locked.delete(uri);
-    const document = this.documents.get(uri);
-    if (document) {
-      document.openedByClient = false;
-    }
-    if (this.deleteCandidates.has(uri)) {
-      this.deleteCandidates.delete(uri);
-      this.closeDocument(uri);
-    }
-  }
-
-  closeDocument(uri: string) {
-    uri = normalizeUri(uri);
-
-    const document = this.documents.get(uri);
-    if (!document) {
+    if (!this.documents.delete(uri)) {
       throw new Error("Cannot call methods on an unopened document");
     }
-
-    this.notify("documentClose", document);
-
-    // Some plugin may prevent a document from actually being closed.
-    if (!this.locked.has(uri)) {
-      this.documents.delete(uri);
-    } else {
-      this.deleteCandidates.add(uri);
-    }
-
-    document.openedByClient = false;
   }
 
   updateDocument(
     textDocument: VersionedTextDocumentIdentifier,
     changes: TextDocumentContentChangeEvent[],
-  ) {
+  ): boolean {
     const document = this.documents.get(normalizeUri(textDocument.uri));
     if (!document) {
       throw new Error("Cannot call methods on an unopened document");
     }
 
-    document.update(changes);
+    // Ignore stale updates atomically so delayed protocol messages cannot corrupt newer content.
+    if (textDocument.version <= document.version) {
+      return false;
+    }
 
-    this.notify("documentChange", document);
+    document.update(changes, textDocument.version);
+    return true;
   }
 
-  on(name: DocumentEvent, listener: (document: Document) => void) {
-    this.emitter.on(name, listener);
-  }
-
-  get(uri: string) {
+  get(uri: string): Document | undefined {
     return this.documents.get(normalizeUri(uri));
-  }
-
-  private notify(name: DocumentEvent, document: Document) {
-    this.emitter.emit(name, document);
   }
 }

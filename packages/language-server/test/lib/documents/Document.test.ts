@@ -14,19 +14,14 @@ describe("Document", () => {
     assert.strictEqual(document.getText(), "<h1>Hello, django!</h1>");
   });
 
-  it("increments the version on edits", () => {
-    const document = new Document("file:///hello.html", "hello");
-    assert.strictEqual(document.version, 0);
+  it("stores language and protocol version metadata", () => {
+    const document = new Document("file:///hello.html", "hello", "django-template-test", 4);
 
-    document.setText("Hello, world!");
-    assert.strictEqual(document.version, 1);
-    document.update([
-      {
-        text: "django",
-        range: { start: { line: 0, character: 7 }, end: { line: 0, character: 12 } },
-      },
-    ]);
-    assert.strictEqual(document.version, 2);
+    assert.strictEqual(document.languageId, "django-template-test");
+    assert.strictEqual(document.version, 4);
+
+    document.update([{ text: "Hello, world!" }], 9);
+    assert.strictEqual(document.version, 9);
   });
 
   it("returns the correct file path", () => {
@@ -101,6 +96,23 @@ describe("Document", () => {
     assert.strictEqual(document.offsetAt({ line: 0, character: 1 }), 1);
     assert.strictEqual(document.offsetAt({ line: 1, character: 3 }), 9);
     assert.strictEqual(document.offsetAt({ line: 2, character: 0 }), 12);
+  });
+
+  it("applies sequential incremental edits with CRLF offsets", () => {
+    const document = new Document("file:///hello.html", "a\r\nb\r\n");
+
+    document.update([
+      {
+        text: "beta",
+        range: { start: { line: 1, character: 0 }, end: { line: 1, character: 1 } },
+      },
+      {
+        text: "!",
+        range: { start: { line: 1, character: 4 }, end: { line: 1, character: 4 } },
+      },
+    ]);
+
+    assert.strictEqual(document.getText(), "a\r\nbeta!\r\n");
   });
 
   it("gets the correct position from offset with CRLF", () => {

@@ -28,8 +28,12 @@ export type DjangoCompletionContext =
       kind: "template-path";
       blockKind: "tag";
       tagName: "extends" | "include";
-      quote: "'" | '"';
       prefix: string;
+      quote: "'" | '"';
+      replacementRange: {
+        start: Position;
+        end: Position;
+      };
     }
   | {
       type: "none";
@@ -50,10 +54,8 @@ interface QuoteState {
   start: number;
 }
 
-const TAG_NAME_RE = /^\s*([A-Za-z_][A-Za-z0-9_]*)?/;
 const TAG_NAME_ONLY_RE = /^\s*([A-Za-z_][A-Za-z0-9_]*)?$/;
 const FILTER_PREFIX_RE = /^\s*([A-Za-z_][A-Za-z0-9_]*)?$/;
-const TEMPLATE_PATH_TAGS = new Set(["extends", "include"]);
 
 export function getDjangoCompletionContext(
   document: Document,
@@ -74,14 +76,17 @@ export function getDjangoCompletionContext(
   const contentBeforeCursor = text.slice(block.contentStart, offset);
   const quoteState = getQuoteState(contentBeforeCursor);
 
-  if (block.kind === "tag") {
-    const templatePathContext = getTemplatePathContext(contentBeforeCursor, quoteState);
-    if (templatePathContext) {
-      return templatePathContext;
-    }
-  }
-
   if (quoteState.quote) {
+    if (block.kind === "tag") {
+      const templatePath = getTemplatePathContext(document, offset, block, contentBeforeCursor, {
+        quote: quoteState.quote,
+        start: quoteState.start,
+      });
+      if (templatePath) {
+        return templatePath;
+      }
+    }
+
     return none("string", block.kind);
   }
 
@@ -162,47 +167,37 @@ function getOpeningDelimiterAt(
   return null;
 }
 
+function getTagPrefix(contentBeforeCursor: string): string | null {
+  const match = TAG_NAME_ONLY_RE.exec(contentBeforeCursor);
+  return match ? (match[1] ?? "") : null;
+}
+
 function getTemplatePathContext(
+  document: Document,
+  offset: number,
+  block: DjangoBlockAtOffset,
   contentBeforeCursor: string,
-  quoteState: QuoteState,
+  quoteState: QuoteState & { quote: "'" | '"' },
 ): Extract<DjangoCompletionContext, { type: "template-path" }> | null {
-  if (!quoteState.quote) {
+  const beforeQuote = contentBeforeCursor.slice(0, quoteState.start);
+  const tagMatch = /^\s*(extends|include)\s+$/.exec(beforeQuote);
+  if (!tagMatch) {
     return null;
   }
 
-  const tagNameMatch = TAG_NAME_RE.exec(contentBeforeCursor);
-  if (!tagNameMatch) {
-    return null;
-  }
-
-  const tagName = tagNameMatch[1];
-  if (!isTemplatePathTag(tagName)) {
-    return null;
-  }
-
-  const tagNameEnd = tagNameMatch[0].length;
-  const beforeQuote = contentBeforeCursor.slice(tagNameEnd, quoteState.start);
-  if (!/^\s*$/.test(beforeQuote)) {
-    return null;
-  }
-
+  const prefixStart = block.contentStart + quoteState.start + 1;
   return {
     type: "template-path",
     kind: "template-path",
     blockKind: "tag",
-    tagName,
-    quote: quoteState.quote,
+    tagName: tagMatch[1] as "extends" | "include",
     prefix: contentBeforeCursor.slice(quoteState.start + 1),
+    quote: quoteState.quote,
+    replacementRange: {
+      start: document.positionAt(prefixStart),
+      end: document.positionAt(offset),
+    },
   };
-}
-
-function isTemplatePathTag(tagName: string | undefined): tagName is "extends" | "include" {
-  return !!tagName && TEMPLATE_PATH_TAGS.has(tagName);
-}
-
-function getTagPrefix(contentBeforeCursor: string): string | null {
-  const match = TAG_NAME_ONLY_RE.exec(contentBeforeCursor);
-  return match ? (match[1] ?? "") : null;
 }
 
 function getFilterPrefix(contentBeforeCursor: string): string | null {

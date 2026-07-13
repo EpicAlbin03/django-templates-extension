@@ -5,7 +5,7 @@ Django template support for HTML files in VS Code. Templates keep the built-in `
 ## Features
 
 - **Syntax highlighting** for tags, variables, filters, and comments
-- **Completions** for Django tags and filters
+- **Completions** for Django tags, filters, and template paths
 - **Tooltips** with examples and reference links
 - **Snippets** for common tags and filters
 - **Formatting** with Prettier
@@ -35,15 +35,21 @@ Then use **Format Document** or enable `editor.formatOnSave`.
 
 ### Completions
 
-Provides LSP completions for Django template tags and filters as you type.
+Provides LSP completions for Django template tags, filters, and template paths.
 
-<img src="https://github.com/EpicAlbin03/django-templates-extension/raw/main/packages/django-vscode/img/completion-tag.png" alt="Tag completions" width="400"> <img src="https://github.com/EpicAlbin03/django-templates-extension/raw/main/packages/django-vscode/img/completion-filter.png" alt="Filter completions" width="500">
+<img src="https://github.com/EpicAlbin03/django-templates-extension/raw/main/packages/django-vscode/img/completion-tag.png" alt="Tag completions" width="400">
+<img src="https://github.com/EpicAlbin03/django-templates-extension/raw/main/packages/django-vscode/img/completion-filter.png" alt="Filter completions" width="500">
+
+Template paths autocomplete inside `{% extends %}` and `{% include %}` tags using files under `templates` directories.
+
+<img src="https://github.com/EpicAlbin03/django-templates-extension/raw/main/packages/django-vscode/img/completion-template-path.png" alt="Template path completions" width="500">
 
 ### Tooltips
 
 Shows documentation, examples, and reference links when hovering over supported tags and filters.
 
-<img src="https://github.com/EpicAlbin03/django-templates-extension/raw/main/packages/django-vscode/img/tooltip.png" alt="tooltip" width="500">
+<img src="https://github.com/EpicAlbin03/django-templates-extension/raw/main/packages/django-vscode/img/tooltip-tag.png" alt="Tag tooltip" width="400">
+<img src="https://github.com/EpicAlbin03/django-templates-extension/raw/main/packages/django-vscode/img/tooltip-filter.png" alt="Filter tooltip" width="400">
 
 ### Snippets
 
@@ -78,7 +84,6 @@ Type an abbreviation and select the matching snippet from the completion list.
 | `endfilter`                   | `{% endfilter %}`                                                           |
 | `firstof`                     | `{% firstof %}`                                                             |
 | `firstof_as`                  | `{% firstof as %}`                                                          |
-| `endfirstof`                  | `{% endfirstof %}`                                                          |
 | `for`                         | `{% for in %} {% endfor %}`                                                 |
 | `for_paste`                   | `{% for in %}…{% endfor %}`                                                 |
 | `endfor`                      | `{% endfor %}`                                                              |
@@ -339,6 +344,25 @@ Completions, tooltips, and snippets include template tags and filters from popul
 - [django CMS](https://github.com/django-cms/django-cms)
 - [django-allauth](https://github.com/pennersr/django-allauth)
 - [django-crispy-forms](https://github.com/django-crispy-forms/django-crispy-forms)
+
+### Settings
+
+These settings can be added to `.vscode/settings.json`:
+
+| Setting                         | Default | Description                                                                               |
+| ------------------------------- | ------- | ----------------------------------------------------------------------------------------- |
+| `django.templates.autoDiscover` | `true`  | Discover template files under `templates` directories in each workspace folder.           |
+| `django.templates.roots`        | `[]`    | Add template directories to scan. Relative paths are resolved from each workspace folder. |
+
+> **Note:** If clickable links and underlines are distracting, you can override `editor.links` in `.vscode/settings.json`.
+
+```json
+{
+  "[html]": {
+    "editor.links": true
+  }
+}
+```
 
 ### Troubleshooting
 

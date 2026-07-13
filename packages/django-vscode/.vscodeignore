@@ -1,6 +1,7 @@
-/.vscode
-/src
-/test
+.vscode/**
+scripts/**
+src/**
+test/**
 
 .gitignore
 tsconfig.json
@@ -9,6 +10,8 @@ vite.config.ts
 # README images are hosted remotely, only the Marketplace icon is needed in the VSIX.
 img/completion-filter.png
 img/completion-tag.png
+img/completion-template-path.png
 img/formatting-syntax.png
 img/snippets.png
-img/tooltip.png
+img/tooltip-tag.png
+img/tooltip-filter.png

@@ -6,8 +6,6 @@ import { Range } from "vscode-languageserver";
  * Represents an HTML document that may contain Django template syntax.
  */
 export class Document extends WritableDocument {
-  languageId = "html";
-  openedByClient = false;
   /**
    * Compute and cache directly for performance because it is queried often.
    */
@@ -16,6 +14,8 @@ export class Document extends WritableDocument {
   constructor(
     public url: string,
     public content: string,
+    public languageId = "html",
+    public version = 0,
   ) {
     super();
     this.path = urlToPath(url);
@@ -38,9 +38,9 @@ export class Document extends WritableDocument {
   /**
    * Set text content and increase the document version.
    */
-  setText(text: string) {
+  setText(text: string, version = this.version + 1) {
     this.content = text;
-    this.version++;
+    this.version = version;
     this.lineOffsets = undefined;
   }
 
