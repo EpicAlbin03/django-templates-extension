@@ -45,7 +45,7 @@
     "vscode-languageclient": "^10.0.0"
   },
   "devDependencies": {
-    "@types/node": "^25.6.2",
+    "@types/node": "catalog:",
     "@types/vscode": "^1.125.0",
     "@typescript/native": "npm:typescript@^7.0.2",
     "bumpp": "^11.1.0",
@@ -67,7 +67,7 @@
         "django.language-server.ls-path": {
           "type": "string",
           "title": "Language Server Path",
-          "description": "Path to the language server entrypoint. Can be relative to the workspace root or absolute."
+          "description": "Path to the language server entrypoint. Can be relative to the workspace or absolute."
         },
         "django.language-server.runtime-args": {
           "type": "array",
