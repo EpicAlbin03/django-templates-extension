@@ -56,11 +56,10 @@ export function activate(context: ExtensionContext) {
             token,
           );
           return edits?.map(protocolTextEditToVsCodeTextEdit) ?? [];
-        } catch (error) {
+        } catch {
           void window.showErrorMessage(
-            `Django Templates formatter failed. See the Django Templates output for details.`,
+            "Django Templates formatter failed. See the Django Templates output for details.",
           );
-          client.error("Django Templates formatter failed", error, false);
           return [];
         }
       },

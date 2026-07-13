@@ -1,14 +1,18 @@
 import {
+  ErrorCodes,
   IPCMessageReader,
   IPCMessageWriter,
+  ResponseError,
   TextDocumentSyncKind,
   createConnection,
   type Connection,
 } from "vscode-languageserver/node";
+import { formatDocumentForProtocol } from "./formatting-request.js";
 import { Document, DocumentManager } from "./lib/documents/index.js";
 import { Logger } from "./logger.js";
 import { LSConfigManager } from "./ls-config.js";
 import { DjangoPlugin } from "./plugins/index.js";
+import { parseConfigurationChange, parseInitializationOptions } from "./protocol.js";
 import { setIsTrusted } from "./importPackage.js";
 
 export interface LSOptions {
@@ -26,7 +30,7 @@ export interface LSOptions {
 
 function createServerConnection(): Connection {
   if (process.argv.includes("--stdio")) {
-    console.log = (...args: any[]) => {
+    console.log = (...args: unknown[]) => {
       console.warn(...args);
     };
     return createConnection(process.stdin, process.stdout);
@@ -59,17 +63,14 @@ export function startServer(options?: LSOptions) {
     ];
     Logger.log("Initialize language server at ", workspaceUris.join(", "));
 
-    const isTrusted: boolean = evt.initializationOptions?.isTrusted ?? true;
+    const initializationOptions = parseInitializationOptions(evt.initializationOptions);
     const formattingProviderHandledByClient =
-      evt.initializationOptions?.handledCapabilities?.documentFormattingProvider === true;
-    setIsTrusted(isTrusted);
+      initializationOptions.handledCapabilities.documentFormattingProvider;
+    setIsTrusted(initializationOptions.isTrusted);
+    configManager.updateIsTrusted(initializationOptions.isTrusted);
 
-    Logger.setDebug(evt.initializationOptions?.configuration?.django?.["language-server"]?.debug);
-    configManager.updatePrettierConfig(
-      evt.initializationOptions?.configuration?.prettier ||
-        evt.initializationOptions?.prettierConfig ||
-        {},
-    );
+    Logger.setDebug(initializationOptions.configuration.django["language-server"]?.debug ?? false);
+    configManager.updatePrettierConfig(initializationOptions.configuration.prettier);
 
     return {
       capabilities: {
@@ -89,8 +90,9 @@ export function startServer(options?: LSOptions) {
   });
 
   connection.onDidChangeConfiguration(({ settings }) => {
-    configManager.updatePrettierConfig(settings.prettier);
-    Logger.setDebug(settings.django?.["language-server"]?.debug);
+    const configuration = parseConfigurationChange(settings);
+    configManager.updatePrettierConfig(configuration.prettier);
+    Logger.setDebug(configuration.django["language-server"]?.debug ?? false);
   });
 
   connection.onDidOpenTextDocument((evt) => {
@@ -119,10 +121,10 @@ export function startServer(options?: LSOptions) {
   connection.onDocumentFormatting((evt) => {
     const document = docManager.get(evt.textDocument.uri);
     if (!document) {
-      throw new Error("Cannot call methods on an unopened document");
+      throw new ResponseError(ErrorCodes.InvalidRequest, "Cannot format an unopened document.");
     }
 
-    return djangoPlugin.formatDocument(document, evt.options);
+    return formatDocumentForProtocol(djangoPlugin, document, evt.options);
   });
 
   connection.listen();

@@ -21,7 +21,7 @@ export function setIsTrusted(_isTrusted: boolean) {
  * Keep the `require` indirection in one place so builds can replace it
  * without transforming each call site.
  */
-function dynamicRequire(dynamicFileToRequire: string): any {
+function dynamicRequire(dynamicFileToRequire: string): unknown {
   // prettier-ignore
   return require(dynamicFileToRequire);
 }
@@ -38,7 +38,12 @@ export function getPackageInfo(packageName: string, fromPath: string, useFallbac
   const packageJSONPath = require.resolve(`${packageName}/package.json`, {
     paths,
   });
-  const { version } = dynamicRequire(packageJSONPath);
+  const packageJSON = dynamicRequire(packageJSONPath);
+  if (!isRecord(packageJSON) || typeof packageJSON.version !== "string") {
+    throw new Error(`Package ${packageName} has an invalid package.json`);
+  }
+
+  const version = packageJSON.version;
   const [major, minor, patch] = version.split(".");
 
   return {
@@ -56,5 +61,23 @@ export function importPrettier(fromPath: string): typeof prettier {
   const pkg = getPackageInfo("prettier", fromPath);
   const main = resolve(pkg.path);
   Logger.debug("Using Prettier v" + pkg.version.full, "from", main);
-  return dynamicRequire(main);
+  const importedPrettier = dynamicRequire(main);
+  if (!isPrettier(importedPrettier)) {
+    throw new Error(`Package at ${main} is not a compatible Prettier installation`);
+  }
+  return importedPrettier;
+}
+
+function isPrettier(value: unknown): value is typeof prettier {
+  return (
+    isRecord(value) &&
+    typeof value.format === "function" &&
+    typeof value.resolveConfig === "function" &&
+    typeof value.getFileInfo === "function" &&
+    typeof value.getSupportInfo === "function"
+  );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }

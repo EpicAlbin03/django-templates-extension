@@ -10,17 +10,17 @@ export class Logger {
     this.logDebug = debug;
   }
 
-  static log(...args: any) {
+  static log(...args: unknown[]) {
     if (!Logger.logErrorsOnly) {
       console.log(...args);
     }
   }
 
-  static error(...args: any) {
+  static error(...args: unknown[]) {
     console.error(...args);
   }
 
-  static debug(...args: any) {
+  static debug(...args: unknown[]) {
     if (!Logger.logErrorsOnly && this.logDebug) {
       console.log(...args);
     }
