@@ -39,7 +39,7 @@ jobs:
         run: |
           node --version
           npm --version
-          pnpm --version
+          vp env current
           npm config get registry
           npm config get userconfig
           test -z "${NODE_AUTH_TOKEN:-}" || echo "NODE_AUTH_TOKEN is unexpectedly set"
