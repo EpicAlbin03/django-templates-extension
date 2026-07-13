@@ -354,6 +354,16 @@ These settings can be added to `.vscode/settings.json`:
 | `django.templates.autoDiscover` | `true`  | Discover template files under `templates` directories in each workspace folder.           |
 | `django.templates.roots`        | `[]`    | Add template directories to scan. Relative paths are resolved from each workspace folder. |
 
+> **Note:** If clickable links and underlines are distracting, you can override `editor.links` in `.vscode/settings.json`.
+
+```json
+{
+  "[html]": {
+    "editor.links": true
+  }
+}
+```
+
 ### Troubleshooting
 
 You may want to force the html language if you are using other extensions that defaults to "django-html" (ex: "batisteo.vscode-django").
