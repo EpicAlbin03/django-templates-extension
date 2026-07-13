@@ -81,7 +81,88 @@ describe("getDjangoHoverInfo", () => {
     assert.ok(value.includes("`{% if %}`"));
   });
 
-  it("returns null inside variables", () => {
+  it("returns filter docs and the filter-name range inside variables", () => {
+    const text = "{{ variable|lower:argument }}";
+    const hover = hoverAt(text, "lower", 1);
+
+    assertHover(hover);
+    assert.strictEqual(
+      getMarkdownValue(hover),
+      "`|lower`\n\nConverts a string into all lowercase.\n\n[Documentation](https://docs.djangoproject.com/en/6.0/ref/templates/builtins/#std-templatefilter-lower)",
+    );
+    assert.deepStrictEqual(hover.range, {
+      start: { line: 0, character: 12 },
+      end: { line: 0, character: 17 },
+    });
+    assertHover(hoverAt(text, "lower", 0));
+    assertHover(hoverAt(text, "lower", 4));
+    assert.strictEqual(hoverAt(text, "lower", 5), null);
+    assert.strictEqual(hoverAt(text, "|"), null);
+    assert.strictEqual(hoverAt(text, "argument", 1), null);
+  });
+
+  it("ignores filter-like text in quoted arguments while supporting chained filters", () => {
+    const text = `{{ variable|default:"a|lower"|upper }}`;
+
+    const firstHover = hoverAt(text, "default", 1);
+    assertHover(firstHover);
+    assert.match(getMarkdownValue(firstHover), /Uses the supplied default/);
+    assert.match(getMarkdownValue(firstHover), /#std-templatefilter-default\)/);
+
+    assert.strictEqual(hoverAt(text, "lower", 1), null);
+
+    const secondHover = hoverAt(text, "upper", 1);
+    assertHover(secondHover);
+    assert.match(getMarkdownValue(secondHover), /Converts a string into all uppercase/);
+    assert.match(getMarkdownValue(secondHover), /#std-templatefilter-upper\)/);
+  });
+
+  it("keeps pipes inside single-quoted arguments with escaped quotes out of filter ranges", () => {
+    const text = String.raw`{{ variable|default:'an\'|lower'|upper }}`;
+
+    assert.strictEqual(hoverAt(text, "lower", 1), null);
+    assertHover(hoverAt(text, "upper", 1));
+  });
+
+  it("supports whitespace and multiline filter names", () => {
+    const text = `{{ variable
+  | lower
+  | upper }}`;
+    const hover = hoverAt(text, "lower", 1);
+
+    assertHover(hover);
+    assert.deepStrictEqual(hover.range, {
+      start: { line: 1, character: 4 },
+      end: { line: 1, character: 9 },
+    });
+  });
+
+  it("returns filter docs inside tag expressions", () => {
+    const hover = hoverAt("{% if variable|length %}yes{% endif %}", "length", 1);
+
+    assertHover(hover);
+    assert.match(getMarkdownValue(hover), /Returns the length of a string or sequence/);
+    assert.match(getMarkdownValue(hover), /#std-templatefilter-length\)/);
+  });
+
+  it("returns filter docs for the first filter in a filter block", () => {
+    const text = "{% filter force_escape|lower %}{{ value }}{% endfilter %}";
+    const hover = hoverAt(text, "force_escape", 1);
+
+    assertHover(hover);
+    assert.match(getMarkdownValue(hover), /Applies HTML escaping immediately/);
+    assert.deepStrictEqual(hover.range, {
+      start: { line: 0, character: 10 },
+      end: { line: 0, character: 22 },
+    });
+  });
+
+  it("returns null for unknown filters and filter arguments", () => {
+    assert.strictEqual(hoverAt("{{ variable|custom_filter }}", "custom_filter", 1), null);
+    assert.strictEqual(hoverAt(`{{ variable|default:"fallback" }}`, "fallback", 1), null);
+  });
+
+  it("returns null inside variables outside filter names", () => {
     const hover = hoverAt("{{ variable }}", "variable", 1);
 
     assert.strictEqual(hover, null);
@@ -91,6 +172,28 @@ describe("getDjangoHoverInfo", () => {
     const hover = hoverAt("{# {% if user %} #}", "if", 1);
 
     assert.strictEqual(hover, null);
+  });
+
+  it("returns null for template syntax inside comment and verbatim blocks", () => {
+    for (const [startTag, endTag] of [
+      ["comment", "endcomment"],
+      ["verbatim", "endverbatim"],
+    ]) {
+      const text = `{% ${startTag} %}{{ value|lower }}{% if user %}{% ${endTag} %}{{ value|upper }}`;
+
+      assert.strictEqual(hoverAt(text, "lower", 1), null);
+      assert.strictEqual(hoverAt(text, "if", 1), null);
+      assertHover(hoverAt(text, "upper", 1));
+    }
+  });
+
+  it("requires matching names before ending a named verbatim block", () => {
+    const text =
+      "{% verbatim outer %}{{ value|lower }}{% endverbatim inner %}{{ value|upper }}{% endverbatim outer %}{{ value|title }}";
+
+    assert.strictEqual(hoverAt(text, "lower", 1), null);
+    assert.strictEqual(hoverAt(text, "upper", 1), null);
+    assertHover(hoverAt(text, "title", 1));
   });
 
   it("returns null for unknown custom tags", () => {

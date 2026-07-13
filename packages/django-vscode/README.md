@@ -43,7 +43,8 @@ Provides LSP completions for Django template tags and filters as you type.
 
 Shows documentation, examples, and reference links when hovering over supported tags and filters.
 
-<img src="https://github.com/EpicAlbin03/django-templates-extension/raw/main/packages/django-vscode/img/tooltip.png" alt="tooltip" width="500">
+<img src="https://github.com/EpicAlbin03/django-templates-extension/raw/main/packages/django-vscode/img/tooltip-tag.png" alt="tooltip" width="400">
+<img src="https://github.com/EpicAlbin03/django-templates-extension/raw/main/packages/django-vscode/img/tooltip-filter.png" alt="tooltip" width="400">
 
 ### Snippets
 

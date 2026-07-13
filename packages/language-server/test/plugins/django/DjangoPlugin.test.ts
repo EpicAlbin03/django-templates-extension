@@ -48,6 +48,20 @@ describe("DjangoPlugin", () => {
     assert.match(contents.value, /Conditionally renders/);
   });
 
+  it("returns Django filter hover info", () => {
+    const text = "{{ user.name|lower }}";
+    const document = Document.createForTest("file:///template.html", text);
+    const plugin = new DjangoPlugin(new LSConfigManager());
+
+    const hover = plugin.doHover(document, document.positionAt(text.indexOf("lower") + 1));
+
+    assert.notStrictEqual(hover, null);
+    const contents = hover!.contents as { kind: string; value: string };
+    assert.strictEqual(contents.kind, MarkupKind.Markdown);
+    assert.match(contents.value, /Converts a string into all lowercase/);
+    assert.match(contents.value, /\[Documentation\]\(.*#std-templatefilter-lower\)/);
+  });
+
   it("returns Django tag completions inside tag blocks", () => {
     const completions = completionListAt("{% bl█ %}");
 
