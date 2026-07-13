@@ -80,6 +80,11 @@ describe("DjangoPlugin", () => {
     assert.strictEqual(completions, null);
   });
 
+  it("returns no unsupported completions for quoted tag arguments", () => {
+    assert.strictEqual(completionListAt('{% include "partials/█" %}'), null);
+    assert.strictEqual(completionListAt("{% extends 'base█' %}"), null);
+  });
+
   it("formats Django template tags with the bundled Prettier plugin", async () => {
     const filePath = join(mkdtempSync(join(tmpdir(), "django-template-format-")), "template.html");
     const text = "<div>{% if user %}<span>{{ user.username }}</span>{% endif %}</div>\n";

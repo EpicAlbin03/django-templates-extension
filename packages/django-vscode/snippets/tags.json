@@ -139,12 +139,6 @@
     "body": "{% firstof $1 as $2 %}"
   },
 
-  "endfirstof": {
-    "description": "{% endfirstof %}",
-    "prefix": "endfirstof",
-    "body": "{% endfirstof %}"
-  },
-
   "for": {
     "description": "{% for %}",
     "prefix": "for",

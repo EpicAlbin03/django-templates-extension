@@ -1,5 +1,6 @@
 import { CompletionItemKind, MarkupKind, type CompletionItem } from "vscode-languageserver-types";
 import { djangoTagDocsByName, type DjangoTagDoc } from "./djangoTags.js";
+import { renderTagCompletionDocumentation } from "./renderTagDocumentation.js";
 
 export interface DjangoFilterDoc {
   name: string;
@@ -111,7 +112,7 @@ function createTagCompletionItem(doc: DjangoTagDoc): CompletionItem {
     detail: `{% ${doc.name} %}`,
     documentation: {
       kind: MarkupKind.Markdown,
-      value: renderTagDocumentation(doc),
+      value: renderTagCompletionDocumentation(doc),
     },
   };
 }
@@ -126,22 +127,4 @@ function createFilterCompletionItem(doc: DjangoFilterDoc): CompletionItem {
       value: `\`${doc.description}\``,
     },
   };
-}
-
-function renderTagDocumentation(doc: DjangoTagDoc): string {
-  const lines = [`\`{% ${doc.name} %}\``, "", doc.description];
-
-  if (doc.load) {
-    lines.push("", `**Load:** \`{% load ${doc.load} %}\``);
-  }
-
-  if (doc.deprecated) {
-    lines.push("", `**Deprecated:** ${doc.deprecated}`);
-  }
-
-  if (doc.reference) {
-    lines.push("", `[Documentation](${doc.reference})`);
-  }
-
-  return lines.join("\n");
 }

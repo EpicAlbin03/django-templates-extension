@@ -1,7 +1,8 @@
 import type { Hover, Position } from "vscode-languageserver-types";
 import { MarkupKind, Range } from "vscode-languageserver-types";
 import type { Document } from "../../lib/documents/index.js";
-import { djangoTagDocsByName, type DjangoTagDoc } from "./djangoTags.js";
+import { djangoTagDocsByName } from "./djangoTags.js";
+import { renderTagHoverDocumentation } from "./renderTagDocumentation.js";
 
 const DJANGO_TEMPLATE_BLOCK_RE = new RegExp(
   String.raw`{%[\s\S]*?%}|{{[\s\S]*?}}|{#[\s\S]*?#}`,
@@ -65,7 +66,7 @@ function getTagHover(
   return {
     contents: {
       kind: MarkupKind.Markdown,
-      value: renderDjangoTagHover(tagName, doc),
+      value: renderTagHoverDocumentation(tagName, doc),
     },
     range: Range.create(document.positionAt(nameStart), document.positionAt(nameEnd)),
   };
@@ -83,49 +84,4 @@ function getTagNameStartInBlock(blockText: string): number {
   }
 
   return index;
-}
-
-function renderDjangoTagHover(tagName: string, doc: DjangoTagDoc): string {
-  const lines = [`\`{% ${tagName} %}\``, "", doc.description];
-
-  if (doc.load) {
-    lines.push("", `**Load:** \`{% load ${doc.load} %}\``);
-  }
-
-  if (doc.deprecated) {
-    lines.push("", `**Deprecated:** ${doc.deprecated}`);
-  }
-
-  const relatedTags = getRelatedTags(tagName, doc);
-  if (relatedTags.length > 0) {
-    lines.push("", `**Related tags:** ${relatedTags.map(formatRelatedTag).join(", ")}`);
-  }
-
-  lines.push("", "#### Usage");
-  for (const example of doc.examples) {
-    lines.push("", "```html", example, "```");
-  }
-
-  if (doc.reference) {
-    lines.push("", `[Documentation](${doc.reference})`);
-  }
-
-  return lines.join("\n");
-}
-
-function getRelatedTags(tagName: string, doc: DjangoTagDoc): string[] {
-  return Array.from(
-    new Set(
-      doc.relatedTags ?? [
-        doc.name,
-        ...(doc.aliases ?? []),
-        ...(doc.branches ?? []),
-        ...(doc.endTags ?? []),
-      ],
-    ),
-  ).filter((relatedTag) => relatedTag !== tagName);
-}
-
-function formatRelatedTag(tagName: string): string {
-  return `\`{% ${tagName} %}\``;
 }

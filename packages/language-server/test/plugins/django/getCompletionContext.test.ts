@@ -66,16 +66,14 @@ describe("getDjangoCompletionContext", () => {
     assert.strictEqual(context.reason, "comment");
   });
 
-  it("detects quoted template paths for include and extends tags", () => {
+  it("returns no context for quoted tag arguments", () => {
     const includeContext = contextAt('{% include "partials/█" %}');
     const extendsContext = contextAt("{% extends 'base█' %}");
 
-    assert.strictEqual(includeContext.type, "template-path");
-    assert.strictEqual(includeContext.tagName, "include");
-    assert.strictEqual(includeContext.prefix, "partials/");
-    assert.strictEqual(extendsContext.type, "template-path");
-    assert.strictEqual(extendsContext.tagName, "extends");
-    assert.strictEqual(extendsContext.prefix, "base");
+    assert.strictEqual(includeContext.type, "none");
+    assert.strictEqual(includeContext.reason, "string");
+    assert.strictEqual(extendsContext.type, "none");
+    assert.strictEqual(extendsContext.reason, "string");
   });
 
   it("returns no tag context for tag arguments", () => {

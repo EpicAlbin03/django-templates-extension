@@ -8,7 +8,7 @@ import {
   type Connection,
 } from "vscode-languageserver/node";
 import { formatDocumentForProtocol } from "./formatting-request.js";
-import { Document, DocumentManager } from "./lib/documents/index.js";
+import { DocumentManager } from "./lib/documents/index.js";
 import { Logger } from "./logger.js";
 import { LSConfigManager } from "./ls-config.js";
 import { DjangoPlugin } from "./plugins/index.js";
@@ -51,9 +51,7 @@ export function startServer(options?: LSOptions) {
     Logger.setLogErrorsOnly(options.logErrorsOnly);
   }
 
-  const docManager = new DocumentManager(
-    (textDocument) => new Document(textDocument.uri, textDocument.text),
-  );
+  const docManager = new DocumentManager();
   const configManager = new LSConfigManager();
   const djangoPlugin = new DjangoPlugin(configManager);
 
@@ -81,7 +79,7 @@ export function startServer(options?: LSOptions) {
         },
         hoverProvider: true,
         completionProvider: {
-          triggerCharacters: ["%", "{", "|", " ", '"', "'"],
+          triggerCharacters: ["%", "|", " "],
           resolveProvider: false,
         },
         documentFormattingProvider: !formattingProviderHandledByClient,

@@ -78,7 +78,6 @@ Type an abbreviation and select the matching snippet from the completion list.
 | `endfilter`                   | `{% endfilter %}`                                                           |
 | `firstof`                     | `{% firstof %}`                                                             |
 | `firstof_as`                  | `{% firstof as %}`                                                          |
-| `endfirstof`                  | `{% endfirstof %}`                                                          |
 | `for`                         | `{% for in %} {% endfor %}`                                                 |
 | `for_paste`                   | `{% for in %}…{% endfor %}`                                                 |
 | `endfor`                      | `{% endfor %}`                                                              |
