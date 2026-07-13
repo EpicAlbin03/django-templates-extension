@@ -345,6 +345,15 @@ Completions, tooltips, and snippets include template tags and filters from popul
 - [django-allauth](https://github.com/pennersr/django-allauth)
 - [django-crispy-forms](https://github.com/django-crispy-forms/django-crispy-forms)
 
+### Settings
+
+These settings can be added to `.vscode/settings.json`:
+
+| Setting                         | Default | Description                                                                               |
+| ------------------------------- | ------- | ----------------------------------------------------------------------------------------- |
+| `django.templates.autoDiscover` | `true`  | Discover template files under `templates` directories in each workspace folder.           |
+| `django.templates.roots`        | `[]`    | Add template directories to scan. Relative paths are resolved from each workspace folder. |
+
 ### Troubleshooting
 
 You may want to force the html language if you are using other extensions that defaults to "django-html" (ex: "batisteo.vscode-django").
