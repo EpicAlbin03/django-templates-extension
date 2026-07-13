@@ -1,7 +1,5 @@
 import { isAbsolute, resolve } from "node:path";
 
-export const defaultServerModule = "django-template-language-server/bin/server.js";
-
 export type ServerConfigurationError = {
   code: "relative-server-path-without-workspace";
   message: string;
@@ -32,6 +30,7 @@ type BuildServerLaunchOptionsInput = {
 
 type ResolveServerModuleOptions = {
   configuredPath?: string;
+  defaultServerModule: string;
   workspaceRoot?: string;
   resolveModule: (request: string) => string;
 };
@@ -67,6 +66,7 @@ export function buildServerLaunchOptions({
 
 export function resolveServerModule({
   configuredPath,
+  defaultServerModule,
   workspaceRoot,
   resolveModule,
 }: ResolveServerModuleOptions): ServerModuleResolution {
@@ -74,7 +74,7 @@ export function resolveServerModule({
   // Resolves relative paths against the first workspace folder.
   const serverPath = configuredPath?.trim();
   if (!serverPath) {
-    return { ok: true, serverModule: resolveModule(defaultServerModule) };
+    return { ok: true, serverModule: defaultServerModule };
   }
 
   if (isAbsolute(serverPath)) {

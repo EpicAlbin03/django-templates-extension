@@ -34,23 +34,25 @@
   "type": "module",
   "main": "dist/extension.cjs",
   "scripts": {
-    "build": "vp pack",
+    "build": "vp pack && node scripts/copy-language-server.mjs",
     "dev": "vp pack --watch",
     "test": "vp test",
     "check": "vp check",
-    "vscode:prepublish": "vp install && vp run build && vp pm prune --prod"
+    "vscode:prepublish": "vp run django-template-language-server#build && vp run build"
   },
   "dependencies": {
-    "django-template-language-server": "workspace:*",
-    "vscode-languageclient": "^10.0.0"
+    "prettier": "~3.3.3",
+    "prettier-plugin-django-templates": "^0.2.0"
   },
   "devDependencies": {
     "@types/node": "catalog:",
     "@types/vscode": "1.104.0",
     "@typescript/native": "npm:typescript@^7.0.2",
     "bumpp": "^11.1.0",
+    "django-template-language-server": "workspace:*",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
     "vite-plus": "catalog:",
+    "vscode-languageclient": "^10.0.0",
     "vscode-oniguruma": "^2.0.1",
     "vscode-textmate": "^9.2.1"
   },

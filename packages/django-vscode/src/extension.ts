@@ -1,4 +1,4 @@
-import { commands, languages, Range, TextEdit, window, workspace } from "vscode";
+import { commands, ExtensionMode, languages, Range, TextEdit, window, workspace } from "vscode";
 import type { ExtensionContext } from "vscode";
 import { RevealOutputChannelOn } from "vscode-languageclient";
 import type { LanguageClientOptions } from "vscode-languageclient";
@@ -48,7 +48,7 @@ export function activate(context: ExtensionContext) {
   });
 
   // Start immediately because this extension only targets Django template support.
-  startLanguageServer(true);
+  startLanguageServer(context, true);
 
   context.subscriptions.push(
     languages.registerDocumentFormattingEditProvider(djangoDocumentSelector, {
@@ -97,7 +97,7 @@ export function activate(context: ExtensionContext) {
      */
     getLanguageServer() {
       if (!lsApi) {
-        startLanguageServer(false);
+        startLanguageServer(context, false);
       }
       if (!lsApi) {
         throw new Error("Django Templates language server configuration is invalid.");
@@ -131,8 +131,8 @@ type LanguageServerActivation =
   | { ok: true; api: DjangoLanguageServer }
   | { ok: false; error: ServerConfigurationError };
 
-function startLanguageServer(showConfigurationError: boolean): void {
-  const activation = activateDjangoLanguageServer();
+function startLanguageServer(context: ExtensionContext, showConfigurationError: boolean): void {
+  const activation = activateDjangoLanguageServer(context);
   if (!activation.ok) {
     lsApi = undefined;
     const outputChannel = window.createOutputChannel("Django Templates", { log: true });
@@ -157,12 +157,18 @@ function registerLanguageServerOwner(owner: AsyncResourceOwner): void {
   resourceOwnership.register(owner);
 }
 
-function activateDjangoLanguageServer(): LanguageServerActivation {
+function activateDjangoLanguageServer(context: ExtensionContext): LanguageServerActivation {
   const runtimeConfig = workspace.getConfiguration("django.language-server");
   const { workspaceFolders } = workspace;
   const rootPath = Array.isArray(workspaceFolders) ? workspaceFolders[0]?.uri.fsPath : undefined;
+  const defaultServerModule = context.asAbsolutePath(
+    context.extensionMode === ExtensionMode.Development
+      ? "../language-server/bin/server.js"
+      : "dist/server/bin/server.js",
+  );
   const moduleResolution = resolveServerModule({
     configuredPath: runtimeConfig.get<string>("ls-path"),
+    defaultServerModule,
     workspaceRoot: rootPath,
     resolveModule: (request) => require.resolve(request),
   });

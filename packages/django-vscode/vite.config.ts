@@ -6,6 +6,7 @@ export default defineConfig({
     dts: false,
     format: "cjs",
     deps: {
+      alwaysBundle: [/^vscode-languageclient(?:\/|$)/],
       neverBundle: ["vscode"],
     },
   },

@@ -1,6 +1,7 @@
-/.vscode
-/src
-/test
+.vscode/**
+scripts/**
+src/**
+test/**
 
 .gitignore
 tsconfig.json

@@ -4,6 +4,18 @@ import { describe, it } from "vite-plus/test";
 import { buildServerLaunchOptions, resolveServerModule } from "../src/serverOptions.ts";
 
 describe("resolveServerModule", () => {
+  it("uses the packaged server when no custom path is configured", () => {
+    const defaultServerModule = resolve("extension", "dist", "server", "bin", "server.js");
+
+    assert.deepEqual(
+      resolveServerModule({
+        defaultServerModule,
+        resolveModule: () => assert.fail("the packaged path is already resolved"),
+      }),
+      { ok: true, serverModule: defaultServerModule },
+    );
+  });
+
   it("resolves absolute and workspace-relative configured server paths", () => {
     const absolutePath = resolve("absolute", "server.js");
     const workspaceRoot = resolve("workspace");
@@ -13,13 +25,21 @@ describe("resolveServerModule", () => {
       return `${request}.resolved`;
     };
 
-    assert.deepEqual(resolveServerModule({ configuredPath: absolutePath, resolveModule }), {
-      ok: true,
-      serverModule: `${absolutePath}.resolved`,
-    });
+    assert.deepEqual(
+      resolveServerModule({
+        configuredPath: absolutePath,
+        defaultServerModule: "/default-server.js",
+        resolveModule,
+      }),
+      {
+        ok: true,
+        serverModule: `${absolutePath}.resolved`,
+      },
+    );
     assert.deepEqual(
       resolveServerModule({
         configuredPath: "language-server/server.js",
+        defaultServerModule: "/default-server.js",
         workspaceRoot,
         resolveModule,
       }),
@@ -37,6 +57,7 @@ describe("resolveServerModule", () => {
   it("returns a typed error for a relative path without a workspace", () => {
     const result = resolveServerModule({
       configuredPath: "language-server/server.js",
+      defaultServerModule: "/default-server.js",
       resolveModule: () => assert.fail("module resolution should not be attempted"),
     });
 
