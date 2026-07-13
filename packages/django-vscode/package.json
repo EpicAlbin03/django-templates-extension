@@ -77,7 +77,7 @@
         "django.language-server.port": {
           "type": "number",
           "title": "Language Server Port",
-          "description": "Port to use for debugging the language server. -1 uses the default behavior.",
+          "description": "Port to use for debugging the language server. Negative values use the default inspector port 6009, non-negative values set an explicit inspector port for debug launches only.",
           "default": -1
         },
         "django.trace.server": {
