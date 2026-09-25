@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.1
+
+### Patch Changes
+
+- [#4](https://github.com/EpicAlbin03/django-templates-extension/pull/4) [`a296b4f`](https://github.com/EpicAlbin03/django-templates-extension/commit/a296b4fef087786318bd5cd85e00a10c294c91e1) Thanks [@EpicAlbin03](https://github.com/EpicAlbin03)! - update prettier to "~3.9.8" and prettier-plugin-django-templates to "~0.3.0"
+
 ## 0.1.0
 
 ### Minor Changes
