@@ -50,11 +50,11 @@ importers:
   packages/django-vscode:
     dependencies:
       prettier:
-        specifier: ~3.3.3
-        version: 3.3.3
+        specifier: ~3.9.8
+        version: 3.9.8
       prettier-plugin-django-templates:
-        specifier: ^0.2.0
-        version: 0.2.0(prettier@3.3.3)
+        specifier: ~0.3.0
+        version: 0.3.0(prettier@3.9.8)
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -90,11 +90,11 @@ importers:
   packages/language-server:
     dependencies:
       prettier:
-        specifier: ~3.3.3
-        version: 3.3.3
+        specifier: ~3.9.8
+        version: 3.9.8
       prettier-plugin-django-templates:
-        specifier: ^0.2.0
-        version: 0.2.0(prettier@3.3.3)
+        specifier: ~0.3.0
+        version: 0.3.0(prettier@3.9.8)
       vscode-languageserver:
         specifier: 10.0.0
         version: 10.0.0
@@ -1450,8 +1450,8 @@ packages:
     resolution: {integrity: sha512-FfR8sjd4em2T6fb3I2MwAJU7HWVMr9zba+enmQeeWFfCbm+UOC/0X4DS8XtpUTMwWMGbjKYP7xjfNekzyGmB3A==}
     engines: {node: ^10 || ^12 || >=14}
 
-  prettier-plugin-django-templates@0.2.0:
-    resolution: {integrity: sha512-6B2u/vmTnLFaCXk74eA+RtZIiP2DFFLoNANL2/kbX3a15X3MOLdcglLA4cyX4dg+JMcQcm9k8W3Ab5+sPhqtMQ==}
+  prettier-plugin-django-templates@0.3.0:
+    resolution: {integrity: sha512-oksawPXSh0TYq5iAeO2Nstlb5hDs073U7F49rdF4l9BmfVG5eenebJleb2MGsnSwGDDcL4aKoph6LLP4STMlmQ==}
     engines: {node: '>=22'}
     peerDependencies:
       prettier: ^3.0.0
@@ -1461,8 +1461,8 @@ packages:
     engines: {node: '>=10.13.0'}
     hasBin: true
 
-  prettier@3.3.3:
-    resolution: {integrity: sha512-i2tDNA0O5IrMO757lfrdQZCc2jPNDVntV0m/+4whiDfWaTKfMNgR7Qz0NAeGz/nRqF4m5/6CLzbP4/liHt12Ew==}
+  prettier@3.9.8:
+    resolution: {integrity: sha512-WRFq3Wn3WId7LLROfMLdH7xaFr2jR62wU8nLO6rQUOLOxNZUviyJQs1M0iIhLexSFy+L+w0ch66wtoO2jRjG0A==}
     engines: {node: '>=14'}
     hasBin: true
 
@@ -2991,13 +2991,13 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
-  prettier-plugin-django-templates@0.2.0(prettier@3.3.3):
+  prettier-plugin-django-templates@0.3.0(prettier@3.9.8):
     dependencies:
-      prettier: 3.3.3
+      prettier: 3.9.8
 
   prettier@2.8.8: {}
 
-  prettier@3.3.3: {}
+  prettier@3.9.8: {}
 
   pretty-format@27.5.1:
     dependencies:

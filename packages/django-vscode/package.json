@@ -41,8 +41,8 @@
     "vscode:prepublish": "vp run django-template-language-server#build && vp run build"
   },
   "dependencies": {
-    "prettier": "~3.3.3",
-    "prettier-plugin-django-templates": "^0.2.0"
+    "prettier": "~3.9.8",
+    "prettier-plugin-django-templates": "~0.3.0"
   },
   "devDependencies": {
     "@types/node": "catalog:",
