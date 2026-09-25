@@ -1,6 +1,6 @@
 import { createRequire } from "node:module";
 import { dirname, isAbsolute } from "path";
-import { fileURLToPath, pathToFileURL } from "url";
+import { URL, fileURLToPath, pathToFileURL } from "url";
 import type { Options, Plugin } from "prettier";
 import type { CancellationToken } from "vscode-languageserver";
 import type { FormattingOptions, Hover, Position } from "vscode-languageserver-types";
@@ -26,6 +26,7 @@ const DJANGO_TEMPLATE_TAG_RE = /({%[\s\S]*?%}|{{[\s\S]*?}}|{#[\s\S]*?#})/;
 const DJANGO_HTML_PARSER = "django-html";
 const DJANGO_PRETTIER_PLUGIN = "prettier-plugin-django-templates";
 const CANCELLED = Symbol("cancelled");
+type PluginSpecifier = string | URL | Plugin;
 
 const EMPTY_TEMPLATE_PATH_PROVIDER: TemplatePathProvider = {
   async getCandidates() {
@@ -138,7 +139,7 @@ export class DjangoPlugin implements CompletionProvider, FormattingProvider, Hov
   ): Promise<{
     prettier: typeof import("prettier");
     config: Options;
-    resolvedPlugins: Array<string | Plugin>;
+    resolvedPlugins: PluginSpecifier[];
   }> {
     if (!this.configManager.isTrustedWorkspace()) {
       return {
@@ -177,14 +178,14 @@ export class DjangoPlugin implements CompletionProvider, FormattingProvider, Hov
     };
   }
 
-  private static isPrettierPluginDjangoTemplatesPath(plugin: string | Plugin): boolean {
+  private static isPrettierPluginDjangoTemplatesPath(plugin: PluginSpecifier): boolean {
     return typeof plugin === "string" && plugin.includes(DJANGO_PRETTIER_PLUGIN);
   }
 
-  private static isPrettierPluginDjangoTemplatesObject(plugin: string | Plugin): boolean {
+  private static isPrettierPluginDjangoTemplatesObject(plugin: PluginSpecifier): boolean {
     return (
-      typeof plugin !== "string" &&
-      !!plugin?.languages?.find((language) => hasDjangoParser(language.parsers))
+      isPluginObject(plugin) &&
+      !!plugin.languages?.find((language) => hasDjangoParser(language.parsers))
     );
   }
 }
@@ -219,7 +220,7 @@ async function importDjangoTemplatePlugin(): Promise<Plugin> {
 
 async function hasDjangoTemplatePluginLoaded(
   prettier: typeof import("prettier"),
-  plugins: Array<string | Plugin>,
+  plugins: PluginSpecifier[],
 ): Promise<boolean> {
   if (plugins.some(isDjangoTemplatePluginObject)) {
     return true;
@@ -230,13 +231,13 @@ async function hasDjangoTemplatePluginLoaded(
 }
 
 function resolvePlugins(
-  plugins: Array<string | Plugin> | undefined,
+  plugins: PluginSpecifier[] | undefined,
   filePath: string,
-): Array<string | Plugin> {
+): PluginSpecifier[] {
   return (plugins ?? []).map((plugin) => resolvePlugin(plugin, filePath));
 }
 
-function resolvePlugin(plugin: string | Plugin, filePath: string): string | Plugin {
+function resolvePlugin(plugin: PluginSpecifier, filePath: string): PluginSpecifier {
   if (typeof plugin !== "string" || isAbsolute(plugin) || plugin.startsWith(".")) {
     return plugin;
   }
@@ -246,11 +247,15 @@ function resolvePlugin(plugin: string | Plugin, filePath: string): string | Plug
   });
 }
 
-function isDjangoTemplatePluginObject(plugin: string | Plugin): boolean {
+function isDjangoTemplatePluginObject(plugin: PluginSpecifier): boolean {
   return (
-    typeof plugin !== "string" &&
+    isPluginObject(plugin) &&
     !!plugin.languages?.some((language) => hasDjangoParser(language.parsers))
   );
+}
+
+function isPluginObject(plugin: PluginSpecifier): plugin is Plugin {
+  return typeof plugin !== "string" && !(plugin instanceof URL);
 }
 
 function hasDjangoParser(parsers: readonly string[] | undefined): boolean {

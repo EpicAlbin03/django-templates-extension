@@ -47,7 +47,7 @@ jobs:
           unzip -Z1 "$vsix" > "$listing"
           bytes=$(stat --format=%s "$vsix")
           files=$(grep -vc '/$' "$listing")
-          max_bytes=2600000
+          max_bytes=4000000
           max_files=90
           echo "VSIX: $bytes bytes, $files files"
           test "$bytes" -le "$max_bytes"
