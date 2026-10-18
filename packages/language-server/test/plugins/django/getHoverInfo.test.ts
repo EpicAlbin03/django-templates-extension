@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import type { Hover } from "vscode-languageserver-types";
-import { MarkupKind } from "vscode-languageserver-types";
+import { MarkupContent, MarkupKind } from "vscode-languageserver-types";
 import { describe, it } from "vite-plus/test";
 import { Document } from "../../../src/lib/documents/index.js";
 import { djangoTagDocsByName } from "../../../src/plugins/django/djangoTags.js";
@@ -22,7 +22,8 @@ function assertHover(hover: Hover | null): asserts hover is Hover {
 }
 
 function getMarkdownValue(hover: Hover): string {
-  const contents = hover.contents as { kind: string; value: string };
+  const contents = hover.contents;
+  assert.ok(MarkupContent.is(contents));
   assert.strictEqual(contents.kind, MarkupKind.Markdown);
   return contents.value;
 }

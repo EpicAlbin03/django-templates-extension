@@ -1,5 +1,6 @@
 import type { Options, ResolveConfigOptions } from "prettier";
 import type { FormattingOptions } from "vscode-languageserver-types";
+import { z } from "zod";
 
 export interface PrettierEditorFields {
   useEditorConfig?: boolean;
@@ -33,7 +34,7 @@ export class LSConfigManager {
     return this.trusted;
   }
 
-  updatePrettierConfig(config: unknown): void {
+  updatePrettierConfig(config: PrettierEditorConfig): void {
     this.prettierConfig = normalizePrettierConfig(config);
   }
 
@@ -73,71 +74,68 @@ export class LSConfigManager {
       ? omitEditorOnlyFields(this.prettierConfig)
       : pickSafeUntrustedOptions(this.prettierConfig);
 
-    return {
-      ...editorConfig,
-      ...(this.trusted ? (prettierFromFileConfig ?? {}) : {}),
-      ...requestIndentationOptions(formattingOptions),
-    };
+    if (this.trusted && prettierFromFileConfig) {
+      Object.assign(editorConfig, prettierFromFileConfig);
+    }
+    return { ...editorConfig, ...requestIndentationOptions(formattingOptions) };
   }
 }
 
-export function normalizePrettierConfig(value: unknown): PrettierEditorConfig {
-  if (!isRecord(value)) {
-    return {};
-  }
+const optionalNumber = z.number().nonnegative().optional().catch(undefined);
+const optionalBoolean = z.boolean().optional().catch(undefined);
+const optionalStrings = z.array(z.string()).optional().catch(undefined);
 
-  const config: PrettierEditorConfig = {};
+const prettierEditorConfigSchema = z
+  .object({
+    printWidth: optionalNumber,
+    tabWidth: optionalNumber,
+    rangeStart: optionalNumber,
+    rangeEnd: optionalNumber,
+    useTabs: optionalBoolean,
+    semi: optionalBoolean,
+    singleQuote: optionalBoolean,
+    jsxSingleQuote: optionalBoolean,
+    bracketSpacing: optionalBoolean,
+    bracketSameLine: optionalBoolean,
+    requirePragma: optionalBoolean,
+    insertPragma: optionalBoolean,
+    vueIndentScriptAndStyle: optionalBoolean,
+    singleAttributePerLine: optionalBoolean,
+    experimentalTernaries: optionalBoolean,
+    trailingComma: z.enum(["none", "es5", "all"]).optional().catch(undefined),
+    proseWrap: z.enum(["always", "never", "preserve"]).optional().catch(undefined),
+    arrowParens: z.enum(["avoid", "always"]).optional().catch(undefined),
+    htmlWhitespaceSensitivity: z.enum(["css", "strict", "ignore"]).optional().catch(undefined),
+    endOfLine: z.enum(["lf", "crlf", "cr", "auto"]).optional().catch(undefined),
+    quoteProps: z.enum(["as-needed", "consistent", "preserve"]).optional().catch(undefined),
+    embeddedLanguageFormatting: z.enum(["auto", "off"]).optional().catch(undefined),
+    plugins: optionalStrings,
+    useEditorConfig: optionalBoolean,
+    ignorePath: z
+      .union([z.string(), z.array(z.string())])
+      .optional()
+      .catch(undefined),
+    config: z.string().optional().catch(undefined),
+    pluginSearchDirs: z
+      .union([z.literal(false), z.array(z.string())])
+      .optional()
+      .catch(undefined),
+  })
+  .catch({})
+  .transform((config): PrettierEditorConfig => {
+    for (const key of Object.keys(config)) {
+      // SAFETY: Object.keys enumerates only properties of this schema-validated configuration.
+      const option = key as keyof typeof config;
+      if (config[option] === undefined) {
+        delete config[option];
+      }
+    }
+    return config;
+  });
 
-  assignNumber(config, "printWidth", value.printWidth);
-  assignNumber(config, "tabWidth", value.tabWidth);
-  assignNumber(config, "rangeStart", value.rangeStart);
-  assignNumber(config, "rangeEnd", value.rangeEnd);
-
-  assignBoolean(config, "useTabs", value.useTabs);
-  assignBoolean(config, "semi", value.semi);
-  assignBoolean(config, "singleQuote", value.singleQuote);
-  assignBoolean(config, "jsxSingleQuote", value.jsxSingleQuote);
-  assignBoolean(config, "bracketSpacing", value.bracketSpacing);
-  assignBoolean(config, "bracketSameLine", value.bracketSameLine);
-  assignBoolean(config, "requirePragma", value.requirePragma);
-  assignBoolean(config, "insertPragma", value.insertPragma);
-  assignBoolean(config, "vueIndentScriptAndStyle", value.vueIndentScriptAndStyle);
-  assignBoolean(config, "singleAttributePerLine", value.singleAttributePerLine);
-  assignBoolean(config, "experimentalTernaries", value.experimentalTernaries);
-
-  assignChoice(config, "trailingComma", value.trailingComma, ["none", "es5", "all"]);
-  assignChoice(config, "proseWrap", value.proseWrap, ["always", "never", "preserve"]);
-  assignChoice(config, "arrowParens", value.arrowParens, ["avoid", "always"]);
-  assignChoice(config, "htmlWhitespaceSensitivity", value.htmlWhitespaceSensitivity, [
-    "css",
-    "strict",
-    "ignore",
-  ]);
-  assignChoice(config, "endOfLine", value.endOfLine, ["lf", "crlf", "cr", "auto"]);
-  assignChoice(config, "quoteProps", value.quoteProps, ["as-needed", "consistent", "preserve"]);
-  assignChoice(config, "embeddedLanguageFormatting", value.embeddedLanguageFormatting, [
-    "auto",
-    "off",
-  ]);
-
-  if (isStringArray(value.plugins)) {
-    config.plugins = value.plugins;
-  }
-  if (typeof value.useEditorConfig === "boolean") {
-    config.useEditorConfig = value.useEditorConfig;
-  }
-  if (typeof value.ignorePath === "string" || isStringArray(value.ignorePath)) {
-    config.ignorePath = value.ignorePath;
-  }
-  if (typeof value.config === "string") {
-    config.config = value.config;
-  }
-  if (value.pluginSearchDirs === false || isStringArray(value.pluginSearchDirs)) {
-    config.pluginSearchDirs = value.pluginSearchDirs;
-  }
-
-  return config;
-}
+export const normalizePrettierConfig = prettierEditorConfigSchema.parse.bind(
+  prettierEditorConfigSchema,
+);
 
 function omitEditorOnlyFields(config: PrettierEditorConfig): Options {
   const {
@@ -167,50 +165,8 @@ function requestIndentationOptions(options: FormattingOptions | undefined): Opti
   if (Number.isFinite(options.tabSize) && options.tabSize > 0) {
     requestOptions.tabWidth = options.tabSize;
   }
-  if (typeof options.insertSpaces === "boolean") {
-    requestOptions.useTabs = !options.insertSpaces;
-  }
+  requestOptions.useTabs = !options.insertSpaces;
   return requestOptions;
-}
-
-function assignNumber<K extends "printWidth" | "tabWidth" | "rangeStart" | "rangeEnd">(
-  target: PrettierEditorConfig,
-  key: K,
-  value: unknown,
-): void {
-  if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
-    target[key] = value;
-  }
-}
-
-function assignBoolean<
-  K extends
-    | "useTabs"
-    | "semi"
-    | "singleQuote"
-    | "jsxSingleQuote"
-    | "bracketSpacing"
-    | "bracketSameLine"
-    | "requirePragma"
-    | "insertPragma"
-    | "vueIndentScriptAndStyle"
-    | "singleAttributePerLine"
-    | "experimentalTernaries",
->(target: PrettierEditorConfig, key: K, value: unknown): void {
-  if (typeof value === "boolean") {
-    target[key] = value;
-  }
-}
-
-function assignChoice<K extends keyof Options, V extends NonNullable<Options[K]> & string>(
-  target: PrettierEditorConfig,
-  key: K,
-  value: unknown,
-  choices: readonly V[],
-): void {
-  if (typeof value === "string" && choices.includes(value as V)) {
-    target[key] = value as PrettierEditorConfig[K];
-  }
 }
 
 function copyOption<K extends keyof Options>(target: Options, source: Options, key: K): void {
@@ -218,12 +174,4 @@ function copyOption<K extends keyof Options>(target: Options, source: Options, k
   if (value !== undefined) {
     target[key] = value;
   }
-}
-
-function isStringArray(value: unknown): value is string[] {
-  return Array.isArray(value) && value.every((item) => typeof item === "string");
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

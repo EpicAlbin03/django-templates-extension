@@ -1,6 +1,7 @@
 import { lstat, readdir, realpath } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { z } from "zod";
 import { isUseCaseSensitiveFileNames } from "../../lib/documents/isFileSystemCaseSensitive.js";
 
 export const DEFAULT_TEMPLATE_PATH_LIMIT = 200;
@@ -599,11 +600,17 @@ function createWorkspaceState(folder: TemplateWorkspaceFolder): WorkspaceState {
 function normalizeTemplateSettings(settings?: Partial<TemplateSettings>): TemplateSettings {
   return {
     autoDiscover: settings?.autoDiscover !== false,
-    roots: Array.isArray(settings?.roots)
-      ? settings.roots.filter((root): root is string => typeof root === "string")
-      : [],
+    roots: [...(settings?.roots ?? [])],
   };
 }
+
+const workspaceFolderSchema = z.union([
+  z.string().transform((folder): TemplateWorkspaceFolder => {
+    const path = normalizeFilePath(folder.startsWith("file:") ? fileURLToPath(folder) : folder);
+    return { path, uri: pathToFileURL(path).toString() };
+  }),
+  z.object({ path: z.string(), uri: z.string(), name: z.string().optional() }),
+]);
 
 function normalizeWorkspaceFolders(
   folders: Array<string | TemplateWorkspaceFolder>,
@@ -612,22 +619,22 @@ function normalizeWorkspaceFolders(
   const seen = new Set<string>();
   for (const folder of folders) {
     try {
+      const workspaceFolder = workspaceFolderSchema.parse(folder);
       const filePath = normalizeFilePath(
-        typeof folder === "string"
-          ? folder.startsWith("file:")
-            ? fileURLToPath(folder)
-            : folder
-          : folder.path || fileURLToPath(folder.uri),
+        workspaceFolder.path || fileURLToPath(workspaceFolder.uri),
       );
       if (seen.has(filePath)) {
         continue;
       }
       seen.add(filePath);
-      normalized.push({
+      const normalizedFolder: TemplateWorkspaceFolder = {
         path: filePath,
-        uri: typeof folder === "string" ? pathToFileURL(filePath).toString() : folder.uri,
-        ...(typeof folder === "string" || !folder.name ? {} : { name: folder.name }),
-      });
+        uri: workspaceFolder.uri,
+      };
+      if (workspaceFolder.name) {
+        normalizedFolder.name = workspaceFolder.name;
+      }
+      normalized.push(normalizedFolder);
     } catch {
       // Non-file workspace folders cannot participate in filesystem discovery.
     }
@@ -725,10 +732,7 @@ async function walkDirectoryQueue<Work>(
   }
 }
 
-function candidateIndexes(candidates: TemplatePathCandidate[]): {
-  byName: Map<string, CandidateSources>;
-  namesBySource: Map<string, Set<string>>;
-} {
+function candidateIndexes(candidates: TemplatePathCandidate[]) {
   const byName = new Map<string, CandidateSources>();
   const namesBySource = new Map<string, Set<string>>();
   for (const candidate of candidates) {

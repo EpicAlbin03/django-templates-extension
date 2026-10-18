@@ -185,12 +185,16 @@ function getTemplatePathContext(
     return null;
   }
 
+  const tagName = tagMatch[1];
+  if (tagName !== "extends" && tagName !== "include") {
+    return null;
+  }
   const prefixStart = block.contentStart + quoteState.start + 1;
   return {
     type: "template-path",
     kind: "template-path",
     blockKind: "tag",
-    tagName: tagMatch[1] as "extends" | "include",
+    tagName,
     prefix: contentBeforeCursor.slice(quoteState.start + 1),
     quote: quoteState.quote,
     replacementRange: {
@@ -278,12 +282,15 @@ function none(
   reason: DjangoCompletionContextReason,
   blockKind?: DjangoBlockKind,
 ): Extract<DjangoCompletionContext, { type: "none" }> {
-  return {
+  const context: Extract<DjangoCompletionContext, { type: "none" }> = {
     type: "none",
     kind: "none",
     reason,
-    ...(blockKind ? { blockKind } : {}),
   };
+  if (blockKind) {
+    context.blockKind = blockKind;
+  }
+  return context;
 }
 
 export { getDjangoCompletionContext as getCompletionContext };

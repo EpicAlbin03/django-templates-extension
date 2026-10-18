@@ -248,11 +248,14 @@ export function getFileWorkspaceFolders(evt: InitializeParams): TemplateWorkspac
       if (uri.scheme !== "file") {
         continue;
       }
-      folders.push({
+      const folder: TemplateWorkspaceFolder = {
         uri: uri.toString(),
         path: uri.fsPath,
-        ...(candidate.name ? { name: candidate.name } : {}),
-      });
+      };
+      if (candidate.name) {
+        folder.name = candidate.name;
+      }
+      folders.push(folder);
     } catch {
       // Filesystem discovery intentionally ignores non-file and malformed workspace URIs.
     }

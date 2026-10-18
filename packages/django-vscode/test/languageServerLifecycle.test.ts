@@ -5,12 +5,12 @@ import { createLanguageServerLifecycle } from "../src/languageServerLifecycle.ts
 type Deferred = {
   promise: Promise<void>;
   resolve(): void;
-  reject(error: unknown): void;
+  reject(error: Error): void;
 };
 
 function deferred(): Deferred {
   let resolvePromise!: () => void;
-  let rejectPromise!: (error: unknown) => void;
+  let rejectPromise!: (error: Error) => void;
   const promise = new Promise<void>((resolve, reject) => {
     resolvePromise = resolve;
     rejectPromise = reject;

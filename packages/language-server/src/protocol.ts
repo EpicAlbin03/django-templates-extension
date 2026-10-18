@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { normalizePrettierConfig, type PrettierEditorConfig } from "./ls-config.js";
 
 export interface HandledCapabilities {
@@ -30,67 +31,65 @@ export interface ConfigurationChangePayload {
   prettier: PrettierEditorConfig;
 }
 
-export function parseInitializationOptions(value: unknown): InitializationOptions {
-  const options = isRecord(value) ? value : {};
-  const configuration = isRecord(options.configuration) ? options.configuration : {};
-  const hasTrustValue = Object.prototype.hasOwnProperty.call(options, "isTrusted");
+const handledCapabilitiesSchema = z
+  .object({ documentFormattingProvider: z.boolean().catch(false) })
+  .catch({ documentFormattingProvider: false });
 
-  return {
+const templateSettingsSchema = z
+  .object({
+    autoDiscover: z.boolean().catch(true),
+    roots: z.array(z.string()).catch([]),
+  })
+  .catch({ autoDiscover: true, roots: [] });
+
+const djangoSettingsSchema = z
+  .object({
+    "language-server": z
+      .object({ debug: z.boolean().catch(false) })
+      .optional()
+      .catch(undefined),
+    templates: templateSettingsSchema,
+  })
+  .catch({ templates: { autoDiscover: true, roots: [] } })
+  .transform((settings): DjangoSettings => {
+    if (settings["language-server"] === undefined) {
+      delete settings["language-server"];
+    }
+    return settings;
+  });
+
+const configurationChangeSchema = z
+  .object({ django: z.unknown().optional(), prettier: z.unknown().optional() })
+  .catch({})
+  .transform((settings): ConfigurationChangePayload => ({
+    django: djangoSettingsSchema.parse(settings.django),
+    prettier: normalizePrettierConfig(settings.prettier),
+  }));
+
+const initializationOptionsSchema = z
+  .object({
+    isTrusted: z.unknown().optional(),
+    handledCapabilities: z.unknown().optional(),
+    configuration: z
+      .object({ django: z.unknown().optional(), prettier: z.unknown().optional() })
+      .catch({}),
+    prettierConfig: z.unknown().optional(),
+  })
+  .catch({ configuration: {} })
+  .transform((options): InitializationOptions => ({
     // Preserve the standalone server default, but treat malformed explicit values as untrusted.
-    isTrusted: hasTrustValue ? options.isTrusted === true : true,
-    handledCapabilities: parseHandledCapabilities(options.handledCapabilities),
+    isTrusted: Object.prototype.hasOwnProperty.call(options, "isTrusted")
+      ? options.isTrusted === true
+      : true,
+    handledCapabilities: handledCapabilitiesSchema.parse(options.handledCapabilities),
     configuration: {
-      django: parseDjangoSettings(configuration.django),
-      prettier: parsePrettierConfig(configuration.prettier ?? options.prettierConfig),
+      django: djangoSettingsSchema.parse(options.configuration.django),
+      prettier: normalizePrettierConfig(options.configuration.prettier ?? options.prettierConfig),
     },
-  };
-}
+  }));
 
-export function parseConfigurationChange(value: unknown): ConfigurationChangePayload {
-  const settings = isRecord(value) ? value : {};
-  return {
-    django: parseDjangoSettings(settings.django),
-    prettier: parsePrettierConfig(settings.prettier),
-  };
-}
-
-function parseHandledCapabilities(value: unknown): HandledCapabilities {
-  const capabilities = isRecord(value) ? value : {};
-  return {
-    documentFormattingProvider: capabilities.documentFormattingProvider === true,
-  };
-}
-
-function parseDjangoSettings(value: unknown): DjangoSettings {
-  const django = isRecord(value) ? value : {};
-  const languageServer = isRecord(django["language-server"])
-    ? django["language-server"]
-    : undefined;
-  const templates = isRecord(django.templates) ? django.templates : {};
-  const roots =
-    Array.isArray(templates.roots) && templates.roots.every((root) => typeof root === "string")
-      ? templates.roots
-      : [];
-
-  return {
-    ...(languageServer
-      ? {
-          "language-server": {
-            debug: languageServer.debug === true,
-          },
-        }
-      : {}),
-    templates: {
-      autoDiscover: typeof templates.autoDiscover === "boolean" ? templates.autoDiscover : true,
-      roots,
-    },
-  };
-}
-
-function parsePrettierConfig(value: unknown): PrettierEditorConfig {
-  return normalizePrettierConfig(value);
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
+export const parseInitializationOptions = initializationOptionsSchema.parse.bind(
+  initializationOptionsSchema,
+);
+export const parseConfigurationChange =
+  configurationChangeSchema.parse.bind(configurationChangeSchema);

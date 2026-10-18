@@ -5,7 +5,12 @@ import { join } from "node:path";
 import { setImmediate as nextTurn } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
 import { CancellationTokenSource, type CancellationToken } from "vscode-languageserver";
-import { CompletionItemKind, MarkupKind, type CompletionList } from "vscode-languageserver-types";
+import {
+  CompletionItemKind,
+  MarkupContent,
+  MarkupKind,
+  type CompletionList,
+} from "vscode-languageserver-types";
 import { describe, it } from "vite-plus/test";
 import { Document } from "../../../src/lib/documents/index.js";
 import { LSConfigManager } from "../../../src/ls-config.js";
@@ -56,8 +61,9 @@ describe("DjangoPlugin", () => {
 
     const hover = plugin.doHover(document, document.positionAt(text.indexOf("if") + 1));
 
-    assert.notStrictEqual(hover, null);
-    const contents = hover!.contents as { kind: string; value: string };
+    assert.ok(hover);
+    const contents = hover.contents;
+    assert.ok(MarkupContent.is(contents));
     assert.strictEqual(contents.kind, MarkupKind.Markdown);
     assert.match(contents.value, /Conditionally renders/);
   });
@@ -69,8 +75,9 @@ describe("DjangoPlugin", () => {
 
     const hover = plugin.doHover(document, document.positionAt(text.indexOf("lower") + 1));
 
-    assert.notStrictEqual(hover, null);
-    const contents = hover!.contents as { kind: string; value: string };
+    assert.ok(hover);
+    const contents = hover.contents;
+    assert.ok(MarkupContent.is(contents));
     assert.strictEqual(contents.kind, MarkupKind.Markdown);
     assert.match(contents.value, /Converts a string into all lowercase/);
     assert.match(contents.value, /\[Documentation\]\(.*#std-templatefilter-lower\)/);

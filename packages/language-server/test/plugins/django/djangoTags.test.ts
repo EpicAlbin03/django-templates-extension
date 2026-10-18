@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import { readFileSync } from "node:fs";
 import { describe, it } from "vite-plus/test";
+import { z } from "zod";
 import {
   djangoAdditionalCoreTagDocs,
   djangoContribTagDocs,
@@ -55,21 +56,16 @@ function assertMapKeysBelongTo(
   }
 }
 
-function readTagSnippets(): Record<string, unknown> {
+const snippetCatalogSchema = z
+  .object({ _comment: z.string() })
+  .catchall(z.object({ body: z.union([z.string(), z.array(z.string())]) }));
+
+function readTagSnippets() {
   const snippetUrl = new URL("../../../../django-vscode/snippets/tags.json", import.meta.url);
-  return JSON.parse(readFileSync(snippetUrl, "utf8")) as Record<string, unknown>;
-}
-
-function isSnippet(value: unknown): value is Snippet {
-  if (typeof value !== "object" || value === null || !("body" in value)) {
-    return false;
-  }
-
-  const body = value.body;
-  return (
-    typeof body === "string" ||
-    (Array.isArray(body) && body.every((line) => typeof line === "string"))
+  const { _comment, ...snippets } = snippetCatalogSchema.parse(
+    JSON.parse(readFileSync(snippetUrl, "utf8")),
   );
+  return snippets;
 }
 
 function getSnippetTagNames(snippet: Snippet): string[] {
@@ -180,10 +176,6 @@ describe("Django tag catalog", () => {
     }
 
     for (const [snippetName, value] of Object.entries(snippets)) {
-      if (!isSnippet(value)) {
-        continue;
-      }
-
       const tagNames = getSnippetTagNames(value);
       if (tagNames.length === 0) {
         assert.ok(

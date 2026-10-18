@@ -61,6 +61,31 @@ describe("protocol configuration parsing", () => {
     assert.deepStrictEqual(result.configuration.prettier, { tabWidth: 3 });
   });
 
+  it("defaults malformed top-level payloads without throwing", () => {
+    for (const value of [undefined, null, [], "invalid", 42, false]) {
+      assert.deepStrictEqual(parseInitializationOptions(value), {
+        isTrusted: true,
+        handledCapabilities: { documentFormattingProvider: false },
+        configuration: {
+          django: { templates: { autoDiscover: true, roots: [] } },
+          prettier: {},
+        },
+      });
+      assert.deepStrictEqual(parseConfigurationChange(value), {
+        django: { templates: { autoDiscover: true, roots: [] } },
+        prettier: {},
+      });
+    }
+  });
+
+  it("distinguishes absent trust from explicitly malformed trust values", () => {
+    assert.strictEqual(parseInitializationOptions({}).isTrusted, true);
+    for (const isTrusted of [undefined, null, "true", 1, {}, []]) {
+      assert.strictEqual(parseInitializationOptions({ isTrusted }).isTrusted, false);
+    }
+    assert.strictEqual(parseInitializationOptions({ isTrusted: true }).isTrusted, true);
+  });
+
   it("validates configuration-change payloads", () => {
     assert.deepStrictEqual(
       parseConfigurationChange({

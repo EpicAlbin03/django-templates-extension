@@ -70,6 +70,40 @@ describe("LSConfigManager", () => {
     assert.strictEqual(manager.getIgnorePath(), undefined);
   });
 
+  it("omits invalid options without discarding valid siblings", () => {
+    for (const invalid of [-1, NaN, Infinity, -Infinity, null, "4"]) {
+      assert.deepStrictEqual(
+        normalizePrettierConfig({ printWidth: invalid, tabWidth: 4, useTabs: true }),
+        { tabWidth: 4, useTabs: true },
+      );
+    }
+    assert.deepStrictEqual(
+      normalizePrettierConfig({
+        parser: "babel",
+        trailingComma: "all",
+        proseWrap: "preserve",
+        arrowParens: "avoid",
+        htmlWhitespaceSensitivity: "ignore",
+        endOfLine: "crlf",
+        quoteProps: "consistent",
+        embeddedLanguageFormatting: "off",
+        plugins: ["workspace-plugin"],
+        pluginSearchDirs: false,
+      }),
+      {
+        trailingComma: "all",
+        proseWrap: "preserve",
+        arrowParens: "avoid",
+        htmlWhitespaceSensitivity: "ignore",
+        endOfLine: "crlf",
+        quoteProps: "consistent",
+        embeddedLanguageFormatting: "off",
+        plugins: ["workspace-plugin"],
+        pluginSearchDirs: false,
+      },
+    );
+  });
+
   it("validates unknown editor configuration values", () => {
     assert.deepStrictEqual(
       normalizePrettierConfig({

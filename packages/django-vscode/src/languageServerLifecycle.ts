@@ -12,7 +12,7 @@ type LanguageServerLifecycleOptions<Client extends RestartableLanguageClient> = 
   client: Client;
   output: OwnedOutput;
   notifyRestarted: () => void;
-  reportRestartFailure: (error: unknown) => void;
+  reportRestartFailure: (cause: unknown) => void;
 };
 
 export type LanguageServerLifecycle<Client extends RestartableLanguageClient> = {

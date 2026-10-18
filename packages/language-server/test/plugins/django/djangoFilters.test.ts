@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import { readFileSync } from "node:fs";
-import { MarkupKind } from "vscode-languageserver-types";
+import { MarkupContent, MarkupKind } from "vscode-languageserver-types";
 import { describe, it } from "vite-plus/test";
 import { djangoFilterCompletionItems } from "../../../src/plugins/django/djangoCompletions.js";
 import {
@@ -82,7 +82,8 @@ describe("Django filter documentation", () => {
 
   it("uses the same rich documentation for filter completions", () => {
     const lower = djangoFilterCompletionItems.find((item) => item.label === "lower")!;
-    const documentation = lower.documentation as { kind: string; value: string };
+    const documentation = lower.documentation;
+    assert.ok(documentation && MarkupContent.is(documentation));
 
     assert.strictEqual(documentation.kind, MarkupKind.Markdown);
     assert.strictEqual(

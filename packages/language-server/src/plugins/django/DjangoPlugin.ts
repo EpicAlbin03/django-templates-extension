@@ -2,6 +2,7 @@ import { createRequire } from "node:module";
 import { dirname, isAbsolute } from "path";
 import { URL, fileURLToPath, pathToFileURL } from "url";
 import type { Options, Plugin } from "prettier";
+import { z } from "zod";
 import type { CancellationToken } from "vscode-languageserver";
 import type { FormattingOptions, Hover, Position } from "vscode-languageserver-types";
 import { CompletionItemKind, CompletionList, Range, TextEdit } from "vscode-languageserver-types";
@@ -179,7 +180,8 @@ export class DjangoPlugin implements CompletionProvider, FormattingProvider, Hov
   }
 
   private static isPrettierPluginDjangoTemplatesPath(plugin: PluginSpecifier): boolean {
-    return typeof plugin === "string" && plugin.includes(DJANGO_PRETTIER_PLUGIN);
+    const path = z.string().safeParse(plugin);
+    return path.success && path.data.includes(DJANGO_PRETTIER_PLUGIN);
   }
 
   private static isPrettierPluginDjangoTemplatesObject(plugin: PluginSpecifier): boolean {
@@ -215,6 +217,7 @@ async function waitForPromise<Result>(
 async function importDjangoTemplatePlugin(): Promise<Plugin> {
   const pluginPath = require.resolve(`${DJANGO_PRETTIER_PLUGIN}/browser`);
   const plugin = await import(pathToFileURL(pluginPath).href);
+  // SAFETY: The bundled dependency's browser entry exports a Prettier plugin in ESM or CJS form.
   return (plugin.default ?? plugin) as Plugin;
 }
 
@@ -238,11 +241,12 @@ function resolvePlugins(
 }
 
 function resolvePlugin(plugin: PluginSpecifier, filePath: string): PluginSpecifier {
-  if (typeof plugin !== "string" || isAbsolute(plugin) || plugin.startsWith(".")) {
+  const path = z.string().safeParse(plugin);
+  if (!path.success || isAbsolute(path.data) || path.data.startsWith(".")) {
     return plugin;
   }
 
-  return require.resolve(plugin, {
+  return require.resolve(path.data, {
     paths: [dirname(filePath)],
   });
 }
@@ -255,7 +259,7 @@ function isDjangoTemplatePluginObject(plugin: PluginSpecifier): boolean {
 }
 
 function isPluginObject(plugin: PluginSpecifier): plugin is Plugin {
-  return typeof plugin !== "string" && !(plugin instanceof URL);
+  return !z.string().safeParse(plugin).success && !(plugin instanceof URL);
 }
 
 function hasDjangoParser(parsers: readonly string[] | undefined): boolean {

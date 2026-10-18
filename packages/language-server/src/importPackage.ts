@@ -2,6 +2,7 @@ import { createRequire } from "node:module";
 import { dirname, resolve } from "path";
 import { fileURLToPath } from "url";
 import { Logger } from "./logger.js";
+import { z } from "zod";
 
 type Prettier = typeof import("prettier");
 
@@ -22,10 +23,27 @@ export function setIsTrusted(_isTrusted: boolean) {
  * Keep the `require` indirection in one place so builds can replace it
  * without transforming each call site.
  */
-function dynamicRequire(dynamicFileToRequire: string): unknown {
+function dynamicRequire<Value>(
+  dynamicFileToRequire: string,
+  schema: z.ZodType<Value>,
+  invalidMessage: string,
+): Value {
   // prettier-ignore
-  return require(dynamicFileToRequire);
+  const result = schema.safeParse(require(dynamicFileToRequire));
+  if (!result.success) {
+    throw new Error(invalidMessage, { cause: result.error });
+  }
+  return result.data;
 }
+
+const packageMetadataSchema = z.object({ version: z.string() });
+const prettierApiSchema = z.object({
+  format: z.function(),
+  resolveConfig: z.function(),
+  getFileInfo: z.function(),
+  getSupportInfo: z.function(),
+});
+const prettierSchema = z.custom<Prettier>((value) => prettierApiSchema.safeParse(value).success);
 
 export function getPackageInfo(packageName: string, fromPath: string, useFallback = true) {
   const paths: string[] = [];
@@ -39,10 +57,11 @@ export function getPackageInfo(packageName: string, fromPath: string, useFallbac
   const packageJSONPath = require.resolve(`${packageName}/package.json`, {
     paths,
   });
-  const packageJSON = dynamicRequire(packageJSONPath);
-  if (!isRecord(packageJSON) || typeof packageJSON.version !== "string") {
-    throw new Error(`Package ${packageName} has an invalid package.json`);
-  }
+  const packageJSON = dynamicRequire(
+    packageJSONPath,
+    packageMetadataSchema,
+    `Package ${packageName} has an invalid package.json`,
+  );
 
   const version = packageJSON.version;
   const [major, minor, patch] = version.split(".");
@@ -62,23 +81,9 @@ export function importPrettier(fromPath: string): Prettier {
   const pkg = getPackageInfo("prettier", fromPath);
   const main = resolve(pkg.path);
   Logger.debug("Using Prettier v" + pkg.version.full, "from", main);
-  const importedPrettier = dynamicRequire(main);
-  if (!isPrettier(importedPrettier)) {
-    throw new Error(`Package at ${main} is not a compatible Prettier installation`);
-  }
-  return importedPrettier;
-}
-
-function isPrettier(value: unknown): value is Prettier {
-  return (
-    isRecord(value) &&
-    typeof value.format === "function" &&
-    typeof value.resolveConfig === "function" &&
-    typeof value.getFileInfo === "function" &&
-    typeof value.getSupportInfo === "function"
+  return dynamicRequire(
+    main,
+    prettierSchema,
+    `Package at ${main} is not a compatible Prettier installation`,
   );
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
 }

@@ -4,8 +4,11 @@ import { pathToFileURL } from "node:url";
 import {
   CancellationTokenSource,
   WatchKind,
-  type CancellationToken,
+  CancellationToken,
   type Connection,
+  type DidChangeConfigurationParams,
+  type DidChangeWatchedFilesRegistrationOptions,
+  DidChangeWatchedFilesNotification,
   type InitializeParams,
 } from "vscode-languageserver/node";
 import { describe, it } from "vite-plus/test";
@@ -22,19 +25,19 @@ import type {
 } from "../src/plugins/django/TemplatePathIndex.js";
 
 interface ServerCallbacks {
-  initialize?: (params: InitializeParams) => unknown;
-  initialized?: () => unknown;
-  configuration?: (params: { settings: unknown }) => unknown;
-  watchedFiles?: (params: { changes: TemplateFileEvent[] }) => unknown;
+  initialize?: (params: InitializeParams) => ReturnType<Parameters<Connection["onInitialize"]>[0]>;
+  initialized?: () => void | Promise<void>;
+  configuration?: (params: DidChangeConfigurationParams) => void;
+  watchedFiles?: (params: { changes: TemplateFileEvent[] }) => void;
   open?: (params: {
     textDocument: { uri: string; languageId: string; version: number; text: string };
-  }) => unknown;
+  }) => void;
   completion?: (
     params: { textDocument: { uri: string }; position: { line: number; character: number } },
     cancellationToken: CancellationToken,
-  ) => unknown;
-  shutdown?: () => unknown;
-  exit?: () => unknown;
+  ) => ReturnType<Parameters<Connection["onCompletion"]>[0]>;
+  shutdown?: () => ReturnType<Parameters<Connection["onShutdown"]>[0]>;
+  exit?: () => void;
 }
 
 class FakeTemplatePathIndex implements TemplatePathIndexController {
@@ -82,41 +85,45 @@ class FakeTemplatePathIndex implements TemplatePathIndexController {
 
 function createFakeConnection() {
   const callbacks: ServerCallbacks = {};
-  const registrations: unknown[] = [];
+  const registrations: DidChangeWatchedFilesRegistrationOptions[] = [];
   let registrationDisposals = 0;
   let listened = false;
 
+  const progress = { begin() {}, report() {}, done() {} };
   const connection = {
-    onInitialize(handler: unknown) {
-      callbacks.initialize = handler as ServerCallbacks["initialize"];
+    onInitialize(handler: Parameters<Connection["onInitialize"]>[0]) {
+      callbacks.initialize = (params) => handler(params, CancellationToken.None, progress);
     },
-    onInitialized(handler: unknown) {
-      callbacks.initialized = handler as ServerCallbacks["initialized"];
+    onInitialized(handler: Parameters<Connection["onInitialized"]>[0]) {
+      callbacks.initialized = () => handler({});
     },
-    onDidChangeConfiguration(handler: unknown) {
-      callbacks.configuration = handler as ServerCallbacks["configuration"];
+    onDidChangeConfiguration(handler: NonNullable<ServerCallbacks["configuration"]>) {
+      callbacks.configuration = handler;
     },
-    onDidChangeWatchedFiles(handler: unknown) {
-      callbacks.watchedFiles = handler as ServerCallbacks["watchedFiles"];
+    onDidChangeWatchedFiles(handler: NonNullable<ServerCallbacks["watchedFiles"]>) {
+      callbacks.watchedFiles = handler;
     },
-    onShutdown(handler: unknown) {
-      callbacks.shutdown = handler as ServerCallbacks["shutdown"];
+    onShutdown(handler: Parameters<Connection["onShutdown"]>[0]) {
+      callbacks.shutdown = () => handler(CancellationToken.None);
     },
-    onExit(handler: unknown) {
-      callbacks.exit = handler as ServerCallbacks["exit"];
+    onExit(handler: NonNullable<ServerCallbacks["exit"]>) {
+      callbacks.exit = handler;
     },
-    onDidOpenTextDocument(handler: unknown) {
-      callbacks.open = handler as ServerCallbacks["open"];
+    onDidOpenTextDocument(handler: NonNullable<ServerCallbacks["open"]>) {
+      callbacks.open = handler;
     },
-    onDidCloseTextDocument() {},
-    onDidChangeTextDocument() {},
-    onHover() {},
-    onCompletion(handler: unknown) {
-      callbacks.completion = handler as ServerCallbacks["completion"];
+    onDidCloseTextDocument(_handler: Parameters<Connection["onDidCloseTextDocument"]>[0]) {},
+    onDidChangeTextDocument(_handler: Parameters<Connection["onDidChangeTextDocument"]>[0]) {},
+    onHover(_handler: Parameters<Connection["onHover"]>[0]) {},
+    onCompletion(handler: Parameters<Connection["onCompletion"]>[0]) {
+      callbacks.completion = (params, token) => handler(params, token, progress);
     },
-    onDocumentFormatting() {},
+    onDocumentFormatting(_handler: Parameters<Connection["onDocumentFormatting"]>[0]) {},
     client: {
-      async register(_type: unknown, options: unknown) {
+      async register(
+        _type: typeof DidChangeWatchedFilesNotification.type,
+        options: DidChangeWatchedFilesRegistrationOptions,
+      ) {
         registrations.push(options);
         return {
           dispose() {
@@ -128,10 +135,12 @@ function createFakeConnection() {
     listen() {
       listened = true;
     },
-  } as unknown as Connection;
+  };
 
   return {
-    connection,
+    // SAFETY: This in-process fake implements every connection operation exercised by startServer;
+    // unrelated transport and protocol operations are deliberately absent from the test harness.
+    connection: connection as Connection,
     callbacks,
     registrations,
     get registrationDisposals() {
@@ -192,9 +201,9 @@ describe("language server template-path wiring", () => {
       isTrusted: false,
       settings: { autoDiscover: false, roots: ["theme/templates"] },
     });
-    const triggers = (
-      response as { capabilities: { completionProvider: { triggerCharacters: string[] } } }
-    ).capabilities.completionProvider.triggerCharacters;
+    assert.ok(response && "capabilities" in response);
+    const triggers = response.capabilities.completionProvider?.triggerCharacters;
+    assert.ok(triggers);
     assert.deepStrictEqual(triggers, ["%", "|", " ", "'", '"']);
     assert.strictEqual(triggers.includes("/"), false);
     assert.deepStrictEqual(fake.registrations, []);
