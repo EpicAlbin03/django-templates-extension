@@ -324,46 +324,92 @@ describe("DjangoPlugin", () => {
     );
   });
 
-  it("returns no edits for documents without Django syntax", async () => {
-    const document = Document.createForTest("file:///template.html", "<div>HTML only</div>\n");
-    const plugin = new DjangoPlugin(new LSConfigManager());
-
-    assert.deepStrictEqual(
-      await plugin.formatDocument(document, { tabSize: 2, insertSpaces: true }),
-      [],
-    );
-  });
-
-  it("returns no edits for non-file documents", async () => {
-    const document = Document.createForTest("untitled:template.html", "<div>{{ value }}</div>\n");
-    const plugin = new DjangoPlugin(new LSConfigManager());
-
-    assert.deepStrictEqual(
-      await plugin.formatDocument(document, { tabSize: 2, insertSpaces: true }),
-      [],
-    );
-  });
-
-  it("returns no edits for ignored files", async () => {
-    const directory = mkdtempSync(join(tmpdir(), "django-template-ignore-"));
+  it("formats unsaved plain HTML edits with the Django-aware formatter", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "django-template-plain-html-"));
     const filePath = join(directory, "template.html");
-    const ignorePath = join(directory, ".prettierignore");
-    const text = "<div>{% if user %}Hello{% endif %}</div>\n";
-    writeFileSync(filePath, text);
-    writeFileSync(ignorePath, "template.html\n");
+    const text = "<div>\n<div>HTML only</div>\n</div>";
+    const plugin = new DjangoPlugin(new LSConfigManager());
 
-    const configManager = new LSConfigManager();
-    configManager.updatePrettierConfig({ ignorePath });
-    const plugin = new DjangoPlugin(configManager);
+    try {
+      writeFileSync(filePath, "<p>Previously saved content</p>\n");
+      writeFileSync(
+        join(directory, ".prettierrc.json"),
+        JSON.stringify({ tabWidth: 8, useTabs: true }),
+      );
+      const document = new Document(pathToFileURL(filePath).toString(), text);
+      const edits = await plugin.formatDocument(document, { tabSize: 2, insertSpaces: true });
 
-    assert.deepStrictEqual(
-      await plugin.formatDocument(new Document(pathToFileURL(filePath).toString(), text), {
-        tabSize: 2,
-        insertSpaces: true,
-      }),
-      [],
-    );
+      assert.strictEqual(edits.length, 1);
+      assert.strictEqual(edits[0]?.newText, "<div>\n  <div>HTML only</div>\n</div>\n");
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
+
+  it.each([
+    {
+      text: "<div>\n<div>HTML only</div>\n</div>",
+      expected: "<div>\n   <div>HTML only</div>\n</div>\n",
+      options: { tabSize: 3, insertSpaces: true },
+    },
+    {
+      text: "<div>{% if user %}<span>{{ user.username }}</span>{% endif %}</div>",
+      expected:
+        "<div>\n\t{% if user %}\n\t\t<span>{{ user.username }}</span>\n\t{% endif %}\n</div>\n",
+      options: { tabSize: 4, insertSpaces: false },
+    },
+  ])(
+    "formats never-saved HTML with request indentation: $options",
+    async ({ text, expected, options }) => {
+      const document = Document.createForTest("untitled:Untitled-1", text);
+      const configManager = new LSConfigManager();
+      configManager.updatePrettierConfig({ tabWidth: 8, useTabs: false });
+      const plugin = new DjangoPlugin(configManager);
+
+      const edits = await plugin.formatDocument(document, options);
+
+      assert.strictEqual(edits.length, 1);
+      assert.strictEqual(edits[0]?.newText, expected);
+      assert.deepStrictEqual(edits[0]?.range, {
+        start: { line: 0, character: 0 },
+        end: document.positionAt(text.length),
+      });
+    },
+  );
+
+  it("returns no edits for unsupported non-file schemes", async () => {
+    const plugin = new DjangoPlugin(new LSConfigManager());
+    for (const uri of ["git:/template.html", "vscode-notebook-cell:/template.html"]) {
+      const document = Document.createForTest(uri, "<div>{% if user %}Hello{% endif %}</div>");
+      assert.deepStrictEqual(
+        await plugin.formatDocument(document, { tabSize: 2, insertSpaces: true }),
+        [],
+      );
+    }
+  });
+
+  it.each(["<div>\n<div>HTML only</div>\n</div>", "<div>{% if user %}Hello{% endif %}</div>\n"])(
+    "returns no edits for ignored files: %s",
+    async (text) => {
+      const directory = mkdtempSync(join(tmpdir(), "django-template-ignore-"));
+      const filePath = join(directory, "template.html");
+      const ignorePath = join(directory, ".prettierignore");
+      writeFileSync(filePath, text);
+      writeFileSync(ignorePath, "template.html\n");
+
+      const configManager = new LSConfigManager();
+      configManager.updatePrettierConfig({ ignorePath });
+      const plugin = new DjangoPlugin(configManager);
+
+      assert.deepStrictEqual(
+        await plugin.formatDocument(new Document(pathToFileURL(filePath).toString(), text), {
+          tabSize: 2,
+          insertSpaces: true,
+        }),
+        [],
+      );
+    },
+  );
 
   it("discovers the nearest ignore file for each document independently of the server cwd", async () => {
     const directory = mkdtempSync(join(tmpdir(), "django-template-ignore-roots-"));
@@ -417,66 +463,95 @@ describe("DjangoPlugin", () => {
     }
   });
 
-  it("returns no edits when formatting is unchanged", async () => {
-    const filePath = join(
-      mkdtempSync(join(tmpdir(), "django-template-unchanged-")),
-      "template.html",
-    );
-    const text = "<div>{{ value }}</div>\n";
-    writeFileSync(filePath, text);
-    const plugin = new DjangoPlugin(new LSConfigManager());
+  it.each(["file", "untitled"])(
+    "returns no edits when %s formatting is unchanged",
+    async (scheme) => {
+      const directory = mkdtempSync(join(tmpdir(), "django-template-unchanged-"));
+      const filePath = join(directory, "template.html");
+      const plugin = new DjangoPlugin(new LSConfigManager());
 
-    assert.deepStrictEqual(
-      await plugin.formatDocument(new Document(pathToFileURL(filePath).toString(), text), {
-        tabSize: 2,
-        insertSpaces: true,
-      }),
-      [],
-    );
-  });
+      try {
+        for (const text of ["<div>HTML only</div>\n", "<div>{{ value }}</div>\n"]) {
+          writeFileSync(filePath, text);
+          const uri = pathToFileURL(filePath)
+            .toString()
+            .replace(/^file:/, `${scheme}:`);
+          assert.deepStrictEqual(
+            await plugin.formatDocument(new Document(uri, text), {
+              tabSize: 2,
+              insertSpaces: true,
+            }),
+            [],
+          );
+        }
+      } finally {
+        rmSync(directory, { recursive: true, force: true });
+      }
+    },
+  );
 
-  it("does not evaluate workspace config, plugins, or Prettier in untrusted mode", async () => {
-    const directory = mkdtempSync(join(tmpdir(), "django-template-untrusted-"));
-    const filePath = join(directory, "template.html");
-    const configMarker = join(directory, "config-loaded");
-    const pluginMarker = join(directory, "plugin-loaded");
-    const prettierMarker = join(directory, "prettier-loaded");
-    const pluginPath = join(directory, "sentinel-plugin.cjs");
-    const configPath = join(directory, "prettier.config.cjs");
-    const workspacePrettierDirectory = join(directory, "node_modules", "prettier");
-    const text = "<div>{% if user %}Hello{% endif %}</div>\n";
+  it.each([
+    { scheme: "file", isTrusted: false },
+    { scheme: "untitled", isTrusted: true },
+    { scheme: "untitled", isTrusted: false },
+  ])(
+    "uses only bundled code for $scheme documents with trust=$isTrusted",
+    async ({ scheme, isTrusted }) => {
+      const directory = mkdtempSync(join(tmpdir(), "django-template-untrusted-"));
+      const filePath = join(directory, "template.html");
+      const configMarker = join(directory, "config-loaded");
+      const pluginMarker = join(directory, "plugin-loaded");
+      const prettierMarker = join(directory, "prettier-loaded");
+      const pluginPath = join(directory, "sentinel-plugin.cjs");
+      const configPath = join(directory, "prettier.config.cjs");
+      const workspacePrettierDirectory = join(directory, "node_modules", "prettier");
+      const text = "<div>{% if user %}<span>{{ user.username }}</span>{% endif %}</div>\n";
 
-    writeFileSync(filePath, text);
-    writeSentinelModule(configPath, configMarker);
-    writeSentinelModule(pluginPath, pluginMarker);
-    mkdirSync(workspacePrettierDirectory, { recursive: true });
-    writeFileSync(
-      join(workspacePrettierDirectory, "package.json"),
-      JSON.stringify({ name: "prettier", version: "99.0.0", main: "index.cjs" }),
-    );
-    writeSentinelModule(join(workspacePrettierDirectory, "index.cjs"), prettierMarker);
+      writeFileSync(filePath, text);
+      writeFileSync(join(directory, "sentinel.ignore"), "*\n");
+      writeSentinelModule(configPath, configMarker);
+      writeSentinelModule(pluginPath, pluginMarker);
+      mkdirSync(workspacePrettierDirectory, { recursive: true });
+      writeFileSync(
+        join(workspacePrettierDirectory, "package.json"),
+        JSON.stringify({ name: "prettier", version: "99.0.0", main: "index.cjs" }),
+      );
+      writeSentinelModule(join(workspacePrettierDirectory, "index.cjs"), prettierMarker);
 
-    const configManager = new LSConfigManager();
-    configManager.updateIsTrusted(false);
-    configManager.updatePrettierConfig({
-      config: configPath,
-      plugins: [pluginPath],
-      ignorePath: join(directory, "sentinel.ignore"),
-      pluginSearchDirs: [directory],
-      printWidth: 100,
-    });
-    const plugin = new DjangoPlugin(configManager);
+      const configManager = new LSConfigManager();
+      configManager.updateIsTrusted(isTrusted);
+      configManager.updatePrettierConfig({
+        config: configPath,
+        plugins: [pluginPath],
+        ignorePath: join(directory, "sentinel.ignore"),
+        pluginSearchDirs: [directory],
+        printWidth: 100,
+        endOfLine: "crlf",
+      });
+      const plugin = new DjangoPlugin(configManager);
 
-    const edits = await plugin.formatDocument(
-      new Document(pathToFileURL(filePath).toString(), text),
-      { tabSize: 2, insertSpaces: true },
-    );
+      try {
+        const uri = pathToFileURL(filePath)
+          .toString()
+          .replace(/^file:/, `${scheme}:`);
+        const edits = await plugin.formatDocument(new Document(uri, text), {
+          tabSize: 2,
+          insertSpaces: true,
+        });
 
-    assert.strictEqual(edits.length, 1);
-    assert.strictEqual(existsSync(configMarker), false);
-    assert.strictEqual(existsSync(pluginMarker), false);
-    assert.strictEqual(existsSync(prettierMarker), false);
-  });
+        assert.strictEqual(edits.length, 1);
+        assert.strictEqual(
+          edits[0]?.newText,
+          "<div>\r\n  {% if user %}\r\n    <span>{{ user.username }}</span>\r\n  {% endif %}\r\n</div>\r\n",
+        );
+        assert.strictEqual(existsSync(configMarker), false);
+        assert.strictEqual(existsSync(pluginMarker), false);
+        assert.strictEqual(existsSync(prettierMarker), false);
+      } finally {
+        rmSync(directory, { recursive: true, force: true });
+      }
+    },
+  );
 
   it("honors project configuration and plugins in trusted mode", async () => {
     const directory = mkdtempSync(join(tmpdir(), "django-template-trusted-"));

@@ -24,7 +24,6 @@ import type { TemplatePathProvider } from "./TemplatePathIndex.js";
 
 const require = createRequire(import.meta.url);
 const serverDirectory = dirname(fileURLToPath(import.meta.url));
-const DJANGO_TEMPLATE_TAG_RE = /({%[\s\S]*?%}|{{[\s\S]*?}}|{#[\s\S]*?#})/;
 const DJANGO_HTML_PARSER = "django-html";
 const DJANGO_PRETTIER_PLUGIN = "prettier-plugin-django-templates";
 const CANCELLED = Symbol("cancelled");
@@ -92,24 +91,22 @@ export class DjangoPlugin implements CompletionProvider, FormattingProvider, Hov
 
   async formatDocument(document: Document, options: FormattingOptions): Promise<TextEdit[]> {
     const text = document.getText();
-    if (!DJANGO_TEMPLATE_TAG_RE.test(text)) {
-      return [];
-    }
-
     const filePath = document.getFilePath();
-    if (!filePath) {
+    if (!filePath && new URL(document.uri).protocol !== "untitled:") {
       return [];
     }
 
     const { prettier, config, resolvedPlugins } = await this.getFormatter(filePath, options);
-    const fileInfo = await prettier.getFileInfo(filePath, {
-      ignorePath: await resolveIgnorePaths(filePath, this.configManager.getIgnorePath()),
-      withNodeModules: true,
-      resolveConfig: false,
-    });
-    if (fileInfo.ignored) {
-      Logger.debug({ event: "formatter.ignored", uri: document.uri, filePath });
-      return [];
+    if (filePath) {
+      const fileInfo = await prettier.getFileInfo(filePath, {
+        ignorePath: await resolveIgnorePaths(filePath, this.configManager.getIgnorePath()),
+        withNodeModules: true,
+        resolveConfig: false,
+      });
+      if (fileInfo.ignored) {
+        Logger.debug({ event: "formatter.ignored", uri: document.uri, filePath });
+        return [];
+      }
     }
 
     const configuredPlugins = resolvedPlugins.filter(
@@ -120,7 +117,7 @@ export class DjangoPlugin implements CompletionProvider, FormattingProvider, Hov
     const djangoPlugin = await importDjangoTemplatePlugin();
     const formattedCode = await prettier.format(text, {
       ...config,
-      filepath: filePath,
+      filepath: filePath ?? undefined,
       plugins: Array.from(new Set([...configuredPlugins, djangoPlugin])),
       parser: DJANGO_HTML_PARSER,
     });
@@ -136,14 +133,16 @@ export class DjangoPlugin implements CompletionProvider, FormattingProvider, Hov
   }
 
   private async getFormatter(
-    filePath: string,
+    filePath: string | null,
     options: FormattingOptions,
   ): Promise<{
     prettier: PrettierApi;
     config: Options;
     resolvedPlugins: PluginSpecifier[];
   }> {
-    if (!this.configManager.isTrustedWorkspace()) {
+    // Untitled buffers have no project location: never discover config, dependencies, or plugins
+    // from their URI or the server's cwd. Only editor/request options and bundled code apply.
+    if (!filePath || !this.configManager.isTrustedWorkspace()) {
       return {
         prettier: importPrettier(serverDirectory),
         config: this.configManager.getMergedPrettierConfig(undefined, options),

@@ -8,9 +8,11 @@ import {
   CancellationTokenSource,
   CompletionRequest,
   DidChangeConfigurationNotification,
+  DidChangeTextDocumentNotification,
   DidChangeWatchedFilesNotification,
   DidChangeWorkspaceFoldersNotification,
   DidOpenTextDocumentNotification,
+  DocumentFormattingRequest,
   InitializedNotification,
   InitializeRequest,
   RegistrationRequest,
@@ -152,6 +154,61 @@ function initializeParams(
     },
   };
 }
+
+describe("language server formatting", () => {
+  it.each([
+    {
+      text: "<div>\n<div>HTML only</div>\n</div>",
+      expected: "<div>\n   <div>HTML only</div>\n</div>\n",
+    },
+    {
+      text: "<div>{% if user %}<span>{{ user.username }}</span>{% endif %}</div>",
+      expected:
+        "<div>\n   {% if user %}\n      <span>{{ user.username }}</span>\n   {% endif %}\n</div>\n",
+    },
+  ])("formats an opened untitled HTML document: $text", async ({ text, expected }) => {
+    const harness = createTestConnection(new FakeTemplatePathIndex([]));
+    await harness.client.sendRequest(InitializeRequest.type, {
+      processId: null,
+      rootUri: null,
+      capabilities: {},
+      initializationOptions: {
+        isTrusted: true,
+        configuration: { prettier: { tabWidth: 8, useTabs: true } },
+      },
+    });
+    await harness.client.sendNotification(InitializedNotification.type, {});
+    const uri = "untitled:Untitled-1";
+    await harness.client.sendNotification(DidOpenTextDocumentNotification.type, {
+      textDocument: { uri, languageId: "html", version: 1, text },
+    });
+    const params = {
+      textDocument: { uri },
+      options: { tabSize: 3, insertSpaces: true },
+    };
+    assert.deepStrictEqual(
+      await harness.client.sendRequest(DocumentFormattingRequest.type, params),
+      [
+        {
+          range: {
+            start: { line: 0, character: 0 },
+            end: { line: text.split("\n").length - 1, character: text.split("\n").at(-1)?.length },
+          },
+          newText: expected,
+        },
+      ],
+    );
+    await harness.client.sendNotification(DidChangeTextDocumentNotification.type, {
+      textDocument: { uri, version: 2 },
+      contentChanges: [{ text: expected }],
+    });
+    assert.deepStrictEqual(
+      await harness.client.sendRequest(DocumentFormattingRequest.type, params),
+      [],
+    );
+    await harness.client.sendRequest(ShutdownRequest.type);
+  });
+});
 
 describe("language server template-path wiring", () => {
   it("updates template completions when workspace folders change without a restart", async () => {
