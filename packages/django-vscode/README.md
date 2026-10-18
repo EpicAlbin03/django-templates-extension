@@ -359,7 +359,7 @@ These settings can be added to `.vscode/settings.json`:
 ```json
 {
   "[html]": {
-    "editor.links": true
+    "editor.links": false
   }
 }
 ```
