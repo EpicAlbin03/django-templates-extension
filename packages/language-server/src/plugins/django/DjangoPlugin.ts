@@ -215,9 +215,9 @@ async function waitForPromise<Result>(
 }
 
 async function importDjangoTemplatePlugin(): Promise<Plugin> {
-  const plugin = await import("prettier-plugin-django-templates/browser");
-  // SAFETY: The bundled dependency's browser entry provides a plugin through its declared exports.
-  return plugin;
+  const plugin = await import("prettier-plugin-django-templates");
+  // SAFETY: Node exposes the bundled dependency's CommonJS plugin through the default export.
+  return plugin.default;
 }
 
 async function hasDjangoTemplatePluginLoaded(
