@@ -23,7 +23,9 @@
   "devDependencies": {
     "@changesets/changelog-github": "catalog:",
     "@changesets/cli": "catalog:",
+    "@oxlint/plugins": "catalog:",
     "cross-env": "^7.0.2",
+    "oxlint": "catalog:",
     "vite-plus": "catalog:"
   },
   "engines": {
