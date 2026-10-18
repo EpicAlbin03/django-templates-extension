@@ -1,5 +1,6 @@
 import * as assert from "node:assert/strict";
 import { resolve } from "node:path";
+import { createRequire } from "node:module";
 import { describe, it } from "vite-plus/test";
 import { buildServerLaunchOptions, resolveServerModule } from "../src/serverOptions.ts";
 
@@ -52,6 +53,27 @@ describe("resolveServerModule", () => {
       absolutePath,
       resolve(workspaceRoot, "language-server/server.js"),
     ]);
+  });
+
+  it("returns a configuration error when an absolute or relative server does not exist", () => {
+    const require = createRequire(import.meta.url);
+    for (const configuredPath of [
+      resolve("missing-language-server-review-fixture", "server.js"),
+      "missing-language-server-review-fixture/server.js",
+    ]) {
+      const result = resolveServerModule({
+        configuredPath,
+        workspaceRoot: process.cwd(),
+        defaultServerModule: "/default-server.js",
+        resolveModule: require.resolve,
+      });
+
+      assert.equal(result.ok, false);
+      if (!result.ok) {
+        assert.equal(result.error.code, "server-module-not-found");
+        assert.ok(result.error.message.includes(configuredPath));
+      }
+    }
   });
 
   it("returns a typed error for a relative path without a workspace", () => {

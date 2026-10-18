@@ -132,9 +132,7 @@ function startLanguageServer(context: ExtensionContext, showConfigurationError: 
     outputChannel.appendLine(activation.error.message);
     registerLanguageServerOwner(createDisposableResourceOwner(outputChannel));
     if (showConfigurationError) {
-      void window.showErrorMessage(
-        "Django Templates cannot use a relative language server path without an open workspace folder.",
-      );
+      void window.showErrorMessage(activation.error.message);
     }
     return;
   }
