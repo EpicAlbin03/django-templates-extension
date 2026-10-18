@@ -2,6 +2,8 @@ import { lstat, readdir, realpath } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { z } from "zod";
+import type { FileEvent } from "vscode-languageserver";
+import type { DjangoSettings } from "../../protocol.js";
 import { isUseCaseSensitiveFileNames } from "../../lib/documents/isFileSystemCaseSensitive.js";
 
 export const DEFAULT_TEMPLATE_PATH_LIMIT = 200;
@@ -27,10 +29,7 @@ const IGNORED_DIRECTORIES = new Set([
   "coverage",
 ]);
 
-export interface TemplateSettings {
-  autoDiscover: boolean;
-  roots: string[];
-}
+export type TemplateSettings = DjangoSettings["templates"];
 
 export interface TemplateWorkspaceFolder {
   uri: string;
@@ -53,10 +52,7 @@ export interface TemplatePathProvider {
   getCandidates(documentPath: string | null, prefix: string): Promise<TemplatePathResult>;
 }
 
-export interface TemplateFileEvent {
-  uri: string;
-  type: number;
-}
+export type TemplateFileEvent = FileEvent;
 
 export interface TemplateWatchPattern {
   baseUri: string;
@@ -316,7 +312,8 @@ export class TemplatePathIndex implements TemplatePathProvider {
     const containing = this.states
       .filter((state) => isPathInside(normalizedDocumentPath, state.folder.path))
       .sort((left, right) => right.folder.path.length - left.folder.path.length);
-    return containing.length > 0 ? [containing[0]] : this.states;
+    const [closest] = containing;
+    return closest ? [closest] : this.states;
   }
 
   private async ensureFresh(state: WorkspaceState): Promise<void> {
@@ -383,17 +380,17 @@ export class TemplatePathIndex implements TemplatePathProvider {
     const realWorkspacePath = this.isTrusted ? null : await safeRealpath(state.folder.path);
     for (let cursor = 0; cursor < roots.length; cursor += DEFAULT_TEMPLATE_SCAN_CONCURRENCY) {
       const batch = roots.slice(cursor, cursor + DEFAULT_TEMPLATE_SCAN_CONCURRENCY);
-      const accepted = await Promise.all(
+      const acceptedRoots = await Promise.all(
         batch.map(async (root) => {
           const rootInfo = await safeLstat(root);
           if (!rootInfo?.isDirectory() || rootInfo.isSymbolicLink()) {
-            return false;
+            return [];
           }
           if (
             isPathInside(root, state.folder.path) &&
             !(await isPathReachableWithoutSymlink(state.folder.path, root))
           ) {
-            return false;
+            return [];
           }
           if (!this.isTrusted) {
             const realRootPath = await safeRealpath(root);
@@ -402,17 +399,13 @@ export class TemplatePathIndex implements TemplatePathProvider {
               !realWorkspacePath ||
               !isPathInside(realRootPath, realWorkspacePath)
             ) {
-              return false;
+              return [];
             }
           }
-          return true;
+          return [root];
         }),
       );
-      for (let index = 0; index < batch.length; index++) {
-        if (accepted[index]) {
-          activeRoots.push(batch[index]);
-        }
-      }
+      activeRoots.push(...acceptedRoots.flat());
     }
     await scanTemplateRoots(activeRoots, candidates, this.readDirectory);
 
@@ -569,7 +562,7 @@ function sameWorkspaceFolders(
     states.length === folders.length &&
     states.every(
       (state, index) =>
-        state.folder.path === folders[index].path && state.folder.uri === folders[index].uri,
+        state.folder.path === folders[index]?.path && state.folder.uri === folders[index]?.uri,
     )
   );
 }
@@ -699,6 +692,7 @@ async function scanTemplateRoots(
           candidates.push({ name, sourcePath: entryPath, rootPath: work.rootPath });
         }
       }
+      return undefined;
     },
     readDirectory,
   );
@@ -798,7 +792,8 @@ function lowerBound(sortedNames: string[], value: string): number {
   let high = sortedNames.length;
   while (low < high) {
     const middle = low + Math.floor((high - low) / 2);
-    if (comparePaths(sortedNames[middle], value) < 0) {
+    const name = sortedNames[middle];
+    if (name !== undefined && comparePaths(name, value) < 0) {
       low = middle + 1;
     } else {
       high = middle;

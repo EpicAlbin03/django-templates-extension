@@ -14,7 +14,7 @@ export async function formatDocumentForProtocol(
   try {
     return await formatter.formatDocument(document, options);
   } catch (error) {
-    Logger.error("Failed to format Django template", error);
+    Logger.error({ event: "formatter.failed", uri: document.uri, error });
     throw new ResponseError(ErrorCodes.InternalError, FORMATTER_ERROR_MESSAGE);
   }
 }

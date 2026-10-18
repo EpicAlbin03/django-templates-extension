@@ -1,17 +1,28 @@
 import * as assert from "node:assert";
 import { join } from "node:path";
+import { PassThrough } from "node:stream";
 import { pathToFileURL } from "node:url";
 import {
   CancellationTokenSource,
-  WatchKind,
-  CancellationToken,
-  type Connection,
-  type DidChangeConfigurationParams,
-  type DidChangeWatchedFilesRegistrationOptions,
+  CompletionRequest,
+  DidChangeConfigurationNotification,
   DidChangeWatchedFilesNotification,
+  DidOpenTextDocumentNotification,
+  InitializedNotification,
+  InitializeRequest,
+  RegistrationRequest,
+  ShutdownRequest,
+  StreamMessageReader,
+  StreamMessageWriter,
+  UnregistrationRequest,
+  WatchKind,
+  createConnection,
+  createProtocolConnection,
+  type DidChangeWatchedFilesRegistrationOptions,
   type InitializeParams,
+  type RegistrationParams,
 } from "vscode-languageserver/node";
-import { describe, it } from "vite-plus/test";
+import { afterEach, describe, it, vi } from "vite-plus/test";
 import {
   getFileWorkspaceFolders,
   startServer,
@@ -21,49 +32,30 @@ import type {
   TemplateFileEvent,
   TemplatePathResult,
   TemplateWatchPattern,
-  TemplateWorkspaceFolder,
 } from "../src/plugins/django/TemplatePathIndex.js";
 
-interface ServerCallbacks {
-  initialize?: (params: InitializeParams) => ReturnType<Parameters<Connection["onInitialize"]>[0]>;
-  initialized?: () => void | Promise<void>;
-  configuration?: (params: DidChangeConfigurationParams) => void;
-  watchedFiles?: (params: { changes: TemplateFileEvent[] }) => void;
-  open?: (params: {
-    textDocument: { uri: string; languageId: string; version: number; text: string };
-  }) => void;
-  completion?: (
-    params: { textDocument: { uri: string }; position: { line: number; character: number } },
-    cancellationToken: CancellationToken,
-  ) => ReturnType<Parameters<Connection["onCompletion"]>[0]>;
-  shutdown?: () => ReturnType<Parameters<Connection["onShutdown"]>[0]>;
-  exit?: () => void;
-}
+type IndexConfiguration = Parameters<TemplatePathIndexController["configure"]>[0];
 
 class FakeTemplatePathIndex implements TemplatePathIndexController {
-  configurations: Array<{
-    workspaceFolders?: TemplateWorkspaceFolder[];
-    isTrusted?: boolean;
-    settings?: { autoDiscover: boolean; roots: string[] };
-  }> = [];
+  configurations: IndexConfiguration[] = [];
   eventBatches: TemplateFileEvent[][] = [];
   expiryModes: boolean[] = [];
   disposed = 0;
   candidateRequests = 0;
+  candidateResult: Promise<TemplatePathResult> = Promise.resolve({
+    candidates: [],
+    isIncomplete: false,
+  });
 
   constructor(readonly patterns: TemplateWatchPattern[]) {}
 
-  configure(options: {
-    workspaceFolders?: TemplateWorkspaceFolder[];
-    isTrusted?: boolean;
-    settings?: { autoDiscover: boolean; roots: string[] };
-  }): void {
+  configure(options: IndexConfiguration): void {
     this.configurations.push(options);
   }
 
-  async getCandidates(): Promise<TemplatePathResult> {
+  getCandidates(): Promise<TemplatePathResult> {
     this.candidateRequests++;
-    return { candidates: [], isIncomplete: false };
+    return this.candidateResult;
   }
 
   async applyFileEvents(events: TemplateFileEvent[]): Promise<void> {
@@ -83,71 +75,49 @@ class FakeTemplatePathIndex implements TemplatePathIndexController {
   }
 }
 
-function createFakeConnection() {
-  const callbacks: ServerCallbacks = {};
-  const registrations: DidChangeWatchedFilesRegistrationOptions[] = [];
-  let registrationDisposals = 0;
-  let listened = false;
+const cleanups: Array<() => Promise<void>> = [];
+afterEach(async () => {
+  for (const cleanup of cleanups.splice(0)) {
+    await cleanup();
+  }
+});
 
-  const progress = { begin() {}, report() {}, done() {} };
-  const connection = {
-    onInitialize(handler: Parameters<Connection["onInitialize"]>[0]) {
-      callbacks.initialize = (params) => handler(params, CancellationToken.None, progress);
-    },
-    onInitialized(handler: Parameters<Connection["onInitialized"]>[0]) {
-      callbacks.initialized = () => handler({});
-    },
-    onDidChangeConfiguration(handler: NonNullable<ServerCallbacks["configuration"]>) {
-      callbacks.configuration = handler;
-    },
-    onDidChangeWatchedFiles(handler: NonNullable<ServerCallbacks["watchedFiles"]>) {
-      callbacks.watchedFiles = handler;
-    },
-    onShutdown(handler: Parameters<Connection["onShutdown"]>[0]) {
-      callbacks.shutdown = () => handler(CancellationToken.None);
-    },
-    onExit(handler: NonNullable<ServerCallbacks["exit"]>) {
-      callbacks.exit = handler;
-    },
-    onDidOpenTextDocument(handler: NonNullable<ServerCallbacks["open"]>) {
-      callbacks.open = handler;
-    },
-    onDidCloseTextDocument(_handler: Parameters<Connection["onDidCloseTextDocument"]>[0]) {},
-    onDidChangeTextDocument(_handler: Parameters<Connection["onDidChangeTextDocument"]>[0]) {},
-    onHover(_handler: Parameters<Connection["onHover"]>[0]) {},
-    onCompletion(handler: Parameters<Connection["onCompletion"]>[0]) {
-      callbacks.completion = (params, token) => handler(params, token, progress);
-    },
-    onDocumentFormatting(_handler: Parameters<Connection["onDocumentFormatting"]>[0]) {},
-    client: {
-      async register(
-        _type: typeof DidChangeWatchedFilesNotification.type,
-        options: DidChangeWatchedFilesRegistrationOptions,
-      ) {
-        registrations.push(options);
-        return {
-          dispose() {
-            registrationDisposals++;
-          },
-        };
-      },
-    },
-    listen() {
-      listened = true;
-    },
-  };
+function createTestConnection(index: TemplatePathIndexController) {
+  const clientToServer = new PassThrough();
+  const serverToClient = new PassThrough();
+  const connection = createConnection(
+    new StreamMessageReader(clientToServer),
+    new StreamMessageWriter(serverToClient),
+  );
+  connection.onRequest("test/drain", () => null);
+  const client = createProtocolConnection(serverToClient, clientToServer);
+  const registrations: RegistrationParams[] = [];
+  let registrationDisposals = 0;
+
+  client.onRequest(RegistrationRequest.type, (params) => {
+    registrations.push(params);
+  });
+  client.onRequest(UnregistrationRequest.type, (params) => {
+    registrationDisposals += params.unregisterations.length;
+  });
+  client.listen();
+  // SAFETY: This in-process harness uses the real transport and protocol operations exercised by startServer;
+  // only filesystem discovery is replaced by the test index.
+  startServer({ connection, templatePathIndex: index });
+  cleanups.push(async () => {
+    await client.sendRequest("test/drain");
+    connection.dispose();
+    client.dispose();
+    clientToServer.destroy();
+    serverToClient.destroy();
+    index.dispose();
+  });
 
   return {
-    // SAFETY: This in-process fake implements every connection operation exercised by startServer;
-    // unrelated transport and protocol operations are deliberately absent from the test harness.
-    connection: connection as Connection,
-    callbacks,
+    client,
     registrations,
     get registrationDisposals() {
       return registrationDisposals;
-    },
-    get listened() {
-      return listened;
     },
   };
 }
@@ -159,16 +129,12 @@ function initializeParams(
   return {
     processId: null,
     rootUri: null,
-    capabilities: {
-      workspace: { didChangeWatchedFiles: watchedFileCapabilities },
-    },
+    capabilities: { workspace: { didChangeWatchedFiles: watchedFileCapabilities } },
     workspaceFolders: [{ name: "workspace", uri: workspaceUri }],
     initializationOptions: {
       isTrusted: false,
       configuration: {
-        django: {
-          templates: { autoDiscover: false, roots: ["theme/templates"] },
-        },
+        django: { templates: { autoDiscover: false, roots: ["theme/templates"] } },
       },
     },
   };
@@ -185,59 +151,55 @@ describe("language server template-path wiring", () => {
       },
     ];
     const index = new FakeTemplatePathIndex(patterns);
-    const fake = createFakeConnection();
-
-    startServer({ connection: fake.connection, templatePathIndex: index });
-    assert.strictEqual(fake.listened, true);
+    const harness = createTestConnection(index);
     const params = initializeParams(workspaceUri, {
       dynamicRegistration: true,
       relativePatternSupport: true,
     });
-    const response = await fake.callbacks.initialize!(params);
-    const normalizedWorkspace = getFileWorkspaceFolders(params)[0];
+    const response = await harness.client.sendRequest(InitializeRequest.type, params);
 
     assert.deepStrictEqual(index.configurations[0], {
-      workspaceFolders: [normalizedWorkspace],
+      workspaceFolders: getFileWorkspaceFolders(params),
       isTrusted: false,
       settings: { autoDiscover: false, roots: ["theme/templates"] },
     });
-    assert.ok(response && "capabilities" in response);
     const triggers = response.capabilities.completionProvider?.triggerCharacters;
-    assert.ok(triggers);
     assert.deepStrictEqual(triggers, ["%", "|", " ", "'", '"']);
-    assert.strictEqual(triggers.includes("/"), false);
-    assert.deepStrictEqual(fake.registrations, []);
+    assert.strictEqual(harness.registrations.length, 0);
 
-    await fake.callbacks.initialized!();
-    assert.deepStrictEqual(fake.registrations, [
-      {
-        watchers: patterns.map(({ baseUri, pattern }) => ({
-          globPattern: { baseUri, pattern },
-          kind: WatchKind.Create | WatchKind.Delete,
-        })),
-      },
-    ]);
-    assert.deepStrictEqual(index.expiryModes, [true, false]);
+    await harness.client.sendNotification(InitializedNotification.type, {});
+    await vi.waitFor(() => assert.deepStrictEqual(index.expiryModes, [true, false]));
+    const registration = harness.registrations[0]?.registrations[0];
+    assert.ok(registration);
+    assert.strictEqual(registration.method, DidChangeWatchedFilesNotification.method);
+    assert.deepStrictEqual(registration.registerOptions, {
+      watchers: patterns.map(({ baseUri, pattern }) => ({
+        globPattern: { baseUri, pattern },
+        kind: WatchKind.Create | WatchKind.Delete,
+      })),
+    } satisfies DidChangeWatchedFilesRegistrationOptions);
 
-    const events = [{ uri: pathToFileURL(join(process.cwd(), "new.html")).toString(), type: 1 }];
-    fake.callbacks.watchedFiles!({ changes: events });
-    assert.deepStrictEqual(index.eventBatches, [events]);
-
-    fake.callbacks.configuration!({
-      settings: {
-        django: { templates: { autoDiscover: true, roots: [] } },
-      },
+    const events = [
+      { uri: pathToFileURL(join(process.cwd(), "new.html")).toString(), type: 1 },
+    ] satisfies TemplateFileEvent[];
+    await harness.client.sendNotification(DidChangeWatchedFilesNotification.type, {
+      changes: events,
     });
-    await new Promise((resolve) => setImmediate(resolve));
-    assert.deepStrictEqual(index.configurations[1], {
-      settings: { autoDiscover: true, roots: [] },
-    });
-    assert.strictEqual(fake.registrationDisposals, 1);
-    assert.strictEqual(fake.registrations.length, 2);
+    await vi.waitFor(() => assert.deepStrictEqual(index.eventBatches, [events]));
 
-    await fake.callbacks.shutdown!();
-    fake.callbacks.exit!();
-    assert.strictEqual(fake.registrationDisposals, 2);
+    await harness.client.sendNotification(DidChangeConfigurationNotification.type, {
+      settings: { django: { templates: { autoDiscover: true, roots: [] } } },
+    });
+    await vi.waitFor(() => {
+      assert.deepStrictEqual(index.configurations[1], {
+        settings: { autoDiscover: true, roots: [] },
+      });
+      assert.strictEqual(harness.registrationDisposals, 1);
+      assert.strictEqual(harness.registrations.length, 2);
+    });
+
+    await harness.client.sendRequest(ShutdownRequest.type);
+    await vi.waitFor(() => assert.strictEqual(harness.registrationDisposals, 2));
     assert.strictEqual(index.disposed, 1);
   });
 
@@ -245,32 +207,28 @@ describe("language server template-path wiring", () => {
     const workspaceUri = pathToFileURL(join(process.cwd(), "workspace")).toString();
     const documentUri = pathToFileURL(join(process.cwd(), "workspace", "page.html")).toString();
     const index = new FakeTemplatePathIndex([]);
-    const fake = createFakeConnection();
+    const candidates = Promise.withResolvers<TemplatePathResult>();
+    index.candidateResult = candidates.promise;
+    const harness = createTestConnection(index);
     const cancellation = new CancellationTokenSource();
 
     try {
-      startServer({ connection: fake.connection, templatePathIndex: index });
-      await fake.callbacks.initialize!(initializeParams(workspaceUri, {}));
-      fake.callbacks.open!({
-        textDocument: {
-          uri: documentUri,
-          languageId: "html",
-          version: 1,
-          text: '{% include "',
-        },
+      await harness.client.sendRequest(InitializeRequest.type, initializeParams(workspaceUri, {}));
+      await harness.client.sendNotification(DidOpenTextDocumentNotification.type, {
+        textDocument: { uri: documentUri, languageId: "html", version: 1, text: '{% include "' },
       });
-
-      cancellation.cancel();
-      const completion = await fake.callbacks.completion!(
+      const completion = harness.client.sendRequest(
+        CompletionRequest.type,
         { textDocument: { uri: documentUri }, position: { line: 0, character: 12 } },
         cancellation.token,
       );
-
-      assert.strictEqual(completion, null);
-      assert.strictEqual(index.candidateRequests, 0);
+      await vi.waitFor(() => assert.strictEqual(index.candidateRequests, 1));
+      cancellation.cancel();
+      assert.strictEqual(await completion, null);
     } finally {
+      candidates.resolve({ candidates: [], isIncomplete: false });
       cancellation.dispose();
-      await fake.callbacks.shutdown!();
+      await harness.client.sendRequest(ShutdownRequest.type);
     }
   });
 
@@ -279,19 +237,18 @@ describe("language server template-path wiring", () => {
     const index = new FakeTemplatePathIndex([
       { baseUri: workspaceUri, pattern: "**/templates/**" },
     ]);
-    const fake = createFakeConnection();
-
-    startServer({ connection: fake.connection, templatePathIndex: index });
-    await fake.callbacks.initialize!(
+    const harness = createTestConnection(index);
+    await harness.client.sendRequest(
+      InitializeRequest.type,
       initializeParams(workspaceUri, {
         dynamicRegistration: true,
         relativePatternSupport: false,
       }),
     );
-    await fake.callbacks.initialized!();
-
-    assert.deepStrictEqual(fake.registrations, []);
-    assert.deepStrictEqual(index.expiryModes, [true]);
+    await harness.client.sendNotification(InitializedNotification.type, {});
+    await vi.waitFor(() => assert.deepStrictEqual(index.expiryModes, [true]));
+    assert.deepStrictEqual(harness.registrations, []);
+    await harness.client.sendRequest(ShutdownRequest.type);
   });
 
   it("normalizes only file workspace folders and falls back to rootUri", () => {
@@ -304,7 +261,9 @@ describe("language server template-path wiring", () => {
     base.rootUri = rootUri;
     const folders = getFileWorkspaceFolders(base);
     assert.strictEqual(folders.length, 1);
-    assert.strictEqual(folders[0].path.toLowerCase(), join(process.cwd(), "root").toLowerCase());
-    assert.match(folders[0].uri, /^file:/);
+    const [folder] = folders;
+    assert.ok(folder);
+    assert.strictEqual(folder.path.toLowerCase(), join(process.cwd(), "root").toLowerCase());
+    assert.match(folder.uri, /^file:/);
   });
 });

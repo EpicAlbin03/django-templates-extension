@@ -4,7 +4,10 @@ import { fileURLToPath } from "url";
 import { Logger } from "./logger.js";
 import { z } from "zod";
 
-type Prettier = typeof import("prettier");
+export type PrettierApi = Pick<
+  typeof import("prettier"),
+  "format" | "resolveConfig" | "getFileInfo" | "getSupportInfo"
+>;
 
 const require = createRequire(import.meta.url);
 const serverDirectory = dirname(fileURLToPath(import.meta.url));
@@ -43,7 +46,7 @@ const prettierApiSchema = z.object({
   getFileInfo: z.function(),
   getSupportInfo: z.function(),
 });
-const prettierSchema = z.custom<Prettier>((value) => prettierApiSchema.safeParse(value).success);
+const prettierSchema = z.custom<PrettierApi>((value) => prettierApiSchema.safeParse(value).success);
 
 export function getPackageInfo(packageName: string, fromPath: string, useFallback = true) {
   const paths: string[] = [];
@@ -77,10 +80,10 @@ export function getPackageInfo(packageName: string, fromPath: string, useFallbac
   };
 }
 
-export function importPrettier(fromPath: string): Prettier {
+export function importPrettier(fromPath: string): PrettierApi {
   const pkg = getPackageInfo("prettier", fromPath);
   const main = resolve(pkg.path);
-  Logger.debug("Using Prettier v" + pkg.version.full, "from", main);
+  Logger.debug({ event: "formatter.prettier", version: pkg.version.full, path: main });
   return dynamicRequire(
     main,
     prettierSchema,

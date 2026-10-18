@@ -44,6 +44,11 @@ export default defineConfig({
     rules: {
       "vite-plus/prefer-vite-plus-imports": "error",
       "oxc/no-accumulating-spread": "error",
+      "no-console": ["error", { allow: ["error"] }],
+      "typescript/no-explicit-any": "error",
+      "typescript/no-non-null-assertion": "error",
+      "typescript/consistent-type-assertions": ["error", { assertionStyle: "never" }],
+      "typescript/switch-exhaustiveness-check": "error",
       "anti-slop/no-array-filter-map": "error",
       "anti-slop/no-reduce-accumulator-copy": "error",
       "anti-slop/no-chained-type-assertions": "error",

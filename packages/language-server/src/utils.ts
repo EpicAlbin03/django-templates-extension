@@ -29,9 +29,7 @@ export function isNotNullOrUndefined<T>(val: T | undefined | null): val is T {
  * If the object if it has entries, else undefined
  */
 export function returnObjectIfHasKeys<T>(obj: T | undefined): T | undefined {
-  if (Object.keys(obj || {}).length > 0) {
-    return obj;
-  }
+  return Object.keys(obj || {}).length > 0 ? obj : undefined;
 }
 
 const fileNameLowerCaseRegExp = /[^\u0130\u0131\u00DFa-z0-9\\/:\-_. ]+/g;

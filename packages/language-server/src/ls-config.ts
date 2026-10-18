@@ -2,12 +2,10 @@ import type { Options, ResolveConfigOptions } from "prettier";
 import type { FormattingOptions } from "vscode-languageserver-types";
 import { z } from "zod";
 
-export interface PrettierEditorFields {
-  useEditorConfig?: boolean;
-  ignorePath?: string | string[];
-  config?: string;
-  pluginSearchDirs?: false | string[];
-}
+export type PrettierEditorFields = Pick<
+  z.infer<typeof prettierEditorConfigSchema>,
+  "useEditorConfig" | "ignorePath" | "config" | "pluginSearchDirs"
+>;
 
 export type PrettierEditorConfig = Options & PrettierEditorFields;
 
@@ -122,16 +120,17 @@ const prettierEditorConfigSchema = z
       .catch(undefined),
   })
   .catch({})
-  .transform((config): PrettierEditorConfig => {
-    for (const key of Object.keys(config)) {
-      // SAFETY: Object.keys enumerates only properties of this schema-validated configuration.
-      const option = key as keyof typeof config;
-      if (config[option] === undefined) {
-        delete config[option];
-      }
+  .transform(omitUndefinedOptions);
+
+function omitUndefinedOptions<Config extends object>(config: Config): Config {
+  for (const option in config) {
+    // SAFETY: Only undefined properties of this schema-validated configuration are removed.
+    if (config[option] === undefined) {
+      delete config[option];
     }
-    return config;
-  });
+  }
+  return config;
+}
 
 export const normalizePrettierConfig = prettierEditorConfigSchema.parse.bind(
   prettierEditorConfigSchema,

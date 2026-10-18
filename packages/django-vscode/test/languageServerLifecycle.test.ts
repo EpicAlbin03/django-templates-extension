@@ -2,20 +2,8 @@ import * as assert from "node:assert/strict";
 import { describe, it } from "vite-plus/test";
 import { createLanguageServerLifecycle } from "../src/languageServerLifecycle.ts";
 
-type Deferred = {
-  promise: Promise<void>;
-  resolve(): void;
-  reject(error: Error): void;
-};
-
-function deferred(): Deferred {
-  let resolvePromise!: () => void;
-  let rejectPromise!: (error: Error) => void;
-  const promise = new Promise<void>((resolve, reject) => {
-    resolvePromise = resolve;
-    rejectPromise = reject;
-  });
-  return { promise, resolve: resolvePromise, reject: rejectPromise };
+function deferred() {
+  return Promise.withResolvers<void>();
 }
 
 function createHarness(restart: () => Promise<void> = async () => {}) {

@@ -90,7 +90,8 @@ describe("DjangoPlugin", () => {
     assert.strictEqual(completions.isIncomplete, false);
     const blockCompletion = completions.items.find((item) => item.label === "block");
     assert.notStrictEqual(blockCompletion, undefined);
-    assert.strictEqual(blockCompletion!.kind, CompletionItemKind.Keyword);
+    assert.ok(blockCompletion);
+    assert.strictEqual(blockCompletion.kind, CompletionItemKind.Keyword);
   });
 
   it("returns Django filter completions after pipes", async () => {
@@ -100,7 +101,8 @@ describe("DjangoPlugin", () => {
     assert.strictEqual(completions.isIncomplete, false);
     const defaultCompletion = completions.items.find((item) => item.label === "default");
     assert.notStrictEqual(defaultCompletion, undefined);
-    assert.strictEqual(defaultCompletion!.kind, CompletionItemKind.Function);
+    assert.ok(defaultCompletion);
+    assert.strictEqual(defaultCompletion.kind, CompletionItemKind.Function);
   });
 
   it("returns no completions outside Django contexts", async () => {
@@ -156,14 +158,8 @@ describe("DjangoPlugin", () => {
   it("releases a cancelled completion while another request shares its discovery", async () => {
     const cancellation = new CancellationTokenSource();
     let scans = 0;
-    let releaseScan!: () => void;
-    let markScanStarted!: () => void;
-    const scanStarted = new Promise<void>((resolve) => {
-      markScanStarted = resolve;
-    });
-    const scanPause = new Promise<void>((resolve) => {
-      releaseScan = resolve;
-    });
+    const { promise: scanStarted, resolve: markScanStarted } = Promise.withResolvers<void>();
+    const { promise: scanPause, resolve: releaseScan } = Promise.withResolvers<void>();
     const provider = new TemplatePathIndex({
       workspaceFolders: ["/workspace"],
       async scanWorkspace() {
@@ -285,6 +281,7 @@ describe("DjangoPlugin", () => {
     const edits = await plugin.formatDocument(document, { tabSize: 2, insertSpaces: true });
 
     assert.strictEqual(edits.length, 1);
+    assert.ok(edits[0]);
     assert.strictEqual(
       edits[0].newText,
       `<div>
@@ -442,6 +439,7 @@ describe("DjangoPlugin", () => {
     );
 
     assert.strictEqual(edits.length, 1);
+    assert.ok(edits[0]);
     assert.match(edits[0].newText, /{% if user %}/);
   });
 

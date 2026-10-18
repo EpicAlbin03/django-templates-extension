@@ -372,7 +372,7 @@ describe("TemplatePathIndex", () => {
         },
       });
       assert.strictEqual(
-        (await index.getCandidates(null, "same")).candidates[0].sourcePath,
+        (await index.getCandidates(null, "same")).candidates[0]?.sourcePath,
         appSource,
       );
 
@@ -381,7 +381,7 @@ describe("TemplatePathIndex", () => {
       const result = await index.getCandidates(null, "same");
 
       assert.deepStrictEqual(names(result), ["same.html"]);
-      assert.strictEqual(result.candidates[0].sourcePath, projectSource);
+      assert.strictEqual(result.candidates[0]?.sourcePath, projectSource);
       assert.strictEqual(scans, 1);
     } finally {
       rmSync(workspace, { recursive: true, force: true });
@@ -535,14 +535,8 @@ describe("TemplatePathIndex", () => {
   it("marks ambiguous directory changes dirty and prevents a stale scan from winning a race", async () => {
     const workspace = temporaryWorkspace();
     let scans = 0;
-    let releaseFirstScan!: () => void;
-    let markFirstScanReady!: () => void;
-    const firstScanReady = new Promise<void>((resolve) => {
-      markFirstScanReady = resolve;
-    });
-    const firstScanPause = new Promise<void>((resolve) => {
-      releaseFirstScan = resolve;
-    });
+    const { promise: firstScanReady, resolve: markFirstScanReady } = Promise.withResolvers<void>();
+    const { promise: firstScanPause, resolve: releaseFirstScan } = Promise.withResolvers<void>();
     try {
       createFile(join(workspace, "templates", "before.html"));
       const index = new TemplatePathIndex({

@@ -42,6 +42,15 @@ describe("formatDocumentForProtocol", () => {
       console.error = originalConsoleError;
     }
 
-    assert.deepStrictEqual(calls, [["Failed to format Django template", failure]]);
+    assert.deepStrictEqual(calls, [
+      [
+        {
+          level: "error",
+          event: "formatter.failed",
+          uri: document.uri,
+          error: failure,
+        },
+      ],
+    ]);
   });
 });

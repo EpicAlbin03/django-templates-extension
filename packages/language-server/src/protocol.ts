@@ -1,35 +1,11 @@
 import { z } from "zod";
-import { normalizePrettierConfig, type PrettierEditorConfig } from "./ls-config.js";
+import { normalizePrettierConfig } from "./ls-config.js";
 
-export interface HandledCapabilities {
-  documentFormattingProvider: boolean;
-}
-
-export interface DjangoSettings {
-  "language-server"?: {
-    debug: boolean;
-  };
-  templates: {
-    autoDiscover: boolean;
-    roots: string[];
-  };
-}
-
-export interface ServerConfiguration {
-  django: DjangoSettings;
-  prettier: PrettierEditorConfig;
-}
-
-export interface InitializationOptions {
-  isTrusted: boolean;
-  handledCapabilities: HandledCapabilities;
-  configuration: ServerConfiguration;
-}
-
-export interface ConfigurationChangePayload {
-  django: DjangoSettings;
-  prettier: PrettierEditorConfig;
-}
+export type HandledCapabilities = z.infer<typeof handledCapabilitiesSchema>;
+export type DjangoSettings = z.infer<typeof djangoSettingsSchema>;
+export type ServerConfiguration = z.infer<typeof configurationChangeSchema>;
+export type InitializationOptions = z.infer<typeof initializationOptionsSchema>;
+export type ConfigurationChangePayload = ServerConfiguration;
 
 const handledCapabilitiesSchema = z
   .object({ documentFormattingProvider: z.boolean().catch(false) })
@@ -51,7 +27,7 @@ const djangoSettingsSchema = z
     templates: templateSettingsSchema,
   })
   .catch({ templates: { autoDiscover: true, roots: [] } })
-  .transform((settings): DjangoSettings => {
+  .transform((settings) => {
     if (settings["language-server"] === undefined) {
       delete settings["language-server"];
     }
@@ -61,7 +37,7 @@ const djangoSettingsSchema = z
 const configurationChangeSchema = z
   .object({ django: z.unknown().optional(), prettier: z.unknown().optional() })
   .catch({})
-  .transform((settings): ConfigurationChangePayload => ({
+  .transform((settings) => ({
     django: djangoSettingsSchema.parse(settings.django),
     prettier: normalizePrettierConfig(settings.prettier),
   }));
@@ -76,7 +52,7 @@ const initializationOptionsSchema = z
     prettierConfig: z.unknown().optional(),
   })
   .catch({ configuration: {} })
-  .transform((options): InitializationOptions => ({
+  .transform((options) => ({
     // Preserve the standalone server default, but treat malformed explicit values as untrusted.
     isTrusted: Object.prototype.hasOwnProperty.call(options, "isTrusted")
       ? options.isTrusted === true

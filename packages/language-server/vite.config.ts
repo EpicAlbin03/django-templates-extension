@@ -11,7 +11,7 @@ export default defineConfig({
       alwaysBundle: [lspDependencies, /^zod(?:\/|$)/],
       neverBundle: [/^prettier(?:\/|$)/, /^prettier-plugin-django-templates(?:\/|$)/],
       dts: {
-        neverBundle: [lspDependencies],
+        neverBundle: [lspDependencies, /^zod(?:\/|$)/],
       },
     },
   },

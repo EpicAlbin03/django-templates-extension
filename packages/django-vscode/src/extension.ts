@@ -1,7 +1,8 @@
 import { commands, ExtensionMode, languages, Range, TextEdit, window, workspace } from "vscode";
 import type { ExtensionContext } from "vscode";
 import { RevealOutputChannelOn } from "vscode-languageclient";
-import type { LanguageClientOptions } from "vscode-languageclient";
+import { DocumentFormattingRequest } from "vscode-languageclient";
+import type { LanguageClientOptions, TextEdit as ProtocolTextEdit } from "vscode-languageclient";
 import { LanguageClient, TransportKind } from "vscode-languageclient/node";
 import type { ServerOptions } from "vscode-languageclient/node";
 import { versions } from "node:process";
@@ -21,21 +22,13 @@ import {
   type ServerConfigurationError,
 } from "./serverOptions.ts";
 
-const [nodeMajor, nodeMinor] = (versions?.node ?? "0.0.0-unknown").split(".", 3).map(Number);
+const [nodeMajor = 0, nodeMinor = 0] = versions.node.split(".", 3).map(Number);
 
 const addExperimentalStripTypesFlag =
   (nodeMajor === 22 && nodeMinor > 5 && nodeMinor < 18) || // flag added in 22.6.0, removed in 22.18.0
   (nodeMajor === 23 && nodeMinor < 6); // flag removed in 23.6.0
 
 const djangoDocumentSelector = [{ language: "html" }];
-
-type ProtocolTextEdit = {
-  range: {
-    start: { line: number; character: number };
-    end: { line: number; character: number };
-  };
-  newText: string;
-};
 
 type DjangoLanguageServer = LanguageServerLifecycle<LanguageClient>;
 
@@ -60,8 +53,8 @@ export function activate(context: ExtensionContext) {
 
         try {
           await client.start();
-          const edits = await client.sendRequest<ProtocolTextEdit[] | null>(
-            "textDocument/formatting",
+          const edits = await client.sendRequest(
+            DocumentFormattingRequest.type,
             {
               textDocument: { uri: document.uri.toString() },
               options: {

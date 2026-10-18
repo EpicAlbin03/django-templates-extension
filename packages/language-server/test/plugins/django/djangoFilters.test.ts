@@ -26,7 +26,8 @@ describe("Django filter documentation", () => {
   });
 
   it("renders the filter signature, description, load instruction, and reference", () => {
-    const intcomma = djangoFilterDocsByName.get("intcomma")!;
+    const intcomma = djangoFilterDocsByName.get("intcomma");
+    assert.ok(intcomma);
 
     assert.strictEqual(
       renderFilterDocumentation(intcomma),
@@ -35,7 +36,8 @@ describe("Django filter documentation", () => {
   });
 
   it("renders usage examples in hover documentation for non-obvious filters", () => {
-    const defaultDoc = djangoFilterDocsByName.get("default")!;
+    const defaultDoc = djangoFilterDocsByName.get("default");
+    assert.ok(defaultDoc);
     const hover = renderFilterHoverDocumentation(defaultDoc);
 
     assert.match(hover, /#### Usage/);
@@ -51,7 +53,9 @@ describe("Django filter documentation", () => {
   });
 
   it("marks filters removed from current Django versions", () => {
-    const lengthIs = renderFilterDocumentation(djangoFilterDocsByName.get("length_is")!);
+    const doc = djangoFilterDocsByName.get("length_is");
+    assert.ok(doc);
+    const lengthIs = renderFilterDocumentation(doc);
 
     assert.match(lengthIs, /\*\*Deprecated:\*\* Removed in Django 4\.0/);
     assert.match(lengthIs, /docs\.djangoproject\.com\/en\/3\.2/);
@@ -59,7 +63,9 @@ describe("Django filter documentation", () => {
 
   it("keeps sorl-thumbnail references on the official documentation host", () => {
     for (const filterName of ["background_margin", "markdown_thumbnails", "html_thumbnails"]) {
-      const reference = djangoFilterDocsByName.get(filterName)!.reference;
+      const doc = djangoFilterDocsByName.get(filterName);
+      assert.ok(doc);
+      const reference = doc.reference;
       assert.match(reference, /^https:\/\/sorl-thumbnail\.readthedocs\.io\//);
     }
   });
@@ -81,14 +87,14 @@ describe("Django filter documentation", () => {
   });
 
   it("uses the same rich documentation for filter completions", () => {
-    const lower = djangoFilterCompletionItems.find((item) => item.label === "lower")!;
+    const lower = djangoFilterCompletionItems.find((item) => item.label === "lower");
+    assert.ok(lower);
     const documentation = lower.documentation;
     assert.ok(documentation && MarkupContent.is(documentation));
 
     assert.strictEqual(documentation.kind, MarkupKind.Markdown);
-    assert.strictEqual(
-      documentation.value,
-      renderFilterDocumentation(djangoFilterDocsByName.get("lower")!),
-    );
+    const doc = djangoFilterDocsByName.get("lower");
+    assert.ok(doc);
+    assert.strictEqual(documentation.value, renderFilterDocumentation(doc));
   });
 });
