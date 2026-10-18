@@ -1,5 +1,5 @@
 import { lstat, readdir, realpath } from "node:fs/promises";
-import { isAbsolute, relative, resolve, sep } from "node:path";
+import { basename, isAbsolute, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { z } from "zod";
 import type { FileEvent } from "vscode-languageserver";
@@ -281,7 +281,8 @@ export class TemplatePathIndex implements TemplatePathProvider {
 
     for (const state of this.states) {
       if (this.settings.autoDiscover) {
-        addWatchPattern(patterns, seen, state.folder.uri, "**/templates/**");
+        const pattern = basename(state.folder.path) === "templates" ? "**/*" : "**/templates/**";
+        addWatchPattern(patterns, seen, state.folder.uri, pattern);
       }
       for (const root of this.resolveConfiguredRoots(state.folder)) {
         addWatchPattern(patterns, seen, pathToFileURL(root).toString(), "**/*");
@@ -639,7 +640,7 @@ async function discoverConventionalRoots(
   workspacePath: string,
   readDirectory: (directory: string) => Promise<TemplateDirectoryEntry[]>,
 ): Promise<string[]> {
-  if (workspacePath.split(sep).at(-1) === "templates") {
+  if (basename(workspacePath) === "templates") {
     return [workspacePath];
   }
 

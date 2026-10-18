@@ -136,6 +136,37 @@ describe("TemplatePathIndex", () => {
     }
   });
 
+  it("watches all files when the workspace itself is a templates root", async () => {
+    const parent = temporaryWorkspace();
+    const workspace = join(parent, "templates");
+    const index = new TemplatePathIndex({ workspaceFolders: [workspace] });
+    try {
+      createFile(join(workspace, "base.html"));
+      assert.deepStrictEqual(index.getWatchPatterns(), [
+        { baseUri: pathToFileURL(workspace).toString(), pattern: "**/*" },
+      ]);
+      index.setRequestDrivenExpiry(false);
+      assert.deepStrictEqual(names(await index.getCandidates(null, "")), ["base.html"]);
+
+      const added = join(workspace, "partials", "card.html");
+      createFile(added);
+      await index.applyFileEvents([{ uri: pathToFileURL(added).toString(), type: 1 }]);
+      assert.deepStrictEqual(names(await index.getCandidates(null, "")), [
+        "base.html",
+        "partials/card.html",
+      ]);
+      unlinkSync(added);
+      await index.applyFileEvents([{ uri: pathToFileURL(added).toString(), type: 3 }]);
+      assert.deepStrictEqual(names(await index.getCandidates(null, "")), ["base.html"]);
+
+      index.configure({ settings: { autoDiscover: false, roots: [] } });
+      assert.deepStrictEqual(index.getWatchPatterns(), []);
+    } finally {
+      index.dispose();
+      rmSync(parent, { recursive: true, force: true });
+    }
+  });
+
   it("deduplicates logical names, sorts them, bounds results, and reports incompleteness", async () => {
     const workspace = temporaryWorkspace();
     try {
