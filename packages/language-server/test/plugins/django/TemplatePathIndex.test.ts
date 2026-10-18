@@ -211,6 +211,47 @@ describe("TemplatePathIndex", () => {
     }
   });
 
+  it("uses the current folder list when workspace changes overlap an in-flight scan", async () => {
+    const parent = temporaryWorkspace();
+    const first = join(parent, "first");
+    const second = join(parent, "second");
+    const scanReady = Promise.withResolvers<void>();
+    const resumeScan = Promise.withResolvers<void>();
+    const scannedFolders: string[] = [];
+    const index = new TemplatePathIndex({
+      workspaceFolders: [first],
+      async scanWorkspace(folder, scan) {
+        scannedFolders.push(folder.path);
+        const result = await scan();
+        if (folder.path === first) {
+          scanReady.resolve();
+          await resumeScan.promise;
+        }
+        return result;
+      },
+    });
+    try {
+      createFile(join(first, "templates", "first.html"));
+      createFile(join(second, "templates", "second.html"));
+      const pending = index.getCandidates(null, "");
+      await scanReady.promise;
+      index.configure({ workspaceFolders: [second] });
+      index.configure({ workspaceFolders: [] });
+      index.configure({ workspaceFolders: [second] });
+      assert.deepStrictEqual(scannedFolders, [first]);
+      assert.deepStrictEqual(index.getWatchPatterns(), [
+        { baseUri: pathToFileURL(second).toString(), pattern: "**/templates/**" },
+      ]);
+      resumeScan.resolve();
+      assert.deepStrictEqual(names(await pending), ["second.html"]);
+      assert.deepStrictEqual(names(await index.getCandidates(null, "")), ["second.html"]);
+    } finally {
+      resumeScan.resolve();
+      index.dispose();
+      rmSync(parent, { recursive: true, force: true });
+    }
+  });
+
   it("accepts absolute and escaping roots only in trusted workspaces", async () => {
     const parent = temporaryWorkspace();
     const workspace = join(parent, "workspace");

@@ -174,8 +174,13 @@ export class TemplatePathIndex implements TemplatePathProvider {
     if (this.disposed) {
       return { candidates: [], isIncomplete: false };
     }
+    const workspaceStates = this.states;
     const states = this.selectStates(documentPath);
     await Promise.all(states.map((state) => this.ensureFresh(state)));
+    if (workspaceStates !== this.states) {
+      // A folder update can replace the selected states while their scans are in flight.
+      return this.getCandidates(documentPath, prefix);
+    }
 
     const normalizedPrefix = prefix.replace(/\\/g, "/");
     const cursors = states.map((state) => ({

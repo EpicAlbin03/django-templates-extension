@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import {
   DidChangeWatchedFilesNotification,
   ErrorCodes,
@@ -75,6 +76,8 @@ export function startServer(options?: LSOptions) {
   const templatePathIndex =
     options?.templatePathIndex ?? new TemplatePathIndex({ workspaceFolders: [] });
   const djangoPlugin = new DjangoPlugin(configManager, templatePathIndex);
+  let workspaceFolders: TemplateWorkspaceFolder[] = [];
+  let supportsWorkspaceFolderChanges = false;
   let supportsRelativeWatcherRegistration = false;
   let initialized = false;
   let watcherRegistration: Disposable | null = null;
@@ -82,7 +85,8 @@ export function startServer(options?: LSOptions) {
   let disposed = false;
 
   connection.onInitialize((evt) => {
-    const workspaceFolders = getFileWorkspaceFolders(evt);
+    workspaceFolders = getFileWorkspaceFolders(evt);
+    supportsWorkspaceFolderChanges = evt.capabilities.workspace?.workspaceFolders === true;
     Logger.log({
       event: "server.initialize",
       workspaceFolders: workspaceFolders.map((folder) => folder.uri),
@@ -109,6 +113,7 @@ export function startServer(options?: LSOptions) {
 
     return {
       capabilities: {
+        workspace: { workspaceFolders: { supported: true, changeNotifications: true } },
         textDocumentSync: {
           openClose: true,
           change: TextDocumentSyncKind.Incremental,
@@ -126,6 +131,20 @@ export function startServer(options?: LSOptions) {
 
   connection.onInitialized(() => {
     initialized = true;
+    if (supportsWorkspaceFolderChanges) {
+      // The workspace-folder event is available only after client capability negotiation.
+      connection.workspace.onDidChangeWorkspaceFolders(({ added, removed }) => {
+        const removedUris = new Set(
+          normalizeFileWorkspaceFolders(removed).map((folder) => folder.uri),
+        );
+        workspaceFolders = normalizeFileWorkspaceFolders([
+          ...workspaceFolders.filter((folder) => !removedUris.has(folder.uri)),
+          ...added,
+        ]);
+        templatePathIndex.configure({ workspaceFolders });
+        void refreshWatcherRegistration();
+      });
+    }
     return refreshWatcherRegistration();
   });
 
@@ -233,18 +252,26 @@ export function getFileWorkspaceFolders(evt: InitializeParams): TemplateWorkspac
       : evt.rootUri
         ? [{ name: "", uri: evt.rootUri }]
         : [];
+  return normalizeFileWorkspaceFolders(candidates);
+}
+
+function normalizeFileWorkspaceFolders(
+  candidates: Array<Pick<TemplateWorkspaceFolder, "uri" | "name">>,
+): TemplateWorkspaceFolder[] {
   const folders: TemplateWorkspaceFolder[] = [];
+  const seen = new Set<string>();
 
   for (const candidate of candidates) {
     try {
-      const uri = URI.parse(candidate.uri);
-      if (uri.scheme !== "file") {
-        continue;
-      }
+      const uri = URI.file(fileURLToPath(candidate.uri));
       const folder: TemplateWorkspaceFolder = {
         uri: uri.toString(),
         path: uri.fsPath,
       };
+      if (seen.has(folder.uri)) {
+        continue;
+      }
+      seen.add(folder.uri);
       if (candidate.name) {
         folder.name = candidate.name;
       }
