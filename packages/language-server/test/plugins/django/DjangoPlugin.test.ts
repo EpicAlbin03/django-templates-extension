@@ -1,5 +1,5 @@
 import * as assert from "assert";
-import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setImmediate as nextTurn } from "node:timers/promises";
@@ -363,6 +363,58 @@ describe("DjangoPlugin", () => {
       }),
       [],
     );
+  });
+
+  it("discovers the nearest ignore file for each document independently of the server cwd", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "django-template-ignore-roots-"));
+    const text = "<div>{% if user %}<span>{{ user }}</span>{% endif %}</div>\n";
+    const plugin = new DjangoPlugin(new LSConfigManager());
+    try {
+      for (const [root, ignored] of [
+        ["first", "one.html"],
+        ["second", "two.html"],
+      ] as const) {
+        const project = join(directory, root);
+        const templates = join(project, "templates");
+        mkdirSync(templates, { recursive: true });
+        writeFileSync(join(project, ".prettierignore"), `templates/${ignored}\n`);
+        for (const name of ["one.html", "two.html"]) {
+          const filePath = join(templates, name);
+          writeFileSync(filePath, text);
+          const edits = await plugin.formatDocument(
+            new Document(pathToFileURL(filePath).toString(), text),
+            { tabSize: 2, insertSpaces: true },
+          );
+          assert.strictEqual(edits.length, name === ignored ? 0 : 1);
+        }
+      }
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("resolves relative custom ignore paths and arrays from document ancestors", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "django-template-custom-ignore-"));
+    const templates = join(directory, "templates");
+    const filePath = join(templates, "ignored.html");
+    const text = "<div>{% if user %}Hello{% endif %}</div>\n";
+    try {
+      mkdirSync(templates);
+      writeFileSync(filePath, text);
+      writeFileSync(join(directory, "custom.ignore"), "templates/ignored.html\n");
+      for (const ignorePath of ["custom.ignore", ["missing.ignore", "custom.ignore"]]) {
+        const configManager = new LSConfigManager();
+        configManager.updatePrettierConfig({ ignorePath });
+        const plugin = new DjangoPlugin(configManager);
+        const edits = await plugin.formatDocument(
+          new Document(pathToFileURL(filePath).toString(), text),
+          { tabSize: 2, insertSpaces: true },
+        );
+        assert.deepStrictEqual(edits, []);
+      }
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 
   it("returns no edits when formatting is unchanged", async () => {

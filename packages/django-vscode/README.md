@@ -33,6 +33,10 @@ Set Django Templates as the formatter for HTML files:
 
 Then use **Format Document** or enable `editor.formatOnSave`.
 
+Formatting uses the closest ancestor `.prettierignore` for each document. Relative
+`prettier.ignorePath` settings are also searched from the document's directory upwards;
+absolute ignore paths are used as-is. This is independent of the language server's working directory.
+
 ### Completions
 
 Provides LSP completions for Django template tags, filters, and template paths.

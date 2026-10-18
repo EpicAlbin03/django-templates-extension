@@ -1,5 +1,6 @@
+import { access } from "node:fs/promises";
 import { createRequire } from "node:module";
-import { dirname, isAbsolute } from "path";
+import { dirname, isAbsolute, resolve } from "path";
 import { URL, fileURLToPath } from "url";
 import type { Options, Plugin } from "prettier";
 import { z } from "zod";
@@ -102,7 +103,7 @@ export class DjangoPlugin implements CompletionProvider, FormattingProvider, Hov
 
     const { prettier, config, resolvedPlugins } = await this.getFormatter(filePath, options);
     const fileInfo = await prettier.getFileInfo(filePath, {
-      ignorePath: this.configManager.getIgnorePath(),
+      ignorePath: await resolveIgnorePaths(filePath, this.configManager.getIgnorePath()),
       withNodeModules: true,
       resolveConfig: false,
     });
@@ -189,6 +190,38 @@ export class DjangoPlugin implements CompletionProvider, FormattingProvider, Hov
       isPluginObject(plugin) &&
       !!plugin.languages?.find((language) => hasDjangoParser(language.parsers))
     );
+  }
+}
+
+async function resolveIgnorePaths(
+  filePath: string,
+  ignorePath: string | string[] | undefined,
+): Promise<string[] | undefined> {
+  if (ignorePath === undefined) {
+    return undefined;
+  }
+  const paths = Array.isArray(ignorePath) ? ignorePath : [ignorePath];
+  return Promise.all(paths.map((path) => findIgnoreFile(filePath, path)));
+}
+
+async function findIgnoreFile(filePath: string, ignorePath: string): Promise<string> {
+  if (isAbsolute(ignorePath)) {
+    return ignorePath;
+  }
+  let directory = dirname(filePath);
+  while (true) {
+    const candidate = resolve(directory, ignorePath);
+    try {
+      await access(candidate);
+      return candidate;
+    } catch {
+      // Relative ignore files belong to the document's ancestors, never the server's cwd.
+    }
+    const parent = dirname(directory);
+    if (parent === directory) {
+      return resolve(dirname(filePath), ignorePath);
+    }
+    directory = parent;
   }
 }
 
