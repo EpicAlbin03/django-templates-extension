@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.1.2
+
+### Patch Changes
+
+- [#6](https://github.com/EpicAlbin03/django-templates-extension/pull/6) [`954aab2`](https://github.com/EpicAlbin03/django-templates-extension/commit/954aab216adf862fc0540e04f69eb51e560ca6d7) Thanks [@EpicAlbin03](https://github.com/EpicAlbin03)! - Replace the complete template path when accepting a completion in the middle of a quoted path, preserving the surrounding quotes and template tag delimiters.
+
+- [#6](https://github.com/EpicAlbin03/django-templates-extension/pull/6) [`954aab2`](https://github.com/EpicAlbin03/django-templates-extension/commit/954aab216adf862fc0540e04f69eb51e560ca6d7) Thanks [@EpicAlbin03](https://github.com/EpicAlbin03)! - Resolve relative formatter ignore files from each document's directory and ancestors instead of the language server's working directory.
+
+- [#6](https://github.com/EpicAlbin03/django-templates-extension/pull/6) [`954aab2`](https://github.com/EpicAlbin03/django-templates-extension/commit/954aab216adf862fc0540e04f69eb51e560ca6d7) Thanks [@EpicAlbin03](https://github.com/EpicAlbin03)! - Format plain HTML and untitled documents without requiring Django template tags. Use only bundled formatter dependencies and editor options for untitled documents, without discovering project configuration or plugins.
+
+- [#6](https://github.com/EpicAlbin03/django-templates-extension/pull/6) [`ce4fd34`](https://github.com/EpicAlbin03/django-templates-extension/commit/ce4fd347e4a1ac702ae944d0e137a6343a874af1) Thanks [@EpicAlbin03](https://github.com/EpicAlbin03)! - Load the Node entrypoint of prettier-plugin-django-templates instead of its browser build.
+
+- [#6](https://github.com/EpicAlbin03/django-templates-extension/pull/6) [`954aab2`](https://github.com/EpicAlbin03/django-templates-extension/commit/954aab216adf862fc0540e04f69eb51e560ca6d7) Thanks [@EpicAlbin03](https://github.com/EpicAlbin03)! - Refresh template indexing and file watchers when workspace folders are added or removed, and discard stale scan results when folders change during a completion request.
+
+- [#6](https://github.com/EpicAlbin03/django-templates-extension/pull/6) [`ce4fd34`](https://github.com/EpicAlbin03/django-templates-extension/commit/ce4fd347e4a1ac702ae944d0e137a6343a874af1) Thanks [@EpicAlbin03](https://github.com/EpicAlbin03)! - Use schema-based validation for initialization options, Django settings, Prettier configuration, and workspace Prettier packages while preserving safe defaults for malformed configuration. E.g. add Zod.
+
+- [#6](https://github.com/EpicAlbin03/django-templates-extension/pull/6) [`ce4fd34`](https://github.com/EpicAlbin03/django-templates-extension/commit/ce4fd347e4a1ac702ae944d0e137a6343a874af1) Thanks [@EpicAlbin03](https://github.com/EpicAlbin03)! - Write structured language-server diagnostics to stderr and let the LSP transport handle dependency console output in stdio mode to keep protocol stdout free of log messages.
+
+- [#6](https://github.com/EpicAlbin03/django-templates-extension/pull/6) [`e87e94e`](https://github.com/EpicAlbin03/django-templates-extension/commit/e87e94ed9cba9252eef4e222833ccb493d493fcc) Thanks [@EpicAlbin03](https://github.com/EpicAlbin03)! - Update prettier-plugin-django-templates to v0.3.1.
+
+- [#6](https://github.com/EpicAlbin03/django-templates-extension/pull/6) [`954aab2`](https://github.com/EpicAlbin03/django-templates-extension/commit/954aab216adf862fc0540e04f69eb51e560ca6d7) Thanks [@EpicAlbin03](https://github.com/EpicAlbin03)! - Watch template file changes when the workspace folder itself is named `templates`, keeping template path completions up to date.
+
 ## 0.1.1
 
 ### Patch Changes
