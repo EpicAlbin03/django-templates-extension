@@ -71,7 +71,7 @@ describe("Django filter documentation", () => {
   });
 
   it("keeps every supported filter in the manual hover fixture", () => {
-    const fixtureUrl = new URL("../../../../../test-filters.html", import.meta.url);
+    const fixtureUrl = new URL("../../../../../examples/test-filters.html", import.meta.url);
     const fixture = readFileSync(fixtureUrl, "utf8");
 
     for (const doc of djangoFilterDocs) {
