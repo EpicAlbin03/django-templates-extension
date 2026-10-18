@@ -190,6 +190,25 @@ function getTemplatePathContext(
     return null;
   }
   const prefixStart = block.contentStart + quoteState.start + 1;
+  const text = document.getText();
+  let replacementEnd = offset;
+  while (replacementEnd < text.length) {
+    if (
+      (text[replacementEnd] === quoteState.quote && !isEscaped(text, replacementEnd)) ||
+      text.startsWith(block.closeDelimiter, replacementEnd) ||
+      text[replacementEnd] === "\n" ||
+      text[replacementEnd] === "\r"
+    ) {
+      break;
+    }
+    replacementEnd++;
+  }
+  // An unfinished quote must not consume the tag delimiter or its preceding whitespace.
+  if (text[replacementEnd] !== quoteState.quote) {
+    while (replacementEnd > offset && /\s/.test(text.charAt(replacementEnd - 1))) {
+      replacementEnd--;
+    }
+  }
   return {
     type: "template-path",
     kind: "template-path",
@@ -199,7 +218,7 @@ function getTemplatePathContext(
     quote: quoteState.quote,
     replacementRange: {
       start: document.positionAt(prefixStart),
-      end: document.positionAt(offset),
+      end: document.positionAt(replacementEnd),
     },
   };
 }

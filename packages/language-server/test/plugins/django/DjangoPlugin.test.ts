@@ -252,6 +252,37 @@ describe("DjangoPlugin", () => {
     ]);
   });
 
+  it("replaces the whole template path when completing in the middle of a string", async () => {
+    const provider: TemplatePathProvider = {
+      async getCandidates() {
+        return {
+          candidates: [
+            { name: "base.html", sourcePath: "/templates/base.html", rootPath: "/templates" },
+          ],
+          isIncomplete: false,
+        };
+      },
+    };
+    for (const [textWithCursor, expected] of [
+      ['{% include "ba█se.html" with value=value %}', '{% include "base.html" with value=value %}'],
+      ["{% extends 'ba█se.html' %}", "{% extends 'base.html' %}"],
+      ['{% include "ba█se\\\"old.html" %}', '{% include "base.html" %}'],
+      ['{% include "ba█se.html %}<div>keep</div>', '{% include "base.html %}<div>keep</div>'],
+    ] as const) {
+      const completions = await completionListAt(textWithCursor, provider);
+      assertCompletionList(completions);
+      const edit = completions.items[0]?.textEdit;
+      assert.ok(edit && "range" in edit);
+      const text = textWithCursor.replace(CURSOR, "");
+      const document = Document.createForTest("file:///template.html", text);
+      const applied =
+        text.slice(0, document.offsetAt(edit.range.start)) +
+        edit.newText +
+        text.slice(document.offsetAt(edit.range.end));
+      assert.strictEqual(applied, expected);
+    }
+  });
+
   it("preserves either quote style and returns an empty list when no path matches", async () => {
     const provider: TemplatePathProvider = {
       async getCandidates() {
