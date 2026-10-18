@@ -2,7 +2,7 @@ import type { Position } from "vscode-languageserver-types";
 import type { Document } from "../../lib/documents/index.js";
 
 export type DjangoBlockKind = "tag" | "variable" | "comment";
-export type DjangoCompletionContextType = "tag" | "filter" | "template-path" | "none";
+export type DjangoCompletionContextType = DjangoCompletionContext["type"];
 export type DjangoCompletionContextReason =
   | "outside"
   | "comment"
@@ -49,10 +49,7 @@ interface DjangoBlockAtOffset {
   closeDelimiter: string;
 }
 
-interface QuoteState {
-  quote: "'" | '"' | null;
-  start: number;
-}
+type QuoteState = { quote: null } | { quote: "'" | '"'; start: number };
 
 const TAG_NAME_ONLY_RE = /^\s*([A-Za-z_][A-Za-z0-9_]*)?$/;
 const FILTER_PREFIX_RE = /^\s*([A-Za-z_][A-Za-z0-9_]*)?$/;
@@ -78,10 +75,13 @@ export function getDjangoCompletionContext(
 
   if (quoteState.quote) {
     if (block.kind === "tag") {
-      const templatePath = getTemplatePathContext(document, offset, block, contentBeforeCursor, {
-        quote: quoteState.quote,
-        start: quoteState.start,
-      });
+      const templatePath = getTemplatePathContext(
+        document,
+        offset,
+        block,
+        contentBeforeCursor,
+        quoteState,
+      );
       if (templatePath) {
         return templatePath;
       }
@@ -177,7 +177,7 @@ function getTemplatePathContext(
   offset: number,
   block: DjangoBlockAtOffset,
   contentBeforeCursor: string,
-  quoteState: QuoteState & { quote: "'" | '"' },
+  quoteState: Extract<QuoteState, { quote: string }>,
 ): Extract<DjangoCompletionContext, { type: "template-path" }> | null {
   const beforeQuote = contentBeforeCursor.slice(0, quoteState.start);
   const tagMatch = /^\s*(extends|include)\s+$/.exec(beforeQuote);
@@ -185,17 +185,40 @@ function getTemplatePathContext(
     return null;
   }
 
+  const tagName = tagMatch[1];
+  if (tagName !== "extends" && tagName !== "include") {
+    return null;
+  }
   const prefixStart = block.contentStart + quoteState.start + 1;
+  const text = document.getText();
+  let replacementEnd = offset;
+  while (replacementEnd < text.length) {
+    if (
+      (text[replacementEnd] === quoteState.quote && !isEscaped(text, replacementEnd)) ||
+      text.startsWith(block.closeDelimiter, replacementEnd) ||
+      text[replacementEnd] === "\n" ||
+      text[replacementEnd] === "\r"
+    ) {
+      break;
+    }
+    replacementEnd++;
+  }
+  // An unfinished quote must not consume the tag delimiter or its preceding whitespace.
+  if (text[replacementEnd] !== quoteState.quote) {
+    while (replacementEnd > offset && /\s/.test(text.charAt(replacementEnd - 1))) {
+      replacementEnd--;
+    }
+  }
   return {
     type: "template-path",
     kind: "template-path",
     blockKind: "tag",
-    tagName: tagMatch[1] as "extends" | "include",
+    tagName,
     prefix: contentBeforeCursor.slice(quoteState.start + 1),
     quote: quoteState.quote,
     replacementRange: {
       start: document.positionAt(prefixStart),
-      end: document.positionAt(offset),
+      end: document.positionAt(replacementEnd),
     },
   };
 }
@@ -239,27 +262,24 @@ function getLastUnquotedPipeIndex(text: string): number {
 }
 
 function getQuoteState(text: string): QuoteState {
-  let quote: "'" | '"' | null = null;
-  let start = -1;
+  let state: QuoteState = { quote: null };
 
   for (let index = 0; index < text.length; index++) {
     const character = text[index];
 
-    if (quote) {
-      if (character === quote && !isEscaped(text, index)) {
-        quote = null;
-        start = -1;
+    if (state.quote) {
+      if (character === state.quote && !isEscaped(text, index)) {
+        state = { quote: null };
       }
       continue;
     }
 
     if (character === "'" || character === '"') {
-      quote = character;
-      start = index;
+      state = { quote: character, start: index };
     }
   }
 
-  return { quote, start };
+  return state;
 }
 
 function isEscaped(text: string, index: number): boolean {
@@ -278,12 +298,15 @@ function none(
   reason: DjangoCompletionContextReason,
   blockKind?: DjangoBlockKind,
 ): Extract<DjangoCompletionContext, { type: "none" }> {
-  return {
+  const context: Extract<DjangoCompletionContext, { type: "none" }> = {
     type: "none",
     kind: "none",
     reason,
-    ...(blockKind ? { blockKind } : {}),
   };
+  if (blockKind) {
+    context.blockKind = blockKind;
+  }
+  return context;
 }
 
 export { getDjangoCompletionContext as getCompletionContext };

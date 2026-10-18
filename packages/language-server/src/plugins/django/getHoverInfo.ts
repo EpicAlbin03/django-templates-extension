@@ -154,7 +154,7 @@ function getFilterHover(
     }
 
     let nameStartInBlock = index + 1;
-    while (nameStartInBlock < blockText.length && /\s/.test(blockText[nameStartInBlock])) {
+    while (nameStartInBlock < blockText.length && /\s/.test(blockText.charAt(nameStartInBlock))) {
       nameStartInBlock++;
     }
 
@@ -184,7 +184,7 @@ function getFilterBlockFirstFilter(blockText: string): { name: string; start: nu
   }
 
   let nameStart = getTagNameStartInBlock(blockText) + tagName.length;
-  while (nameStart < blockText.length && /\s/.test(blockText[nameStart])) {
+  while (nameStart < blockText.length && /\s/.test(blockText.charAt(nameStart))) {
     nameStart++;
   }
 
@@ -251,7 +251,7 @@ function getTagNameStartInBlock(blockText: string): number {
     index++;
   }
 
-  while (index < blockText.length && /\s/.test(blockText[index])) {
+  while (index < blockText.length && /\s/.test(blockText.charAt(index))) {
     index++;
   }
 

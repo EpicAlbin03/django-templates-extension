@@ -26,7 +26,7 @@ export function positionAt(
 
     if (lineOffset === offset) {
       return Position.create(mid, 0);
-    } else if (offset > lineOffset) {
+    } else if (lineOffset !== undefined && offset > lineOffset) {
       low = mid + 1;
     } else {
       high = mid - 1;
@@ -36,7 +36,7 @@ export function positionAt(
   // low is the least x for which the line offset is larger than the current offset
   // or array.length if no line offset is larger than the current offset
   const line = low - 1;
-  return Position.create(line, offset - lineOffsets[line]);
+  return Position.create(line, offset - (lineOffsets[line] ?? 0));
 }
 
 /**
@@ -56,9 +56,8 @@ export function offsetAt(
     return 0;
   }
 
-  const lineOffset = lineOffsets[position.line];
-  const nextLineOffset =
-    position.line + 1 < lineOffsets.length ? lineOffsets[position.line + 1] : text.length;
+  const lineOffset = lineOffsets[position.line] ?? 0;
+  const nextLineOffset = lineOffsets[position.line + 1] ?? text.length;
 
   return clamp(nextLineOffset, lineOffset, lineOffset + position.character);
 }

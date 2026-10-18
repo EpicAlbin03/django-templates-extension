@@ -7,12 +7,12 @@ import { describe, it } from "vite-plus/test";
 import type { IGrammar, StateStack } from "vscode-textmate";
 import { parseRawGrammar, Registry } from "vscode-textmate";
 import { loadWASM, OnigScanner, OnigString } from "vscode-oniguruma";
+import packageJson from "../../package.json" with { type: "json" };
 
 const require = createRequire(import.meta.url);
 const testDir = dirname(fileURLToPath(import.meta.url));
 const packageRoot = join(testDir, "..", "..");
 const grammarPath = join(packageRoot, "syntaxes", "django-injection.tmLanguage.json");
-const packageJsonPath = join(packageRoot, "package.json");
 
 type Token = {
   text: string;
@@ -188,8 +188,7 @@ function tokenizeWithGrammar(grammar: IGrammar, source: string): Token[] {
   for (const line of source.split(/\r?\n/)) {
     const result = grammar.tokenizeLine(line, ruleStack);
 
-    for (let index = 0; index < result.tokens.length; index++) {
-      const token = result.tokens[index];
+    for (const [index, token] of result.tokens.entries()) {
       const nextToken = result.tokens[index + 1];
       tokens.push({
         text: line.slice(token.startIndex, nextToken?.startIndex ?? line.length),
@@ -414,6 +413,8 @@ describe("Django injection TextMate grammar", () => {
       2,
       `Expected two if tokens in ${dumpTokens(ifTokens)}`,
     );
+    assert.ok(ifOccurrences[0]);
+    assert.ok(ifOccurrences[1]);
     assertHasScope(ifOccurrences[0], "keyword.control.flow.django");
     assertHasScope(ifOccurrences[1], "variable.other.object.django");
     assertNoScopeContaining(ifOccurrences[1], "keyword.control.");
@@ -580,9 +581,8 @@ describe("Django injection TextMate grammar", () => {
   });
 
   it("keeps the contributed grammar attached to HTML TextMate scopes", () => {
-    const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8"));
     const grammarContribution = packageJson.contributes.grammars.find(
-      (grammar: { scopeName?: string }) => grammar.scopeName === "source.django.injection",
+      (grammar) => grammar.scopeName === "source.django.injection",
     );
 
     assert.ok(grammarContribution, "Expected a source.django.injection grammar contribution");

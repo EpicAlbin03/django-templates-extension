@@ -1,11 +1,16 @@
 import * as assert from "assert";
-import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setImmediate as nextTurn } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
 import { CancellationTokenSource, type CancellationToken } from "vscode-languageserver";
-import { CompletionItemKind, MarkupKind, type CompletionList } from "vscode-languageserver-types";
+import {
+  CompletionItemKind,
+  MarkupContent,
+  MarkupKind,
+  type CompletionList,
+} from "vscode-languageserver-types";
 import { describe, it } from "vite-plus/test";
 import { Document } from "../../../src/lib/documents/index.js";
 import { LSConfigManager } from "../../../src/ls-config.js";
@@ -56,8 +61,9 @@ describe("DjangoPlugin", () => {
 
     const hover = plugin.doHover(document, document.positionAt(text.indexOf("if") + 1));
 
-    assert.notStrictEqual(hover, null);
-    const contents = hover!.contents as { kind: string; value: string };
+    assert.ok(hover);
+    const contents = hover.contents;
+    assert.ok(MarkupContent.is(contents));
     assert.strictEqual(contents.kind, MarkupKind.Markdown);
     assert.match(contents.value, /Conditionally renders/);
   });
@@ -69,8 +75,9 @@ describe("DjangoPlugin", () => {
 
     const hover = plugin.doHover(document, document.positionAt(text.indexOf("lower") + 1));
 
-    assert.notStrictEqual(hover, null);
-    const contents = hover!.contents as { kind: string; value: string };
+    assert.ok(hover);
+    const contents = hover.contents;
+    assert.ok(MarkupContent.is(contents));
     assert.strictEqual(contents.kind, MarkupKind.Markdown);
     assert.match(contents.value, /Converts a string into all lowercase/);
     assert.match(contents.value, /\[Documentation\]\(.*#std-templatefilter-lower\)/);
@@ -83,7 +90,8 @@ describe("DjangoPlugin", () => {
     assert.strictEqual(completions.isIncomplete, false);
     const blockCompletion = completions.items.find((item) => item.label === "block");
     assert.notStrictEqual(blockCompletion, undefined);
-    assert.strictEqual(blockCompletion!.kind, CompletionItemKind.Keyword);
+    assert.ok(blockCompletion);
+    assert.strictEqual(blockCompletion.kind, CompletionItemKind.Keyword);
   });
 
   it("returns Django filter completions after pipes", async () => {
@@ -93,7 +101,8 @@ describe("DjangoPlugin", () => {
     assert.strictEqual(completions.isIncomplete, false);
     const defaultCompletion = completions.items.find((item) => item.label === "default");
     assert.notStrictEqual(defaultCompletion, undefined);
-    assert.strictEqual(defaultCompletion!.kind, CompletionItemKind.Function);
+    assert.ok(defaultCompletion);
+    assert.strictEqual(defaultCompletion.kind, CompletionItemKind.Function);
   });
 
   it("returns no completions outside Django contexts", async () => {
@@ -149,14 +158,8 @@ describe("DjangoPlugin", () => {
   it("releases a cancelled completion while another request shares its discovery", async () => {
     const cancellation = new CancellationTokenSource();
     let scans = 0;
-    let releaseScan!: () => void;
-    let markScanStarted!: () => void;
-    const scanStarted = new Promise<void>((resolve) => {
-      markScanStarted = resolve;
-    });
-    const scanPause = new Promise<void>((resolve) => {
-      releaseScan = resolve;
-    });
+    const { promise: scanStarted, resolve: markScanStarted } = Promise.withResolvers<void>();
+    const { promise: scanPause, resolve: releaseScan } = Promise.withResolvers<void>();
     const provider = new TemplatePathIndex({
       workspaceFolders: ["/workspace"],
       async scanWorkspace() {
@@ -249,6 +252,37 @@ describe("DjangoPlugin", () => {
     ]);
   });
 
+  it("replaces the whole template path when completing in the middle of a string", async () => {
+    const provider: TemplatePathProvider = {
+      async getCandidates() {
+        return {
+          candidates: [
+            { name: "base.html", sourcePath: "/templates/base.html", rootPath: "/templates" },
+          ],
+          isIncomplete: false,
+        };
+      },
+    };
+    for (const [textWithCursor, expected] of [
+      ['{% include "ba█se.html" with value=value %}', '{% include "base.html" with value=value %}'],
+      ["{% extends 'ba█se.html' %}", "{% extends 'base.html' %}"],
+      ['{% include "ba█se\\\"old.html" %}', '{% include "base.html" %}'],
+      ['{% include "ba█se.html %}<div>keep</div>', '{% include "base.html %}<div>keep</div>'],
+    ] as const) {
+      const completions = await completionListAt(textWithCursor, provider);
+      assertCompletionList(completions);
+      const edit = completions.items[0]?.textEdit;
+      assert.ok(edit && "range" in edit);
+      const text = textWithCursor.replace(CURSOR, "");
+      const document = Document.createForTest("file:///template.html", text);
+      const applied =
+        text.slice(0, document.offsetAt(edit.range.start)) +
+        edit.newText +
+        text.slice(document.offsetAt(edit.range.end));
+      assert.strictEqual(applied, expected);
+    }
+  });
+
   it("preserves either quote style and returns an empty list when no path matches", async () => {
     const provider: TemplatePathProvider = {
       async getCandidates() {
@@ -278,6 +312,7 @@ describe("DjangoPlugin", () => {
     const edits = await plugin.formatDocument(document, { tabSize: 2, insertSpaces: true });
 
     assert.strictEqual(edits.length, 1);
+    assert.ok(edits[0]);
     assert.strictEqual(
       edits[0].newText,
       `<div>
@@ -289,107 +324,234 @@ describe("DjangoPlugin", () => {
     );
   });
 
-  it("returns no edits for documents without Django syntax", async () => {
-    const document = Document.createForTest("file:///template.html", "<div>HTML only</div>\n");
-    const plugin = new DjangoPlugin(new LSConfigManager());
-
-    assert.deepStrictEqual(
-      await plugin.formatDocument(document, { tabSize: 2, insertSpaces: true }),
-      [],
-    );
-  });
-
-  it("returns no edits for non-file documents", async () => {
-    const document = Document.createForTest("untitled:template.html", "<div>{{ value }}</div>\n");
-    const plugin = new DjangoPlugin(new LSConfigManager());
-
-    assert.deepStrictEqual(
-      await plugin.formatDocument(document, { tabSize: 2, insertSpaces: true }),
-      [],
-    );
-  });
-
-  it("returns no edits for ignored files", async () => {
-    const directory = mkdtempSync(join(tmpdir(), "django-template-ignore-"));
+  it("formats unsaved plain HTML edits with the Django-aware formatter", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "django-template-plain-html-"));
     const filePath = join(directory, "template.html");
-    const ignorePath = join(directory, ".prettierignore");
-    const text = "<div>{% if user %}Hello{% endif %}</div>\n";
-    writeFileSync(filePath, text);
-    writeFileSync(ignorePath, "template.html\n");
-
-    const configManager = new LSConfigManager();
-    configManager.updatePrettierConfig({ ignorePath });
-    const plugin = new DjangoPlugin(configManager);
-
-    assert.deepStrictEqual(
-      await plugin.formatDocument(new Document(pathToFileURL(filePath).toString(), text), {
-        tabSize: 2,
-        insertSpaces: true,
-      }),
-      [],
-    );
-  });
-
-  it("returns no edits when formatting is unchanged", async () => {
-    const filePath = join(
-      mkdtempSync(join(tmpdir(), "django-template-unchanged-")),
-      "template.html",
-    );
-    const text = "<div>{{ value }}</div>\n";
-    writeFileSync(filePath, text);
+    const text = "<div>\n<div>HTML only</div>\n</div>";
     const plugin = new DjangoPlugin(new LSConfigManager());
 
-    assert.deepStrictEqual(
-      await plugin.formatDocument(new Document(pathToFileURL(filePath).toString(), text), {
-        tabSize: 2,
-        insertSpaces: true,
-      }),
-      [],
-    );
+    try {
+      writeFileSync(filePath, "<p>Previously saved content</p>\n");
+      writeFileSync(
+        join(directory, ".prettierrc.json"),
+        JSON.stringify({ tabWidth: 8, useTabs: true }),
+      );
+      const document = new Document(pathToFileURL(filePath).toString(), text);
+      const edits = await plugin.formatDocument(document, { tabSize: 2, insertSpaces: true });
+
+      assert.strictEqual(edits.length, 1);
+      assert.strictEqual(edits[0]?.newText, "<div>\n  <div>HTML only</div>\n</div>\n");
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 
-  it("does not evaluate workspace config, plugins, or Prettier in untrusted mode", async () => {
-    const directory = mkdtempSync(join(tmpdir(), "django-template-untrusted-"));
-    const filePath = join(directory, "template.html");
-    const configMarker = join(directory, "config-loaded");
-    const pluginMarker = join(directory, "plugin-loaded");
-    const prettierMarker = join(directory, "prettier-loaded");
-    const pluginPath = join(directory, "sentinel-plugin.cjs");
-    const configPath = join(directory, "prettier.config.cjs");
-    const workspacePrettierDirectory = join(directory, "node_modules", "prettier");
+  it.each([
+    {
+      text: "<div>\n<div>HTML only</div>\n</div>",
+      expected: "<div>\n   <div>HTML only</div>\n</div>\n",
+      options: { tabSize: 3, insertSpaces: true },
+    },
+    {
+      text: "<div>{% if user %}<span>{{ user.username }}</span>{% endif %}</div>",
+      expected:
+        "<div>\n\t{% if user %}\n\t\t<span>{{ user.username }}</span>\n\t{% endif %}\n</div>\n",
+      options: { tabSize: 4, insertSpaces: false },
+    },
+  ])(
+    "formats never-saved HTML with request indentation: $options",
+    async ({ text, expected, options }) => {
+      const document = Document.createForTest("untitled:Untitled-1", text);
+      const configManager = new LSConfigManager();
+      configManager.updatePrettierConfig({ tabWidth: 8, useTabs: false });
+      const plugin = new DjangoPlugin(configManager);
+
+      const edits = await plugin.formatDocument(document, options);
+
+      assert.strictEqual(edits.length, 1);
+      assert.strictEqual(edits[0]?.newText, expected);
+      assert.deepStrictEqual(edits[0]?.range, {
+        start: { line: 0, character: 0 },
+        end: document.positionAt(text.length),
+      });
+    },
+  );
+
+  it("returns no edits for unsupported non-file schemes", async () => {
+    const plugin = new DjangoPlugin(new LSConfigManager());
+    for (const uri of ["git:/template.html", "vscode-notebook-cell:/template.html"]) {
+      const document = Document.createForTest(uri, "<div>{% if user %}Hello{% endif %}</div>");
+      assert.deepStrictEqual(
+        await plugin.formatDocument(document, { tabSize: 2, insertSpaces: true }),
+        [],
+      );
+    }
+  });
+
+  it.each(["<div>\n<div>HTML only</div>\n</div>", "<div>{% if user %}Hello{% endif %}</div>\n"])(
+    "returns no edits for ignored files: %s",
+    async (text) => {
+      const directory = mkdtempSync(join(tmpdir(), "django-template-ignore-"));
+      const filePath = join(directory, "template.html");
+      const ignorePath = join(directory, ".prettierignore");
+      writeFileSync(filePath, text);
+      writeFileSync(ignorePath, "template.html\n");
+
+      const configManager = new LSConfigManager();
+      configManager.updatePrettierConfig({ ignorePath });
+      const plugin = new DjangoPlugin(configManager);
+
+      assert.deepStrictEqual(
+        await plugin.formatDocument(new Document(pathToFileURL(filePath).toString(), text), {
+          tabSize: 2,
+          insertSpaces: true,
+        }),
+        [],
+      );
+    },
+  );
+
+  it("discovers the nearest ignore file for each document independently of the server cwd", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "django-template-ignore-roots-"));
+    const text = "<div>{% if user %}<span>{{ user }}</span>{% endif %}</div>\n";
+    const plugin = new DjangoPlugin(new LSConfigManager());
+    try {
+      for (const [root, ignored] of [
+        ["first", "one.html"],
+        ["second", "two.html"],
+      ] as const) {
+        const project = join(directory, root);
+        const templates = join(project, "templates");
+        mkdirSync(templates, { recursive: true });
+        writeFileSync(join(project, ".prettierignore"), `templates/${ignored}\n`);
+        for (const name of ["one.html", "two.html"]) {
+          const filePath = join(templates, name);
+          writeFileSync(filePath, text);
+          const edits = await plugin.formatDocument(
+            new Document(pathToFileURL(filePath).toString(), text),
+            { tabSize: 2, insertSpaces: true },
+          );
+          assert.strictEqual(edits.length, name === ignored ? 0 : 1);
+        }
+      }
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("resolves relative custom ignore paths and arrays from document ancestors", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "django-template-custom-ignore-"));
+    const templates = join(directory, "templates");
+    const filePath = join(templates, "ignored.html");
     const text = "<div>{% if user %}Hello{% endif %}</div>\n";
-
-    writeFileSync(filePath, text);
-    writeSentinelModule(configPath, configMarker);
-    writeSentinelModule(pluginPath, pluginMarker);
-    mkdirSync(workspacePrettierDirectory, { recursive: true });
-    writeFileSync(
-      join(workspacePrettierDirectory, "package.json"),
-      JSON.stringify({ name: "prettier", version: "99.0.0", main: "index.cjs" }),
-    );
-    writeSentinelModule(join(workspacePrettierDirectory, "index.cjs"), prettierMarker);
-
-    const configManager = new LSConfigManager();
-    configManager.updateIsTrusted(false);
-    configManager.updatePrettierConfig({
-      config: configPath,
-      plugins: [pluginPath],
-      ignorePath: join(directory, "sentinel.ignore"),
-      pluginSearchDirs: [directory],
-      printWidth: 100,
-    });
-    const plugin = new DjangoPlugin(configManager);
-
-    const edits = await plugin.formatDocument(
-      new Document(pathToFileURL(filePath).toString(), text),
-      { tabSize: 2, insertSpaces: true },
-    );
-
-    assert.strictEqual(edits.length, 1);
-    assert.strictEqual(existsSync(configMarker), false);
-    assert.strictEqual(existsSync(pluginMarker), false);
-    assert.strictEqual(existsSync(prettierMarker), false);
+    try {
+      mkdirSync(templates);
+      writeFileSync(filePath, text);
+      writeFileSync(join(directory, "custom.ignore"), "templates/ignored.html\n");
+      for (const ignorePath of ["custom.ignore", ["missing.ignore", "custom.ignore"]]) {
+        const configManager = new LSConfigManager();
+        configManager.updatePrettierConfig({ ignorePath });
+        const plugin = new DjangoPlugin(configManager);
+        const edits = await plugin.formatDocument(
+          new Document(pathToFileURL(filePath).toString(), text),
+          { tabSize: 2, insertSpaces: true },
+        );
+        assert.deepStrictEqual(edits, []);
+      }
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
+
+  it.each(["file", "untitled"])(
+    "returns no edits when %s formatting is unchanged",
+    async (scheme) => {
+      const directory = mkdtempSync(join(tmpdir(), "django-template-unchanged-"));
+      const filePath = join(directory, "template.html");
+      const plugin = new DjangoPlugin(new LSConfigManager());
+
+      try {
+        for (const text of ["<div>HTML only</div>\n", "<div>{{ value }}</div>\n"]) {
+          writeFileSync(filePath, text);
+          const uri = pathToFileURL(filePath)
+            .toString()
+            .replace(/^file:/, `${scheme}:`);
+          assert.deepStrictEqual(
+            await plugin.formatDocument(new Document(uri, text), {
+              tabSize: 2,
+              insertSpaces: true,
+            }),
+            [],
+          );
+        }
+      } finally {
+        rmSync(directory, { recursive: true, force: true });
+      }
+    },
+  );
+
+  it.each([
+    { scheme: "file", isTrusted: false },
+    { scheme: "untitled", isTrusted: true },
+    { scheme: "untitled", isTrusted: false },
+  ])(
+    "uses only bundled code for $scheme documents with trust=$isTrusted",
+    async ({ scheme, isTrusted }) => {
+      const directory = mkdtempSync(join(tmpdir(), "django-template-untrusted-"));
+      const filePath = join(directory, "template.html");
+      const configMarker = join(directory, "config-loaded");
+      const pluginMarker = join(directory, "plugin-loaded");
+      const prettierMarker = join(directory, "prettier-loaded");
+      const pluginPath = join(directory, "sentinel-plugin.cjs");
+      const configPath = join(directory, "prettier.config.cjs");
+      const workspacePrettierDirectory = join(directory, "node_modules", "prettier");
+      const text = "<div>{% if user %}<span>{{ user.username }}</span>{% endif %}</div>\n";
+
+      writeFileSync(filePath, text);
+      writeFileSync(join(directory, "sentinel.ignore"), "*\n");
+      writeSentinelModule(configPath, configMarker);
+      writeSentinelModule(pluginPath, pluginMarker);
+      mkdirSync(workspacePrettierDirectory, { recursive: true });
+      writeFileSync(
+        join(workspacePrettierDirectory, "package.json"),
+        JSON.stringify({ name: "prettier", version: "99.0.0", main: "index.cjs" }),
+      );
+      writeSentinelModule(join(workspacePrettierDirectory, "index.cjs"), prettierMarker);
+
+      const configManager = new LSConfigManager();
+      configManager.updateIsTrusted(isTrusted);
+      configManager.updatePrettierConfig({
+        config: configPath,
+        plugins: [pluginPath],
+        ignorePath: join(directory, "sentinel.ignore"),
+        pluginSearchDirs: [directory],
+        printWidth: 100,
+        endOfLine: "crlf",
+      });
+      const plugin = new DjangoPlugin(configManager);
+
+      try {
+        const uri = pathToFileURL(filePath)
+          .toString()
+          .replace(/^file:/, `${scheme}:`);
+        const edits = await plugin.formatDocument(new Document(uri, text), {
+          tabSize: 2,
+          insertSpaces: true,
+        });
+
+        assert.strictEqual(edits.length, 1);
+        assert.strictEqual(
+          edits[0]?.newText,
+          "<div>\r\n  {% if user %}\r\n    <span>{{ user.username }}</span>\r\n  {% endif %}\r\n</div>\r\n",
+        );
+        assert.strictEqual(existsSync(configMarker), false);
+        assert.strictEqual(existsSync(pluginMarker), false);
+        assert.strictEqual(existsSync(prettierMarker), false);
+      } finally {
+        rmSync(directory, { recursive: true, force: true });
+      }
+    },
+  );
 
   it("honors project configuration and plugins in trusted mode", async () => {
     const directory = mkdtempSync(join(tmpdir(), "django-template-trusted-"));
@@ -435,6 +597,7 @@ describe("DjangoPlugin", () => {
     );
 
     assert.strictEqual(edits.length, 1);
+    assert.ok(edits[0]);
     assert.match(edits[0].newText, /{% if user %}/);
   });
 

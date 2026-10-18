@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import {
   DidChangeWatchedFilesNotification,
   ErrorCodes,
@@ -18,26 +19,21 @@ import { LSConfigManager } from "./ls-config.js";
 import { DjangoPlugin } from "./plugins/index.js";
 import {
   TemplatePathIndex,
-  type TemplateFileEvent,
-  type TemplatePathProvider,
-  type TemplateWatchPattern,
   type TemplateWorkspaceFolder,
 } from "./plugins/django/TemplatePathIndex.js";
 import { parseConfigurationChange, parseInitializationOptions } from "./protocol.js";
 import { setIsTrusted } from "./importPackage.js";
 import { URI } from "vscode-uri";
 
-export interface TemplatePathIndexController extends TemplatePathProvider {
-  configure(options: {
-    workspaceFolders?: TemplateWorkspaceFolder[];
-    isTrusted?: boolean;
-    settings?: { autoDiscover: boolean; roots: string[] };
-  }): void;
-  applyFileEvents(events: TemplateFileEvent[]): Promise<void>;
-  getWatchPatterns(): TemplateWatchPattern[];
-  setRequestDrivenExpiry(enabled: boolean): void;
-  dispose(): void;
-}
+export type TemplatePathIndexController = Pick<
+  TemplatePathIndex,
+  | "configure"
+  | "getCandidates"
+  | "applyFileEvents"
+  | "getWatchPatterns"
+  | "setRequestDrivenExpiry"
+  | "dispose"
+>;
 
 export interface LSOptions {
   /**
@@ -56,10 +52,8 @@ export interface LSOptions {
 
 function createServerConnection(): Connection {
   if (process.argv.includes("--stdio")) {
-    console.log = (...args: unknown[]) => {
-      console.warn(...args);
-    };
-    return createConnection(process.stdin, process.stdout);
+    // Let the LSP transport redirect dependency console output away from protocol stdout.
+    return createConnection();
   }
 
   return createConnection(new IPCMessageReader(process), new IPCMessageWriter(process));
@@ -82,6 +76,8 @@ export function startServer(options?: LSOptions) {
   const templatePathIndex =
     options?.templatePathIndex ?? new TemplatePathIndex({ workspaceFolders: [] });
   const djangoPlugin = new DjangoPlugin(configManager, templatePathIndex);
+  let workspaceFolders: TemplateWorkspaceFolder[] = [];
+  let supportsWorkspaceFolderChanges = false;
   let supportsRelativeWatcherRegistration = false;
   let initialized = false;
   let watcherRegistration: Disposable | null = null;
@@ -89,11 +85,12 @@ export function startServer(options?: LSOptions) {
   let disposed = false;
 
   connection.onInitialize((evt) => {
-    const workspaceFolders = getFileWorkspaceFolders(evt);
-    Logger.log(
-      "Initialize language server at ",
-      workspaceFolders.map((folder) => folder.uri).join(", "),
-    );
+    workspaceFolders = getFileWorkspaceFolders(evt);
+    supportsWorkspaceFolderChanges = evt.capabilities.workspace?.workspaceFolders === true;
+    Logger.log({
+      event: "server.initialize",
+      workspaceFolders: workspaceFolders.map((folder) => folder.uri),
+    });
 
     const initializationOptions = parseInitializationOptions(evt.initializationOptions);
     const formattingProviderHandledByClient =
@@ -116,6 +113,7 @@ export function startServer(options?: LSOptions) {
 
     return {
       capabilities: {
+        workspace: { workspaceFolders: { supported: true, changeNotifications: true } },
         textDocumentSync: {
           openClose: true,
           change: TextDocumentSyncKind.Incremental,
@@ -133,6 +131,20 @@ export function startServer(options?: LSOptions) {
 
   connection.onInitialized(() => {
     initialized = true;
+    if (supportsWorkspaceFolderChanges) {
+      // The workspace-folder event is available only after client capability negotiation.
+      connection.workspace.onDidChangeWorkspaceFolders(({ added, removed }) => {
+        const removedUris = new Set(
+          normalizeFileWorkspaceFolders(removed).map((folder) => folder.uri),
+        );
+        workspaceFolders = normalizeFileWorkspaceFolders([
+          ...workspaceFolders.filter((folder) => !removedUris.has(folder.uri)),
+          ...added,
+        ]);
+        templatePathIndex.configure({ workspaceFolders });
+        void refreshWatcherRegistration();
+      });
+    }
     return refreshWatcherRegistration();
   });
 
@@ -210,7 +222,7 @@ export function startServer(options?: LSOptions) {
         })),
       });
     } catch (error) {
-      Logger.error("Failed to register Django template path watchers", error);
+      Logger.error({ event: "template-watchers.registration-failed", generation, error });
       return;
     }
     if (disposed || generation !== watcherGeneration) {
@@ -240,19 +252,30 @@ export function getFileWorkspaceFolders(evt: InitializeParams): TemplateWorkspac
       : evt.rootUri
         ? [{ name: "", uri: evt.rootUri }]
         : [];
+  return normalizeFileWorkspaceFolders(candidates);
+}
+
+function normalizeFileWorkspaceFolders(
+  candidates: Array<Pick<TemplateWorkspaceFolder, "uri" | "name">>,
+): TemplateWorkspaceFolder[] {
   const folders: TemplateWorkspaceFolder[] = [];
+  const seen = new Set<string>();
 
   for (const candidate of candidates) {
     try {
-      const uri = URI.parse(candidate.uri);
-      if (uri.scheme !== "file") {
-        continue;
-      }
-      folders.push({
+      const uri = URI.file(fileURLToPath(candidate.uri));
+      const folder: TemplateWorkspaceFolder = {
         uri: uri.toString(),
         path: uri.fsPath,
-        ...(candidate.name ? { name: candidate.name } : {}),
-      });
+      };
+      if (seen.has(folder.uri)) {
+        continue;
+      }
+      seen.add(folder.uri);
+      if (candidate.name) {
+        folder.name = candidate.name;
+      }
+      folders.push(folder);
     } catch {
       // Filesystem discovery intentionally ignores non-file and malformed workspace URIs.
     }

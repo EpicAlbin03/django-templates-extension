@@ -1,11 +1,13 @@
+import { access } from "node:fs/promises";
 import { createRequire } from "node:module";
-import { dirname, isAbsolute } from "path";
-import { URL, fileURLToPath, pathToFileURL } from "url";
+import { dirname, isAbsolute, resolve } from "path";
+import { URL, fileURLToPath } from "url";
 import type { Options, Plugin } from "prettier";
+import { z } from "zod";
 import type { CancellationToken } from "vscode-languageserver";
 import type { FormattingOptions, Hover, Position } from "vscode-languageserver-types";
 import { CompletionItemKind, CompletionList, Range, TextEdit } from "vscode-languageserver-types";
-import { importPrettier } from "../../importPackage.js";
+import { importPrettier, type PrettierApi } from "../../importPackage.js";
 import type { Document } from "../../lib/documents/index.js";
 import { Logger } from "../../logger.js";
 import { LSConfigManager } from "../../ls-config.js";
@@ -22,11 +24,10 @@ import type { TemplatePathProvider } from "./TemplatePathIndex.js";
 
 const require = createRequire(import.meta.url);
 const serverDirectory = dirname(fileURLToPath(import.meta.url));
-const DJANGO_TEMPLATE_TAG_RE = /({%[\s\S]*?%}|{{[\s\S]*?}}|{#[\s\S]*?#})/;
 const DJANGO_HTML_PARSER = "django-html";
 const DJANGO_PRETTIER_PLUGIN = "prettier-plugin-django-templates";
 const CANCELLED = Symbol("cancelled");
-type PluginSpecifier = string | URL | Plugin;
+type PluginSpecifier = NonNullable<Options["plugins"]>[number];
 
 const EMPTY_TEMPLATE_PATH_PROVIDER: TemplatePathProvider = {
   async getCandidates() {
@@ -90,24 +91,22 @@ export class DjangoPlugin implements CompletionProvider, FormattingProvider, Hov
 
   async formatDocument(document: Document, options: FormattingOptions): Promise<TextEdit[]> {
     const text = document.getText();
-    if (!DJANGO_TEMPLATE_TAG_RE.test(text)) {
-      return [];
-    }
-
     const filePath = document.getFilePath();
-    if (!filePath) {
+    if (!filePath && new URL(document.uri).protocol !== "untitled:") {
       return [];
     }
 
     const { prettier, config, resolvedPlugins } = await this.getFormatter(filePath, options);
-    const fileInfo = await prettier.getFileInfo(filePath, {
-      ignorePath: this.configManager.getIgnorePath(),
-      withNodeModules: true,
-      resolveConfig: false,
-    });
-    if (fileInfo.ignored) {
-      Logger.debug("File is ignored, formatting skipped");
-      return [];
+    if (filePath) {
+      const fileInfo = await prettier.getFileInfo(filePath, {
+        ignorePath: await resolveIgnorePaths(filePath, this.configManager.getIgnorePath()),
+        withNodeModules: true,
+        resolveConfig: false,
+      });
+      if (fileInfo.ignored) {
+        Logger.debug({ event: "formatter.ignored", uri: document.uri, filePath });
+        return [];
+      }
     }
 
     const configuredPlugins = resolvedPlugins.filter(
@@ -118,7 +117,7 @@ export class DjangoPlugin implements CompletionProvider, FormattingProvider, Hov
     const djangoPlugin = await importDjangoTemplatePlugin();
     const formattedCode = await prettier.format(text, {
       ...config,
-      filepath: filePath,
+      filepath: filePath ?? undefined,
       plugins: Array.from(new Set([...configuredPlugins, djangoPlugin])),
       parser: DJANGO_HTML_PARSER,
     });
@@ -134,14 +133,16 @@ export class DjangoPlugin implements CompletionProvider, FormattingProvider, Hov
   }
 
   private async getFormatter(
-    filePath: string,
+    filePath: string | null,
     options: FormattingOptions,
   ): Promise<{
-    prettier: typeof import("prettier");
+    prettier: PrettierApi;
     config: Options;
     resolvedPlugins: PluginSpecifier[];
   }> {
-    if (!this.configManager.isTrustedWorkspace()) {
+    // Untitled buffers have no project location: never discover config, dependencies, or plugins
+    // from their URI or the server's cwd. Only editor/request options and bundled code apply.
+    if (!filePath || !this.configManager.isTrustedWorkspace()) {
       return {
         prettier: importPrettier(serverDirectory),
         config: this.configManager.getMergedPrettierConfig(undefined, options),
@@ -149,7 +150,7 @@ export class DjangoPlugin implements CompletionProvider, FormattingProvider, Hov
       };
     }
 
-    const getConfig = async (prettier: typeof import("prettier")): Promise<Options> =>
+    const getConfig = async (prettier: PrettierApi): Promise<Options> =>
       this.configManager.getMergedPrettierConfig(
         await prettier.resolveConfig(
           filePath,
@@ -179,7 +180,8 @@ export class DjangoPlugin implements CompletionProvider, FormattingProvider, Hov
   }
 
   private static isPrettierPluginDjangoTemplatesPath(plugin: PluginSpecifier): boolean {
-    return typeof plugin === "string" && plugin.includes(DJANGO_PRETTIER_PLUGIN);
+    const path = z.string().safeParse(plugin);
+    return path.success && path.data.includes(DJANGO_PRETTIER_PLUGIN);
   }
 
   private static isPrettierPluginDjangoTemplatesObject(plugin: PluginSpecifier): boolean {
@@ -187,6 +189,38 @@ export class DjangoPlugin implements CompletionProvider, FormattingProvider, Hov
       isPluginObject(plugin) &&
       !!plugin.languages?.find((language) => hasDjangoParser(language.parsers))
     );
+  }
+}
+
+async function resolveIgnorePaths(
+  filePath: string,
+  ignorePath: string | string[] | undefined,
+): Promise<string[] | undefined> {
+  if (ignorePath === undefined) {
+    return undefined;
+  }
+  const paths = Array.isArray(ignorePath) ? ignorePath : [ignorePath];
+  return Promise.all(paths.map((path) => findIgnoreFile(filePath, path)));
+}
+
+async function findIgnoreFile(filePath: string, ignorePath: string): Promise<string> {
+  if (isAbsolute(ignorePath)) {
+    return ignorePath;
+  }
+  let directory = dirname(filePath);
+  while (true) {
+    const candidate = resolve(directory, ignorePath);
+    try {
+      await access(candidate);
+      return candidate;
+    } catch {
+      // Relative ignore files belong to the document's ancestors, never the server's cwd.
+    }
+    const parent = dirname(directory);
+    if (parent === directory) {
+      return resolve(dirname(filePath), ignorePath);
+    }
+    directory = parent;
   }
 }
 
@@ -213,13 +247,13 @@ async function waitForPromise<Result>(
 }
 
 async function importDjangoTemplatePlugin(): Promise<Plugin> {
-  const pluginPath = require.resolve(`${DJANGO_PRETTIER_PLUGIN}/browser`);
-  const plugin = await import(pathToFileURL(pluginPath).href);
-  return (plugin.default ?? plugin) as Plugin;
+  const plugin = await import("prettier-plugin-django-templates");
+  // SAFETY: Node exposes the bundled dependency's CommonJS plugin through the default export.
+  return plugin.default;
 }
 
 async function hasDjangoTemplatePluginLoaded(
-  prettier: typeof import("prettier"),
+  prettier: PrettierApi,
   plugins: PluginSpecifier[],
 ): Promise<boolean> {
   if (plugins.some(isDjangoTemplatePluginObject)) {
@@ -238,11 +272,12 @@ function resolvePlugins(
 }
 
 function resolvePlugin(plugin: PluginSpecifier, filePath: string): PluginSpecifier {
-  if (typeof plugin !== "string" || isAbsolute(plugin) || plugin.startsWith(".")) {
+  const path = z.string().safeParse(plugin);
+  if (!path.success || isAbsolute(path.data) || path.data.startsWith(".")) {
     return plugin;
   }
 
-  return require.resolve(plugin, {
+  return require.resolve(path.data, {
     paths: [dirname(filePath)],
   });
 }
@@ -255,7 +290,7 @@ function isDjangoTemplatePluginObject(plugin: PluginSpecifier): boolean {
 }
 
 function isPluginObject(plugin: PluginSpecifier): plugin is Plugin {
-  return typeof plugin !== "string" && !(plugin instanceof URL);
+  return !z.string().safeParse(plugin).success && !(plugin instanceof URL);
 }
 
 function hasDjangoParser(parsers: readonly string[] | undefined): boolean {

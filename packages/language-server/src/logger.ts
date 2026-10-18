@@ -1,3 +1,10 @@
+type Diagnostic =
+  | { event: "server.initialize"; workspaceFolders: string[] }
+  | { event: "formatter.ignored"; uri: string; filePath: string }
+  | { event: "formatter.failed"; uri: string; error: unknown }
+  | { event: "formatter.prettier"; version: string; path: string }
+  | { event: "template-watchers.registration-failed"; generation: number; error: unknown };
+
 export class Logger {
   private static logErrorsOnly = false;
   private static logDebug = false;
@@ -10,19 +17,19 @@ export class Logger {
     this.logDebug = debug;
   }
 
-  static log(...args: unknown[]) {
+  static log(diagnostic: Diagnostic): void {
     if (!Logger.logErrorsOnly) {
-      console.log(...args);
+      console.error({ level: "info", ...diagnostic });
     }
   }
 
-  static error(...args: unknown[]) {
-    console.error(...args);
+  static error(diagnostic: Diagnostic): void {
+    console.error({ level: "error", ...diagnostic });
   }
 
-  static debug(...args: unknown[]) {
+  static debug(diagnostic: Diagnostic): void {
     if (!Logger.logErrorsOnly && this.logDebug) {
-      console.log(...args);
+      console.error({ level: "debug", ...diagnostic });
     }
   }
 }

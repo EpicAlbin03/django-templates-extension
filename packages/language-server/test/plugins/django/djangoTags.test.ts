@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import { readFileSync } from "node:fs";
 import { describe, it } from "vite-plus/test";
+import { z } from "zod";
 import {
   djangoAdditionalCoreTagDocs,
   djangoContribTagDocs,
@@ -32,9 +33,8 @@ interface TagOwner {
   docName: string;
   kind: TagMemberKind;
 }
-interface Snippet {
-  body: string | string[];
-}
+const snippetSchema = z.object({ body: z.union([z.string(), z.array(z.string())]) });
+type Snippet = z.infer<typeof snippetSchema>;
 
 function getTagMembers(doc: DjangoTagDoc): Array<[string, TagMemberKind]> {
   return [
@@ -55,26 +55,23 @@ function assertMapKeysBelongTo(
   }
 }
 
-function readTagSnippets(): Record<string, unknown> {
+const snippetCatalogSchema = z.object({ _comment: z.string() }).catchall(snippetSchema);
+
+function readTagSnippets() {
   const snippetUrl = new URL("../../../../django-vscode/snippets/tags.json", import.meta.url);
-  return JSON.parse(readFileSync(snippetUrl, "utf8")) as Record<string, unknown>;
-}
-
-function isSnippet(value: unknown): value is Snippet {
-  if (typeof value !== "object" || value === null || !("body" in value)) {
-    return false;
-  }
-
-  const body = value.body;
-  return (
-    typeof body === "string" ||
-    (Array.isArray(body) && body.every((line) => typeof line === "string"))
+  const { _comment, ...snippets } = snippetCatalogSchema.parse(
+    JSON.parse(readFileSync(snippetUrl, "utf8")),
   );
+  return snippets;
 }
 
 function getSnippetTagNames(snippet: Snippet): string[] {
   const body = Array.isArray(snippet.body) ? snippet.body.join("\n") : snippet.body;
-  return Array.from(body.matchAll(/{%-?\s*([A-Za-z_][A-Za-z0-9_]*)/g), (match) => match[1]);
+  return Array.from(body.matchAll(/{%-?\s*([A-Za-z_][A-Za-z0-9_]*)/g), (match) => {
+    const name = match[1];
+    assert.ok(name, "Expected a captured tag name");
+    return name;
+  });
 }
 
 describe("Django tag catalog", () => {
@@ -85,10 +82,10 @@ describe("Django tag catalog", () => {
       ...djangoAdditionalCoreTagDocs,
       ...djangoThirdPartyTagDocs,
     ]);
-    assert.strictEqual(djangoCoreTagDocs[0].name, "autoescape");
-    assert.strictEqual(djangoContribTagDocs[0].name, "static");
-    assert.strictEqual(djangoAdditionalCoreTagDocs[0].name, "ifequal");
-    assert.strictEqual(djangoThirdPartyTagDocs[0].name, "thumbnail");
+    assert.strictEqual(djangoCoreTagDocs[0]?.name, "autoescape");
+    assert.strictEqual(djangoContribTagDocs[0]?.name, "static");
+    assert.strictEqual(djangoAdditionalCoreTagDocs[0]?.name, "ifequal");
+    assert.strictEqual(djangoThirdPartyTagDocs[0]?.name, "thumbnail");
   });
 
   it("requires complete, valid, and internally unique tag records", () => {
@@ -159,13 +156,15 @@ describe("Django tag catalog", () => {
   });
 
   it("uses shared Markdown rendering while preserving completion and hover detail", () => {
-    const staticDoc = djangoTagDocsByName.get("static")!;
+    const staticDoc = djangoTagDocsByName.get("static");
+    assert.ok(staticDoc);
     assert.strictEqual(
       renderTagCompletionDocumentation(staticDoc),
       "`{% static %}`\n\nBuilds the absolute URL for a static asset using Django's configured static files storage.\n\n**Load:** `{% load static %}`\n\n[Documentation](https://docs.djangoproject.com/en/6.0/ref/templates/builtins/#static)",
     );
 
-    const endForDoc = djangoTagDocsByName.get("endfor")!;
+    const endForDoc = djangoTagDocsByName.get("endfor");
+    assert.ok(endForDoc);
     const hover = renderTagHoverDocumentation("endfor", endForDoc);
     assert.ok(hover.startsWith("`{% endfor %}`\n\nCloses a `{% for %}` loop block."));
     assert.ok(hover.includes("**Related tags:** `{% for %}`, `{% empty %}`"));
@@ -180,10 +179,6 @@ describe("Django tag catalog", () => {
     }
 
     for (const [snippetName, value] of Object.entries(snippets)) {
-      if (!isSnippet(value)) {
-        continue;
-      }
-
       const tagNames = getSnippetTagNames(value);
       if (tagNames.length === 0) {
         assert.ok(

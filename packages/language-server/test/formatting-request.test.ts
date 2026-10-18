@@ -30,7 +30,7 @@ describe("formatDocumentForProtocol", () => {
     try {
       await assert.rejects(
         formatDocumentForProtocol(formatter, document, options),
-        (error: unknown) => {
+        (error: Error) => {
           assert.ok(error instanceof ResponseError);
           assert.strictEqual(error.code, ErrorCodes.InternalError);
           assert.strictEqual(error.message, FORMATTER_ERROR_MESSAGE);
@@ -42,6 +42,15 @@ describe("formatDocumentForProtocol", () => {
       console.error = originalConsoleError;
     }
 
-    assert.deepStrictEqual(calls, [["Failed to format Django template", failure]]);
+    assert.deepStrictEqual(calls, [
+      [
+        {
+          level: "error",
+          event: "formatter.failed",
+          uri: document.uri,
+          error: failure,
+        },
+      ],
+    ]);
   });
 });

@@ -1,6 +1,7 @@
 export type RestartableLanguageClient = {
-  restart(): Promise<void>;
+  start(): Promise<void>;
   stop(): Promise<void>;
+  isRunning(): boolean;
 };
 
 export type OwnedOutput = {
@@ -10,9 +11,11 @@ export type OwnedOutput = {
 
 type LanguageServerLifecycleOptions<Client extends RestartableLanguageClient> = {
   client: Client;
+  initialStart?: Promise<void>;
+  createClient: () => Client;
   output: OwnedOutput;
   notifyRestarted: () => void;
-  reportRestartFailure: (error: unknown) => void;
+  reportRestartFailure: (cause: unknown) => void;
 };
 
 export type LanguageServerLifecycle<Client extends RestartableLanguageClient> = {
@@ -23,14 +26,21 @@ export type LanguageServerLifecycle<Client extends RestartableLanguageClient> = 
 
 export function createLanguageServerLifecycle<Client extends RestartableLanguageClient>({
   client,
+  initialStart,
+  createClient,
   output,
   notifyRestarted,
   reportRestartFailure,
 }: LanguageServerLifecycleOptions<Client>): LanguageServerLifecycle<Client> {
+  let currentClient = client;
+  let startPromise = initialStart;
   let restartPromise: Promise<void> | undefined;
   let disposePromise: Promise<void> | undefined;
 
   function restartLS(showNotification: boolean): Promise<void> {
+    if (disposePromise) {
+      return Promise.reject(new Error("The language server lifecycle has been disposed."));
+    }
     if (restartPromise) {
       return restartPromise;
     }
@@ -38,7 +48,12 @@ export function createLanguageServerLifecycle<Client extends RestartableLanguage
     const operation = Promise.resolve().then(async () => {
       output.clear();
       try {
-        await client.restart();
+        // Validate fresh settings before stopping a working client.
+        const replacement = createClient();
+        await stopCurrentClient();
+        currentClient = replacement;
+        startPromise = currentClient.start();
+        await startPromise;
         if (showNotification) {
           notifyRestarted();
         }
@@ -65,7 +80,7 @@ export function createLanguageServerLifecycle<Client extends RestartableLanguage
         } catch {
           // Restart failures are reported by restartLS before disposal continues.
         }
-        await client.stop();
+        await stopCurrentClient();
       } finally {
         output.dispose();
       }
@@ -73,8 +88,19 @@ export function createLanguageServerLifecycle<Client extends RestartableLanguage
     return disposePromise;
   }
 
+  async function stopCurrentClient(): Promise<void> {
+    try {
+      await startPromise;
+    } catch {
+      // A failed startup has already been reported and must not prevent a fresh launch.
+    }
+    if (currentClient.isRunning()) {
+      await currentClient.stop();
+    }
+  }
+
   return {
-    getLS: () => client,
+    getLS: () => currentClient,
     restartLS,
     dispose,
   };

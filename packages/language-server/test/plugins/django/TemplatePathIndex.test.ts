@@ -136,6 +136,37 @@ describe("TemplatePathIndex", () => {
     }
   });
 
+  it("watches all files when the workspace itself is a templates root", async () => {
+    const parent = temporaryWorkspace();
+    const workspace = join(parent, "templates");
+    const index = new TemplatePathIndex({ workspaceFolders: [workspace] });
+    try {
+      createFile(join(workspace, "base.html"));
+      assert.deepStrictEqual(index.getWatchPatterns(), [
+        { baseUri: pathToFileURL(workspace).toString(), pattern: "**/*" },
+      ]);
+      index.setRequestDrivenExpiry(false);
+      assert.deepStrictEqual(names(await index.getCandidates(null, "")), ["base.html"]);
+
+      const added = join(workspace, "partials", "card.html");
+      createFile(added);
+      await index.applyFileEvents([{ uri: pathToFileURL(added).toString(), type: 1 }]);
+      assert.deepStrictEqual(names(await index.getCandidates(null, "")), [
+        "base.html",
+        "partials/card.html",
+      ]);
+      unlinkSync(added);
+      await index.applyFileEvents([{ uri: pathToFileURL(added).toString(), type: 3 }]);
+      assert.deepStrictEqual(names(await index.getCandidates(null, "")), ["base.html"]);
+
+      index.configure({ settings: { autoDiscover: false, roots: [] } });
+      assert.deepStrictEqual(index.getWatchPatterns(), []);
+    } finally {
+      index.dispose();
+      rmSync(parent, { recursive: true, force: true });
+    }
+  });
+
   it("deduplicates logical names, sorts them, bounds results, and reports incompleteness", async () => {
     const workspace = temporaryWorkspace();
     try {
@@ -176,6 +207,47 @@ describe("TemplatePathIndex", () => {
         "second.html",
       ]);
     } finally {
+      rmSync(parent, { recursive: true, force: true });
+    }
+  });
+
+  it("uses the current folder list when workspace changes overlap an in-flight scan", async () => {
+    const parent = temporaryWorkspace();
+    const first = join(parent, "first");
+    const second = join(parent, "second");
+    const scanReady = Promise.withResolvers<void>();
+    const resumeScan = Promise.withResolvers<void>();
+    const scannedFolders: string[] = [];
+    const index = new TemplatePathIndex({
+      workspaceFolders: [first],
+      async scanWorkspace(folder, scan) {
+        scannedFolders.push(folder.path);
+        const result = await scan();
+        if (folder.path === first) {
+          scanReady.resolve();
+          await resumeScan.promise;
+        }
+        return result;
+      },
+    });
+    try {
+      createFile(join(first, "templates", "first.html"));
+      createFile(join(second, "templates", "second.html"));
+      const pending = index.getCandidates(null, "");
+      await scanReady.promise;
+      index.configure({ workspaceFolders: [second] });
+      index.configure({ workspaceFolders: [] });
+      index.configure({ workspaceFolders: [second] });
+      assert.deepStrictEqual(scannedFolders, [first]);
+      assert.deepStrictEqual(index.getWatchPatterns(), [
+        { baseUri: pathToFileURL(second).toString(), pattern: "**/templates/**" },
+      ]);
+      resumeScan.resolve();
+      assert.deepStrictEqual(names(await pending), ["second.html"]);
+      assert.deepStrictEqual(names(await index.getCandidates(null, "")), ["second.html"]);
+    } finally {
+      resumeScan.resolve();
+      index.dispose();
       rmSync(parent, { recursive: true, force: true });
     }
   });
@@ -372,7 +444,7 @@ describe("TemplatePathIndex", () => {
         },
       });
       assert.strictEqual(
-        (await index.getCandidates(null, "same")).candidates[0].sourcePath,
+        (await index.getCandidates(null, "same")).candidates[0]?.sourcePath,
         appSource,
       );
 
@@ -381,7 +453,7 @@ describe("TemplatePathIndex", () => {
       const result = await index.getCandidates(null, "same");
 
       assert.deepStrictEqual(names(result), ["same.html"]);
-      assert.strictEqual(result.candidates[0].sourcePath, projectSource);
+      assert.strictEqual(result.candidates[0]?.sourcePath, projectSource);
       assert.strictEqual(scans, 1);
     } finally {
       rmSync(workspace, { recursive: true, force: true });
@@ -535,14 +607,8 @@ describe("TemplatePathIndex", () => {
   it("marks ambiguous directory changes dirty and prevents a stale scan from winning a race", async () => {
     const workspace = temporaryWorkspace();
     let scans = 0;
-    let releaseFirstScan!: () => void;
-    let markFirstScanReady!: () => void;
-    const firstScanReady = new Promise<void>((resolve) => {
-      markFirstScanReady = resolve;
-    });
-    const firstScanPause = new Promise<void>((resolve) => {
-      releaseFirstScan = resolve;
-    });
+    const { promise: firstScanReady, resolve: markFirstScanReady } = Promise.withResolvers<void>();
+    const { promise: firstScanPause, resolve: releaseFirstScan } = Promise.withResolvers<void>();
     try {
       createFile(join(workspace, "templates", "before.html"));
       const index = new TemplatePathIndex({

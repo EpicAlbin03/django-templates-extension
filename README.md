@@ -18,7 +18,8 @@ Django template support for HTML files in VS Code. Templates keep the built-in `
 
 ## Development
 
-Requires Node.js 22.18 or later and [Vite+](https://viteplus.dev/).
+Requires [Vite+](https://viteplus.dev/) and a Node.js version supported by Vitest 5:
+`^22.18.0 || ^24.11.0 || >=26.0.0`.
 
 ```sh
 vp install

@@ -1,6 +1,9 @@
 import { lstat, readdir, realpath } from "node:fs/promises";
-import { isAbsolute, relative, resolve, sep } from "node:path";
+import { basename, isAbsolute, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { z } from "zod";
+import type { FileEvent } from "vscode-languageserver";
+import type { DjangoSettings } from "../../protocol.js";
 import { isUseCaseSensitiveFileNames } from "../../lib/documents/isFileSystemCaseSensitive.js";
 
 export const DEFAULT_TEMPLATE_PATH_LIMIT = 200;
@@ -26,10 +29,7 @@ const IGNORED_DIRECTORIES = new Set([
   "coverage",
 ]);
 
-export interface TemplateSettings {
-  autoDiscover: boolean;
-  roots: string[];
-}
+export type TemplateSettings = DjangoSettings["templates"];
 
 export interface TemplateWorkspaceFolder {
   uri: string;
@@ -52,10 +52,7 @@ export interface TemplatePathProvider {
   getCandidates(documentPath: string | null, prefix: string): Promise<TemplatePathResult>;
 }
 
-export interface TemplateFileEvent {
-  uri: string;
-  type: number;
-}
+export type TemplateFileEvent = FileEvent;
 
 export interface TemplateWatchPattern {
   baseUri: string;
@@ -177,8 +174,13 @@ export class TemplatePathIndex implements TemplatePathProvider {
     if (this.disposed) {
       return { candidates: [], isIncomplete: false };
     }
+    const workspaceStates = this.states;
     const states = this.selectStates(documentPath);
     await Promise.all(states.map((state) => this.ensureFresh(state)));
+    if (workspaceStates !== this.states) {
+      // A folder update can replace the selected states while their scans are in flight.
+      return this.getCandidates(documentPath, prefix);
+    }
 
     const normalizedPrefix = prefix.replace(/\\/g, "/");
     const cursors = states.map((state) => ({
@@ -284,7 +286,8 @@ export class TemplatePathIndex implements TemplatePathProvider {
 
     for (const state of this.states) {
       if (this.settings.autoDiscover) {
-        addWatchPattern(patterns, seen, state.folder.uri, "**/templates/**");
+        const pattern = basename(state.folder.path) === "templates" ? "**/*" : "**/templates/**";
+        addWatchPattern(patterns, seen, state.folder.uri, pattern);
       }
       for (const root of this.resolveConfiguredRoots(state.folder)) {
         addWatchPattern(patterns, seen, pathToFileURL(root).toString(), "**/*");
@@ -315,7 +318,8 @@ export class TemplatePathIndex implements TemplatePathProvider {
     const containing = this.states
       .filter((state) => isPathInside(normalizedDocumentPath, state.folder.path))
       .sort((left, right) => right.folder.path.length - left.folder.path.length);
-    return containing.length > 0 ? [containing[0]] : this.states;
+    const [closest] = containing;
+    return closest ? [closest] : this.states;
   }
 
   private async ensureFresh(state: WorkspaceState): Promise<void> {
@@ -382,17 +386,17 @@ export class TemplatePathIndex implements TemplatePathProvider {
     const realWorkspacePath = this.isTrusted ? null : await safeRealpath(state.folder.path);
     for (let cursor = 0; cursor < roots.length; cursor += DEFAULT_TEMPLATE_SCAN_CONCURRENCY) {
       const batch = roots.slice(cursor, cursor + DEFAULT_TEMPLATE_SCAN_CONCURRENCY);
-      const accepted = await Promise.all(
+      const acceptedRoots = await Promise.all(
         batch.map(async (root) => {
           const rootInfo = await safeLstat(root);
           if (!rootInfo?.isDirectory() || rootInfo.isSymbolicLink()) {
-            return false;
+            return [];
           }
           if (
             isPathInside(root, state.folder.path) &&
             !(await isPathReachableWithoutSymlink(state.folder.path, root))
           ) {
-            return false;
+            return [];
           }
           if (!this.isTrusted) {
             const realRootPath = await safeRealpath(root);
@@ -401,17 +405,13 @@ export class TemplatePathIndex implements TemplatePathProvider {
               !realWorkspacePath ||
               !isPathInside(realRootPath, realWorkspacePath)
             ) {
-              return false;
+              return [];
             }
           }
-          return true;
+          return [root];
         }),
       );
-      for (let index = 0; index < batch.length; index++) {
-        if (accepted[index]) {
-          activeRoots.push(batch[index]);
-        }
-      }
+      activeRoots.push(...acceptedRoots.flat());
     }
     await scanTemplateRoots(activeRoots, candidates, this.readDirectory);
 
@@ -568,7 +568,7 @@ function sameWorkspaceFolders(
     states.length === folders.length &&
     states.every(
       (state, index) =>
-        state.folder.path === folders[index].path && state.folder.uri === folders[index].uri,
+        state.folder.path === folders[index]?.path && state.folder.uri === folders[index]?.uri,
     )
   );
 }
@@ -599,11 +599,17 @@ function createWorkspaceState(folder: TemplateWorkspaceFolder): WorkspaceState {
 function normalizeTemplateSettings(settings?: Partial<TemplateSettings>): TemplateSettings {
   return {
     autoDiscover: settings?.autoDiscover !== false,
-    roots: Array.isArray(settings?.roots)
-      ? settings.roots.filter((root): root is string => typeof root === "string")
-      : [],
+    roots: [...(settings?.roots ?? [])],
   };
 }
+
+const workspaceFolderSchema = z.union([
+  z.string().transform((folder): TemplateWorkspaceFolder => {
+    const path = normalizeFilePath(folder.startsWith("file:") ? fileURLToPath(folder) : folder);
+    return { path, uri: pathToFileURL(path).toString() };
+  }),
+  z.object({ path: z.string(), uri: z.string(), name: z.string().optional() }),
+]);
 
 function normalizeWorkspaceFolders(
   folders: Array<string | TemplateWorkspaceFolder>,
@@ -612,22 +618,22 @@ function normalizeWorkspaceFolders(
   const seen = new Set<string>();
   for (const folder of folders) {
     try {
+      const workspaceFolder = workspaceFolderSchema.parse(folder);
       const filePath = normalizeFilePath(
-        typeof folder === "string"
-          ? folder.startsWith("file:")
-            ? fileURLToPath(folder)
-            : folder
-          : folder.path || fileURLToPath(folder.uri),
+        workspaceFolder.path || fileURLToPath(workspaceFolder.uri),
       );
       if (seen.has(filePath)) {
         continue;
       }
       seen.add(filePath);
-      normalized.push({
+      const normalizedFolder: TemplateWorkspaceFolder = {
         path: filePath,
-        uri: typeof folder === "string" ? pathToFileURL(filePath).toString() : folder.uri,
-        ...(typeof folder === "string" || !folder.name ? {} : { name: folder.name }),
-      });
+        uri: workspaceFolder.uri,
+      };
+      if (workspaceFolder.name) {
+        normalizedFolder.name = workspaceFolder.name;
+      }
+      normalized.push(normalizedFolder);
     } catch {
       // Non-file workspace folders cannot participate in filesystem discovery.
     }
@@ -639,7 +645,7 @@ async function discoverConventionalRoots(
   workspacePath: string,
   readDirectory: (directory: string) => Promise<TemplateDirectoryEntry[]>,
 ): Promise<string[]> {
-  if (workspacePath.split(sep).at(-1) === "templates") {
+  if (basename(workspacePath) === "templates") {
     return [workspacePath];
   }
 
@@ -692,6 +698,7 @@ async function scanTemplateRoots(
           candidates.push({ name, sourcePath: entryPath, rootPath: work.rootPath });
         }
       }
+      return undefined;
     },
     readDirectory,
   );
@@ -725,10 +732,7 @@ async function walkDirectoryQueue<Work>(
   }
 }
 
-function candidateIndexes(candidates: TemplatePathCandidate[]): {
-  byName: Map<string, CandidateSources>;
-  namesBySource: Map<string, Set<string>>;
-} {
+function candidateIndexes(candidates: TemplatePathCandidate[]) {
   const byName = new Map<string, CandidateSources>();
   const namesBySource = new Map<string, Set<string>>();
   for (const candidate of candidates) {
@@ -794,7 +798,8 @@ function lowerBound(sortedNames: string[], value: string): number {
   let high = sortedNames.length;
   while (low < high) {
     const middle = low + Math.floor((high - low) / 2);
-    if (comparePaths(sortedNames[middle], value) < 0) {
+    const name = sortedNames[middle];
+    if (name !== undefined && comparePaths(name, value) < 0) {
       low = middle + 1;
     } else {
       high = middle;

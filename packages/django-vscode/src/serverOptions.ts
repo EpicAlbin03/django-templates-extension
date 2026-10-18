@@ -1,7 +1,7 @@
 import { isAbsolute, resolve } from "node:path";
 
 export type ServerConfigurationError = {
-  code: "relative-server-path-without-workspace";
+  code: "relative-server-path-without-workspace" | "server-module-not-found";
   message: string;
 };
 
@@ -77,11 +77,7 @@ export function resolveServerModule({
     return { ok: true, serverModule: defaultServerModule };
   }
 
-  if (isAbsolute(serverPath)) {
-    return { ok: true, serverModule: resolveModule(serverPath) };
-  }
-
-  if (!workspaceRoot) {
+  if (!isAbsolute(serverPath) && !workspaceRoot) {
     return {
       ok: false,
       error: {
@@ -93,8 +89,16 @@ export function resolveServerModule({
     };
   }
 
-  return {
-    ok: true,
-    serverModule: resolveModule(resolve(workspaceRoot, serverPath)),
-  };
+  const modulePath = isAbsolute(serverPath) ? serverPath : resolve(workspaceRoot ?? "", serverPath);
+  try {
+    return { ok: true, serverModule: resolveModule(modulePath) };
+  } catch (error) {
+    return {
+      ok: false,
+      error: {
+        code: "server-module-not-found",
+        message: `Cannot resolve the Django Templates language server path "${serverPath}": ${String(error)}`,
+      },
+    };
+  }
 }

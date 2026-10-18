@@ -8,10 +8,10 @@ export default defineConfig({
     dts: true,
     format: "esm",
     deps: {
-      alwaysBundle: [lspDependencies],
+      alwaysBundle: [lspDependencies, /^zod(?:\/|$)/],
       neverBundle: [/^prettier(?:\/|$)/, /^prettier-plugin-django-templates(?:\/|$)/],
       dts: {
-        neverBundle: [lspDependencies],
+        neverBundle: [lspDependencies, /^zod(?:\/|$)/],
       },
     },
   },
