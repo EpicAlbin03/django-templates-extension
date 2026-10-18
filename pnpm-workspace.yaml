@@ -13,8 +13,8 @@ catalog:
   "@changesets/cli": ^3.0.3
   "@changesets/changelog-github": ^1.0.1
 overrides:
-  vite: "catalog:"
-  vitest: "catalog:"
+  vite@*: "catalog:"
+  vitest@*: "catalog:"
 peerDependencyRules:
   allowAny:
     - vite
