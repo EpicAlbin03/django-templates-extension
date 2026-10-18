@@ -383,6 +383,7 @@ You may want to force the html language if you are using other extensions that d
 Other extensions may also intefer with the syntax highlighting (ex: "vue.volar").
 
 Use the `Django Templates: Restart Language Server` command to restart the language server.
+The command reloads the configured server path, runtime, and runtime arguments without a window reload.
 
 ## Credits
 
