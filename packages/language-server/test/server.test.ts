@@ -158,6 +158,77 @@ function initializeParams(
 describe("language server formatting", () => {
   it.each([
     {
+      project: { tabWidth: 4, useTabs: false, endOfLine: "lf" },
+      options: { tabSize: 2, insertSpaces: false },
+      expected:
+        "<div>\n    {% if user %}\n        <span>{{ user.username }}</span>\n    {% endif %}\n</div>\n",
+    },
+    {
+      project: { tabWidth: 8, useTabs: true, endOfLine: "lf" },
+      options: { tabSize: 2, insertSpaces: true },
+      expected:
+        "<div>\n\t{% if user %}\n\t\t<span>{{ user.username }}</span>\n\t{% endif %}\n</div>\n",
+    },
+  ])(
+    "honors .prettierrc over editor settings and formatting requests: $project",
+    async ({ project, options, expected }) => {
+      const directory = await mkdtemp(join(tmpdir(), "django-server-precedence-"));
+      cleanups.push(() => rm(directory, { recursive: true, force: true }));
+      const filePath = join(directory, "template.html");
+      const uri = pathToFileURL(filePath).toString();
+      const text = "<div>{% if user %}<span>{{ user.username }}</span>{% endif %}</div>";
+      await writeFile(filePath, "<p>Previously saved content</p>\n");
+      await writeFile(join(directory, ".prettierrc"), JSON.stringify(project));
+      const harness = createTestConnection(new FakeTemplatePathIndex([]));
+      await harness.client.sendRequest(InitializeRequest.type, {
+        processId: null,
+        rootUri: null,
+        capabilities: {},
+        initializationOptions: {
+          isTrusted: true,
+          configuration: {
+            prettier: { tabWidth: 6, useTabs: !project.useTabs, endOfLine: "crlf" },
+          },
+        },
+      });
+      await harness.client.sendNotification(InitializedNotification.type, {});
+      await harness.client.sendNotification(DidOpenTextDocumentNotification.type, {
+        textDocument: { uri, languageId: "html", version: 1, text },
+      });
+      const params = { textDocument: { uri }, options };
+      const expectedEdits = [
+        {
+          range: { start: { line: 0, character: 0 }, end: { line: 0, character: text.length } },
+          newText: expected,
+        },
+      ];
+      assert.deepStrictEqual(
+        await harness.client.sendRequest(DocumentFormattingRequest.type, params),
+        expectedEdits,
+      );
+      await harness.client.sendNotification(DidChangeConfigurationNotification.type, {
+        settings: {
+          prettier: { tabWidth: 12, useTabs: !project.useTabs, endOfLine: "crlf" },
+        },
+      });
+      assert.deepStrictEqual(
+        await harness.client.sendRequest(DocumentFormattingRequest.type, params),
+        expectedEdits,
+      );
+      await harness.client.sendNotification(DidChangeTextDocumentNotification.type, {
+        textDocument: { uri, version: 2 },
+        contentChanges: [{ text: expected }],
+      });
+      assert.deepStrictEqual(
+        await harness.client.sendRequest(DocumentFormattingRequest.type, params),
+        [],
+      );
+      await harness.client.sendRequest(ShutdownRequest.type);
+    },
+  );
+
+  it.each([
+    {
       text: "<div>\n<div>HTML only</div>\n</div>",
       expected: "<div>\n   <div>HTML only</div>\n</div>\n",
     },
