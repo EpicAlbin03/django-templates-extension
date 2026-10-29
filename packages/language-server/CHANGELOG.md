@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.3
+
+### Patch Changes
+
+- [#8](https://github.com/EpicAlbin03/django-templates-extension/pull/8) [`b552f35`](https://github.com/EpicAlbin03/django-templates-extension/commit/b552f35970220f730ba7e3106546bd9c23eb0d13) Thanks [@EpicAlbin03](https://github.com/EpicAlbin03)! - fix: prevent tabWidth and useTabs from being overridden by editor formatting requests
+
 ## 0.1.2
 
 ### Patch Changes
