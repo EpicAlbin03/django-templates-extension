@@ -324,27 +324,116 @@ describe("DjangoPlugin", () => {
     );
   });
 
-  it("formats unsaved plain HTML edits with the Django-aware formatter", async () => {
-    const directory = mkdtempSync(join(tmpdir(), "django-template-plain-html-"));
+  it.each([
+    {
+      name: "project spaces override request tabs",
+      project: { tabWidth: 8, useTabs: false },
+      options: { tabSize: 2, insertSpaces: false },
+      indent: "        ",
+    },
+    {
+      name: "project tabs override request spaces",
+      project: { tabWidth: 4, useTabs: true },
+      options: { tabSize: 2, insertSpaces: true },
+      indent: "\t",
+    },
+    {
+      name: "project width overrides request width",
+      project: { tabWidth: 6 },
+      options: { tabSize: 2, insertSpaces: true },
+      indent: "      ",
+    },
+    {
+      name: "project tab style keeps request width",
+      project: { useTabs: false },
+      options: { tabSize: 3, insertSpaces: false },
+      indent: "   ",
+    },
+    {
+      name: "unrelated project options keep request indentation",
+      project: { printWidth: 100 },
+      options: { tabSize: 3, insertSpaces: true },
+      indent: "   ",
+    },
+    {
+      name: "empty project configuration keeps request indentation",
+      project: {},
+      options: { tabSize: 3, insertSpaces: false },
+      indent: "\t",
+    },
+    {
+      name: "missing project configuration keeps request indentation",
+      project: undefined,
+      options: { tabSize: 2, insertSpaces: true },
+      indent: "  ",
+    },
+  ])("formats unsaved HTML and Django edits: $name", async ({ project, options, indent }) => {
+    const directory = mkdtempSync(join(tmpdir(), "django-template-precedence-"));
     const filePath = join(directory, "template.html");
-    const text = "<div>\n<div>HTML only</div>\n</div>";
-    const plugin = new DjangoPlugin(new LSConfigManager());
+    const configManager = new LSConfigManager();
+    configManager.updatePrettierConfig({ tabWidth: 10, useTabs: true, printWidth: 80 });
+    const plugin = new DjangoPlugin(configManager);
 
     try {
       writeFileSync(filePath, "<p>Previously saved content</p>\n");
-      writeFileSync(
-        join(directory, ".prettierrc.json"),
-        JSON.stringify({ tabWidth: 8, useTabs: true }),
-      );
-      const document = new Document(pathToFileURL(filePath).toString(), text);
-      const edits = await plugin.formatDocument(document, { tabSize: 2, insertSpaces: true });
+      if (project !== undefined) {
+        writeFileSync(join(directory, ".prettierrc"), JSON.stringify(project));
+      }
+      for (const [text, expected] of [
+        ["<div>\n<div>HTML only</div>\n</div>", `<div>\n${indent}<div>HTML only</div>\n</div>\n`],
+        [
+          "<div>{% if user %}<span>{{ user.username }}</span>{% endif %}</div>",
+          `<div>\n${indent}{% if user %}\n${indent}${indent}<span>{{ user.username }}</span>\n${indent}{% endif %}\n</div>\n`,
+        ],
+      ] as const) {
+        const uri = pathToFileURL(filePath).toString();
+        const edits = await plugin.formatDocument(new Document(uri, text), options);
 
-      assert.strictEqual(edits.length, 1);
-      assert.strictEqual(edits[0]?.newText, "<div>\n  <div>HTML only</div>\n</div>\n");
+        assert.strictEqual(edits.length, 1);
+        assert.strictEqual(edits[0]?.newText, expected);
+        assert.deepStrictEqual(
+          await plugin.formatDocument(new Document(uri, expected), options),
+          [],
+        );
+      }
     } finally {
       rmSync(directory, { recursive: true, force: true });
     }
   });
+
+  it.each([
+    { useEditorConfig: true, project: undefined, indent: "\t" },
+    { useEditorConfig: true, project: { tabWidth: 4, useTabs: false }, indent: "    " },
+    { useEditorConfig: false, project: undefined, indent: "  " },
+  ])(
+    "resolves project indentation with editorconfig=$useEditorConfig and prettier=$project",
+    async ({ useEditorConfig, project, indent }) => {
+      const directory = mkdtempSync(join(tmpdir(), "django-template-editorconfig-"));
+      try {
+        const filePath = join(directory, "template.html");
+        const text = "<div>\n<div>HTML only</div>\n</div>";
+        writeFileSync(filePath, text);
+        writeFileSync(
+          join(directory, ".editorconfig"),
+          "root = true\n\n[*]\nindent_style = tab\nindent_size = 6\n",
+        );
+        if (project !== undefined) {
+          writeFileSync(join(directory, ".prettierrc"), JSON.stringify(project));
+        }
+        const configManager = new LSConfigManager();
+        configManager.updatePrettierConfig({ useEditorConfig, tabWidth: 10, useTabs: true });
+        const plugin = new DjangoPlugin(configManager);
+        const edits = await plugin.formatDocument(
+          new Document(pathToFileURL(filePath).toString(), text),
+          { tabSize: 2, insertSpaces: true },
+        );
+
+        assert.strictEqual(edits[0]?.newText, `<div>\n${indent}<div>HTML only</div>\n</div>\n`);
+      } finally {
+        rmSync(directory, { recursive: true, force: true });
+      }
+    },
+  );
 
   it.each([
     {

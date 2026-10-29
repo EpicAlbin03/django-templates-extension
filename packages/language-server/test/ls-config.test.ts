@@ -26,11 +26,53 @@ describe("LSConfigManager", () => {
       expected: { printWidth: 80, tabWidth: 4, singleQuote: false },
     },
     {
-      name: "lets request indentation override editor and project configuration",
-      editor: { tabWidth: 4, useTabs: true },
+      name: "lets project indentation override editor and request indentation",
+      editor: { tabWidth: 4, useTabs: false },
       file: { tabWidth: 6, useTabs: true },
       request: { tabSize: 2, insertSpaces: true },
-      expected: { tabWidth: 2, useTabs: false },
+      expected: { tabWidth: 6, useTabs: true },
+    },
+    {
+      name: "preserves project spaces over a tabs request",
+      editor: { tabWidth: 8, useTabs: true },
+      file: { tabWidth: 4, useTabs: false },
+      request: { tabSize: 2, insertSpaces: false },
+      expected: { tabWidth: 4, useTabs: false },
+    },
+    {
+      name: "uses request indentation when project resolution returns null",
+      editor: { tabWidth: 8, useTabs: true, printWidth: 100 },
+      file: null,
+      request: { tabSize: 3, insertSpaces: true },
+      expected: { tabWidth: 3, useTabs: false, printWidth: 100 },
+    },
+    {
+      name: "uses request indentation for an empty project configuration",
+      editor: { tabWidth: 8, useTabs: true },
+      file: {},
+      request: { tabSize: 3, insertSpaces: true },
+      expected: { tabWidth: 3, useTabs: false },
+    },
+    {
+      name: "keeps request tab style when the project only configures width",
+      editor: { tabWidth: 8, useTabs: false },
+      file: { tabWidth: 4 },
+      request: { tabSize: 2, insertSpaces: false },
+      expected: { tabWidth: 4, useTabs: true },
+    },
+    {
+      name: "keeps request width when the project only configures tab style",
+      editor: { tabWidth: 8, useTabs: true },
+      file: { useTabs: false },
+      request: { tabSize: 3, insertSpaces: false },
+      expected: { tabWidth: 3, useTabs: false },
+    },
+    {
+      name: "keeps project and editor options when there is no request",
+      editor: { tabWidth: 8, useTabs: true, printWidth: 100 },
+      file: { tabWidth: 4, useTabs: false },
+      request: undefined,
+      expected: { tabWidth: 4, useTabs: false, printWidth: 100 },
     },
   ] as const;
 
@@ -61,13 +103,31 @@ describe("LSConfigManager", () => {
 
     assert.deepStrictEqual(
       manager.getMergedPrettierConfig(
-        { printWidth: 40, plugins: ["project-plugin"] },
+        { printWidth: 40, tabWidth: 6, useTabs: true, plugins: ["project-plugin"] },
         { tabSize: 2, insertSpaces: true },
       ),
       { printWidth: 100, tabWidth: 2, useTabs: false },
     );
     assert.deepStrictEqual(manager.getPrettierConfigLoadingOptions(), {});
     assert.strictEqual(manager.getIgnorePath(), undefined);
+  });
+
+  it("does not retain project or request overrides between formatting calls", () => {
+    const manager = new LSConfigManager();
+    const editor = { tabWidth: 8, useTabs: true };
+    const project = { tabWidth: 4, useTabs: false };
+    const request = { tabSize: 2, insertSpaces: false };
+    manager.updatePrettierConfig(editor);
+
+    assert.deepStrictEqual(manager.getMergedPrettierConfig(project, request), project);
+    assert.deepStrictEqual(manager.getMergedPrettierConfig(null, request), {
+      tabWidth: 2,
+      useTabs: true,
+    });
+    assert.deepStrictEqual(manager.getMergedPrettierConfig(null), editor);
+    assert.deepStrictEqual(manager.getPrettierConfig(), editor);
+    assert.deepStrictEqual(project, { tabWidth: 4, useTabs: false });
+    assert.deepStrictEqual(request, { tabSize: 2, insertSpaces: false });
   });
 
   it("omits invalid options without discarding valid siblings", () => {

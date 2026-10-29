@@ -60,7 +60,7 @@ export class LSConfigManager {
 
   /**
    * Merges formatter options in increasing order of precedence:
-   * formatter defaults, editor settings, project configuration, then request indentation.
+   * formatter defaults, editor settings, request indentation, then project configuration.
    * Mandatory filepath, parser, and plugin options are applied later by DjangoPlugin.
    * Untrusted workspaces only receive the inert editor options allowlisted above.
    */
@@ -72,10 +72,11 @@ export class LSConfigManager {
       ? omitEditorOnlyFields(this.prettierConfig)
       : pickSafeUntrustedOptions(this.prettierConfig);
 
+    Object.assign(editorConfig, requestIndentationOptions(formattingOptions));
     if (this.trusted && prettierFromFileConfig) {
       Object.assign(editorConfig, prettierFromFileConfig);
     }
-    return { ...editorConfig, ...requestIndentationOptions(formattingOptions) };
+    return editorConfig;
   }
 }
 
